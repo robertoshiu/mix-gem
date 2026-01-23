@@ -1,0 +1,84 @@
+[project]
+name = "scavenger"
+version = "0.1.0"
+description = "Semiconductor equipment knowledge base with HSMS runtime"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30.0",
+    "pgvector>=0.3.6",
+    "alembic>=1.14.0",
+    "click>=8.1.7",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.6.0",
+    "openai>=1.58.0",
+    "secsgem>=0.2.0",
+    "websockets>=14.1",
+    "httpx>=0.28.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "testcontainers[postgres]>=4.8.0",
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+]
+
+simulator = [
+    "grpcio>=1.69.0",
+    "grpcio-tools>=1.69.0",
+    "grpcio-reflection>=1.69.0",
+    "redis>=5.0.0",
+    "hiredis>=2.3.0",
+]
+
+all = [
+    "scavenger[dev,simulator]",
+]
+
+[project.scripts]
+scavenger = "scavenger.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "integration: marks tests as integration tests requiring actual TCP connections",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["scavenger"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
