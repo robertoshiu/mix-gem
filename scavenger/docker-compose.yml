@@ -1,0 +1,50 @@
+# docker-compose.yml
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: scavenger-db
+    environment:
+      POSTGRES_DB: onokb
+      POSTGRES_USER: scavenger
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-scavenger_dev}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    shm_size: '256mb'
+    command: >
+      postgres
+      -c shared_buffers=256MB
+      -c work_mem=64MB
+      -c maintenance_work_mem=256MB
+      -c effective_cache_size=512MB
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scavenger -d onokb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  scavenger:
+    build: .
+    container_name: scavenger-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+      - "5000:5000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://scavenger:${DB_PASSWORD:-scavenger_dev}@postgres:5432/onokb
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      HSMS_PORT: 5000
+      HSMS_DEVICE_ID: 1
+    volumes:
+      - ./data:/app/data
+      - ./src:/app/src:ro
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+    name: scavenger_pgdata
