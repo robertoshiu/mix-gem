@@ -1,0 +1,48 @@
+# Example: Basic communication scenario
+# Tests the fundamental S1Fx message exchange
+
+name: basic_communication
+description: Basic S1F1/S1F13 communication test
+
+initial_state:
+  sv:
+    1: "IDLE"       # ControlState
+    2: 0            # ProcessState
+  ecv:
+    100: 25.0       # Temperature setpoint
+    101: 1.0        # Pressure setpoint
+
+steps:
+  # Wait for host to connect
+  - action: log
+    params:
+      message: "Waiting for host connection..."
+
+  - action: wait
+    params:
+      seconds: 2.0
+
+  # Simulate alarm condition
+  - action: set_alarm
+    params:
+      alarm_id: 1001
+      text: "Wafer misalignment detected"
+
+  - action: wait
+    params:
+      seconds: 1.0
+
+  # Clear the alarm
+  - action: clear_alarm
+    params:
+      alarm_id: 1001
+
+  # Change state variable
+  - action: set_sv
+    params:
+      sv_id: 1
+      value: "PROCESSING"
+
+  - action: log
+    params:
+      message: "Scenario completed successfully"

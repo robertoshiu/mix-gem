@@ -6,6 +6,7 @@ from scavenger.cli.db import db
 from scavenger.cli.embeddings import embeddings
 from scavenger.cli.generate import generate
 from scavenger.cli.serve import serve
+from scavenger.cli.simulator import simulator
 
 
 @click.group()
@@ -19,6 +20,7 @@ cli.add_command(db)
 cli.add_command(embeddings)
 cli.add_command(generate)
 cli.add_command(serve)
+cli.add_command(simulator)
 
 
 @cli.command()

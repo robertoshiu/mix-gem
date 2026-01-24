@@ -4,7 +4,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from scavenger import __version__
-from scavenger.api.routers import search_router, runtime_router, scenarios_router, websocket_router
+from scavenger.api.routers import (
+    runtime_router,
+    scenarios_router,
+    search_router,
+    simulator_router,
+    websocket_router,
+)
 from scavenger.db.session import close_db
 
 
@@ -25,6 +31,7 @@ app = FastAPI(
 app.include_router(search_router, prefix="/api")
 app.include_router(runtime_router, prefix="/api")
 app.include_router(scenarios_router, prefix="/api")
+app.include_router(simulator_router, prefix="/api")
 app.include_router(websocket_router, prefix="/api")
 
 
