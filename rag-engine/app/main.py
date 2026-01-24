@@ -1,7 +1,6 @@
 # rag-engine/app/main.py
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
-import os
 
 import redis.asyncio as redis
 import structlog
@@ -20,6 +19,7 @@ startup_complete = False
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Manage application lifecycle: startup and shutdown."""
     global startup_complete
+    import os
 
     # Startup
     logger.info("starting_up", postgres_host=settings.postgres_host)
@@ -61,7 +61,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await app.state.pg_pool.close()
     await app.state.redis.close()
 
-    if app.state.lightrag is not None:
+    if app.state.lightrag:
         await app.state.lightrag.finalize_storages()
 
     logger.info("shutdown_complete")
@@ -73,11 +73,6 @@ app = FastAPI(
     description="ACE Context Engineering + Agentic RAG with LangGraph + LightRAG",
     lifespan=lifespan,
 )
-
-# Register routers
-from app.routers.health import router as health_router
-
-app.include_router(health_router)
 
 
 @app.get("/health/live")
