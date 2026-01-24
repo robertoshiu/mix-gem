@@ -1,0 +1,73 @@
+# Lithography Domain Knowledge for LightRAG
+# This file contains lithography domain knowledge for seeding LightRAG.
+# LightRAG will automatically extract entities and relationships.
+
+Focus in lithography refers to the vertical position of the wafer relative to the
+best focal plane of the imaging system. Optimal focus produces the sharpest aerial
+image and best CD control. Focus errors cause CD variations: a typical DUV system
+shows approximately 3-5nm CD change per 10nm focus offset. EUV systems are more
+sensitive due to shorter wavelength.
+
+Dose (exposure energy) controls how much light reaches the photoresist. Higher dose
+causes more resist to be exposed in positive-tone processes, resulting in smaller
+features. The dose-to-size sensitivity is typically 2-4nm CD per 1% dose change.
+Maintaining dose uniformity across the wafer is critical for CDU control.
+
+Overlay is the alignment accuracy between successive lithography layers. Modern
+nodes require sub-2nm overlay. Components include translation (X/Y shift), rotation,
+magnification, and higher-order distortions. Overlay errors cause electrical shorts
+or opens when features don't align properly between layers.
+
+CDU (Critical Dimension Uniformity) measures the variation in feature sizes across
+the wafer. It has multiple components: within-field (lens aberrations), field-to-field
+(scanner matching), and wafer-to-wafer (process drift). Total CDU budget is typically
+allocated as sqrt sum of components, each kept below 1-2nm for advanced nodes.
+
+Lithography defects include particles (from environment or resist), pattern collapse
+(aspect ratio too high), bridging (features merge), and stochastic failures (EUV
+shot noise). Defect density targets are typically <0.01/cm² for yield. Root cause
+analysis requires correlating defect maps with process parameters and equipment state.
+
+Q: CD is trending +3nm over the last 5 lots on LITHO01. What should I check?
+A: Systematic CD drift suggests focus or dose drift. Check: (1) Focus offset trend
+in equipment logs - look for gradual shift indicating thermal drift or stage drift.
+(2) Dose monitoring - verify energy sensor calibration. (3) Resist thickness - could
+indicate coating issue. (4) Recent maintenance - any lens or stage adjustments.
+Start with focus since 3nm CD shift typically corresponds to ~6-10nm focus offset.
+
+Q: Overlay errors suddenly increased from 1.5nm to 3nm on metal layer. What happened?
+A: Sudden overlay degradation indicates discrete event rather than drift. Check:
+(1) Recent reticle changes or cleaning. (2) Stage calibration status. (3) Alignment
+mark quality on incoming wafers. (4) Any equipment interventions or PM activities.
+(5) Lot-to-lot correlation - if consistent, likely equipment; if random, likely wafer.
+
+Process Window Estimation for Contact Layer:
+Target CD: 40nm ± 2nm (5% tolerance)
+Focus sensitivity: 4nm CD per 10nm focus
+Usable focus range: ±50nm (from DoF measurement)
+Guard band: 20% for process variation
+Effective focus window: ±40nm
+Dose sensitivity: 3nm CD per 1% dose
+Usable dose range: ±3% (from E-D matrix)
+Effective dose window: ±2.4%
+Overlapping process window area confirms manufacturable conditions.
+
+Anomaly Pattern: Focus Drift Alarm
+Symptom: ALARM_FOCUS_DRIFT, CD trending >2nm over 3 lots
+SECS Event: S5F1 with ALID=1001
+Root Causes:
+- Thermal drift in projection lens (probability: 40%, check: lens temp logs)
+- Stage Z calibration drift (probability: 30%, check: stage encoder data)
+- Reticle flatness change (probability: 20%, check: reticle qualification)
+- Metrology drift (probability: 10%, check: golden wafer)
+Recommended Actions:
+- Run focus calibration routine (S2F41: FOCUS_CAL)
+- If persists, escalate to lens thermal stabilization
+
+Equipment LITHO01 is a DUV ArF scanner with 193nm wavelength. It is used for
+contact and metal layers. Typical process parameters include focus offset range
+of ±100nm, dose range 10-30mJ/cm², and overlay specification <2nm.
+
+Equipment LITHO02 is an EUV scanner with 13.5nm wavelength. It is used for
+critical layers requiring sub-20nm features. EUV has higher defect sensitivity
+and requires vacuum environment. Focus budget is tighter at ±30nm.
