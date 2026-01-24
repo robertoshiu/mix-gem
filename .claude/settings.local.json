@@ -39,7 +39,9 @@
       "Bash(scavenger embeddings populate --help:*)",
       "Bash(pip index versions:*)",
       "Skill(superpowers:requesting-code-review)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(xargs cat:*)",
+      "Bash(ls:*)"
     ]
   }
 }
