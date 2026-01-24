@@ -1,4 +1,13 @@
 """Scenario loading and execution for HSMS test scenarios."""
+from scavenger.simulator.scenario.engine import (
+    ActionNotFoundError,
+    ActionParamsError,
+    NoEquipmentError,
+    ScenarioEngine,
+    ScenarioExecutionError,
+    ScenarioResult,
+    StepLog,
+)
 from scavenger.simulator.scenario.loader import ScenarioLoader
 from scavenger.simulator.scenario.models import (
     Scenario,
@@ -9,6 +18,13 @@ from scavenger.simulator.scenario.models import (
 )
 
 __all__ = [
+    "ScenarioEngine",
+    "ScenarioResult",
+    "StepLog",
+    "ScenarioExecutionError",
+    "ActionNotFoundError",
+    "ActionParamsError",
+    "NoEquipmentError",
     "ScenarioLoader",
     "Scenario",
     "ScenarioStep",
