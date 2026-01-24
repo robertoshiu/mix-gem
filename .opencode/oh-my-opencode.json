@@ -9,7 +9,7 @@
     "providerConcurrency": {
       "anthropic": 3,
       "openai": 3,
-      "google": 6
+      "google": 9
     },
     "modelConcurrency": {
       "google/antigravity-claude-opus-4-5-thinking": 1,
@@ -18,44 +18,71 @@
       "anthropic/claude-opus-4-5": 1,
       "anthropic/claude-sonnet-4-5": 2,
       "google/antigravity-gemini-3-pro-high": 1,
-      "google/antigravity-gemini-3-flash": 2,
+      "google/antigravity-gemini-3-flash": 5,
       "openai/gpt-5.2": 2,
       "openai/gpt-5.2-codex": 2,
       "google/gemini-3-flash": 3
     }
   },
   "categories": {
-    "protocol": {
+    "secs-gem-protocol": {
+      "description": "Implement HSMS/SECS-II/GEM stream and function.",
       "variant": "high",
       "model": "google/antigravity-gemini-3-flash",
-      "temperature": 0.1,
-      "prompt_append": "Focus on HSMS/SECS-II/GEM correctness, timeouts, state models, and deterministic traceability."
+      "temperature": 0.3,
+      "prompt_append": "Always use secs-gem-open-source-docs skill. Focus on HSMS/SECS-II/GEM correctness, timeouts, state models, and deterministic traceability."
+    },
+    "lithography": {
+      "description": "Implement lithography workflow and golden recipe management.",
+      "variant": "high",
+      "model": "google/antigravity-gemini-3-flash",
+      "temperature": 0.45,
+      "prompt_append": "Always use lithography-expert skill. Focus on lithography correctness, timeouts, state models, and deterministic traceability."
+    },
+    "rag-expert": {
+      "description": "Implement ACE Context Pack builder + Agentic RAG orchestration + evidence-chain and evaluation loop.",
+      "variant": "high",
+      "model": "google/antigravity-gemini-3-flash",
+      "temperature": 0.7,
+      "prompt_append": "Always use ollama-rag and pgvector-setup skills. Focus on Agentic RAG and Agentic Context Engineering, vector database correctness."
     },
     "backend": {
+      "description": "Implement backend services and database migrations.",
       "model": "google/antigravity-claude-sonnet-4-5",
+      "variant": "max",
       "temperature": 0.1,
-      "prompt_append": "Focus on FastAPI contracts, Postgres migrations, and streaming endpoints with tests."
+      "prompt_append": "Always use fastapi-patterns and asyncio-concurrency-patterns and postgresql-master skills. Focus on FastAPI contracts, Postgres migrations, and streaming endpoints with tests."
     },
     "business-logic": {
-      "model": "openai/gpt-5.2-codex",
+      "description": "Implement business logic and tests.",
+      "model": "openai/gpt-5.2",
       "variant": "xhigh",
-      "temperature": 0.1
+      "temperature": 0.3,
+      "prompt_append": "Always use postgresql-master skill. Focus on business logic contracts, Postgres migrations, and streaming endpoints with tests."
+    },
+    "docker-compose": {
+      "description": "Implement docker-compose.yml and dockerfile.",
+      "model": "opencode/minimax-m2.1-free",
+      "temperature": 0.45,
+      "prompt_append": "Always use docker-compose-generator skill. Focus on dockerfile contracts, and docker-compose.yml with tests."
     },
     "visual": {
+      "description": "Implement UI/UX contracts, visual design, and visual design with tests.",
       "model": "opencode/minimax-m2.1-free",
-      "temperature": 0.7
+      "temperature": 0.9,
+      "prompt_append": "Always use ui-ux-pro-max skill. Focus on UI/UX contracts, visual design, and visual design with tests."
     }
   },
   "agents": {
-    "Sisyphus": {
+    "sisyphus": {
       "model": "google/antigravity-claude-opus-4-5-thinking",
       "variant": "max",
-      "temperature": 0.3
+      "temperature": 0.1
     },
     "oracle": {
-      "model": "openai/gpt-5.2",
-      "variant": "xhigh",
-      "temperature": 0.1
+      "variant": "high",
+      "model": "google/antigravity-gemini-3-pro",
+      "temperature": 0.3
     },
     "librarian": {
       "model": "google/antigravity-claude-sonnet-4-5-thinking",
@@ -63,32 +90,32 @@
       "temperature": 0.3
     },
     "explore": {
-      "model": "opencode/grok-code"
+      "model": "google/antigravity-gemini-3-flash",
+      "variant": "high",
+      "temperature": 0.45
     },
-    "frontend-ui-ux-engineer": {
-      "model": "opencode/minimax-m2.1-free",
-      "temperature": 0.9
-    },
-    "document-writer": {
-      "model": "google/gemini-3-flash"
+    "atlas": {
+      "model": "google/antigravity-gemini-3-flash",
+      "variant": "high",
+      "temperature": 0.1
     },
     "OpenCode-Builder": {
       "model": "openai/gpt-5.2",
       "variant": "xhigh",
       "temperature": 0.3
     },
-    "Prometheus (Planner)": {
+    "prometheus": {
       "model": "google/antigravity-claude-opus-4-5-thinking",
       "variant": "max",
       "temperature": 0.45
     },
-    "Metis (Plan Consultant)": {
+    "metis": {
       "model": "google/antigravity-claude-sonnet-4-5-thinking",
       "variant": "max",
       "temperature": 0.3
     },
-    "Momus": {
-      "model": "google/antigravity-gemini-3-flash",
+    "momus": {
+      "model": "google/antigravity-gemini-3-pro",
       "variant": "high",
       "temperature": 0.1
     },
@@ -106,7 +133,7 @@
     "description": "Recursive Agent Loop for Persistent Hierarchical task execution",
     "orchestrator": {
       "name": "sisyphus",
-      "model": "openai/gpt-5.2-codex",
+      "model": "google/antigravity-claude-opus-4-5-thinking",
       "persona": "Tireless orchestrator who breaks down complex tasks and delegates to specialists",
       "max_iterations": 45,
       "continuation": {

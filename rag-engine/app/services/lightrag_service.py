@@ -1,6 +1,5 @@
 # rag-engine/app/services/lightrag_service.py
 """LightRAG service for knowledge graph retrieval."""
-import asyncio
 from typing import Any
 
 import anthropic

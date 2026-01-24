@@ -1,0 +1,185 @@
+# docker-compose.yml - Mix-GEM Full Stack
+# Combines scavenger (SECS/GEM ingestion) with rag-engine (LangGraph + LightRAG)
+
+services:
+  # =============================================================================
+  # Core Infrastructure
+  # =============================================================================
+  
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: mixgem_postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-mixgem}
+      POSTGRES_USER: ${DB_USER:-mixgem}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-mixgem}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    shm_size: '256mb'
+    command: >
+      postgres
+      -c shared_buffers=256MB
+      -c work_mem=64MB
+      -c maintenance_work_mem=256MB
+      -c effective_cache_size=512MB
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-mixgem} -d ${DB_NAME:-mixgem}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: mixgem_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # =============================================================================
+  # Ollama - Local LLM for Embeddings
+  # =============================================================================
+  
+  ollama:
+    image: ollama/ollama:latest
+    container_name: mixgem_ollama
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    # GPU support - uncomment if NVIDIA GPU available
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  # =============================================================================
+  # RAG Engine - LangGraph + LightRAG
+  # =============================================================================
+  
+  rag-engine:
+    build:
+      context: ./rag-engine
+      dockerfile: Dockerfile
+    container_name: mixgem_rag_engine
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${DB_USER:-mixgem}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-mixgem}
+      POSTGRES_DATABASE: ${DB_NAME:-mixgem}
+      REDIS_URL: redis://redis:6379
+      OLLAMA_HOST: http://ollama:11434
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-snowflake-arctic-embed2}
+      LLM_MODEL: ${LLM_MODEL:-claude-sonnet-4-20250514}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports:
+      - "${RAG_PORT:-8001}:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    volumes:
+      - rag_storage:/app/lightrag_storage
+
+  # =============================================================================
+  # Scavenger - SECS/GEM Ingestion Pipeline (from ./scavenger)
+  # =============================================================================
+  
+  scavenger-api:
+    build:
+      context: ./scavenger
+      target: api
+    container_name: mixgem_scavenger_api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${SCAVENGER_PORT:-8000}:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${DB_USER:-mixgem}:${DB_PASSWORD:-mixgem}@postgres:5432/${DB_NAME:-mixgem}
+      REDIS_URL: redis://redis:6379/0
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - ./scavenger/data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  scavenger-simulator:
+    build:
+      context: ./scavenger
+      target: simulator
+    container_name: mixgem_simulator
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "5000:5000"   # HSMS passive port for equipment simulation
+      - "5001:5001"   # HSMS active port for host client
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${DB_USER:-mixgem}:${DB_PASSWORD:-mixgem}@postgres:5432/${DB_NAME:-mixgem}
+      REDIS_URL: redis://redis:6379/0
+      HSMS_PASSIVE_PORT: 5000
+      HSMS_ACTIVE_PORT: 5001
+      HSMS_DEVICE_ID: 1
+      EQUIPMENT_ID: ${EQUIPMENT_ID:-LITHO01}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - ./scavenger/scenarios:/app/scenarios:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.settimeout(1); s.connect(('localhost', 5000)); s.close()"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+    name: mixgem_pgdata
+  redisdata:
+    name: mixgem_redisdata
+  ollama_data:
+    name: mixgem_ollama_data
+  rag_storage:
+    name: mixgem_rag_storage

@@ -1,6 +1,6 @@
 # rag-engine/app/main.py
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 import redis.asyncio as redis
 import structlog
@@ -75,8 +75,12 @@ app = FastAPI(
 )
 
 from app.routers.health import router as health_router
+from app.routers.query import router as query_router
+from app.routers.threads import router as threads_router
 
 app.include_router(health_router)
+app.include_router(query_router)
+app.include_router(threads_router)
 
 
 @app.get("/health/live")
