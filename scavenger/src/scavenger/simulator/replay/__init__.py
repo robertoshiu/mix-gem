@@ -5,10 +5,18 @@ from scavenger.simulator.replay.player import (
     ReplayConfig,
     ReplayPlayer,
 )
+from scavenger.simulator.replay.service import (
+    ReplayService,
+    ReplaySession,
+    ReplaySessionNotFoundError,
+)
 
 __all__ = [
     "MessageCallback",
     "PlaybackState",
     "ReplayConfig",
     "ReplayPlayer",
+    "ReplayService",
+    "ReplaySession",
+    "ReplaySessionNotFoundError",
 ]
