@@ -10,6 +10,11 @@ from scavenger.simulator.replay.service import (
     ReplaySession,
     ReplaySessionNotFoundError,
 )
+from scavenger.simulator.replay.snapshot import (
+    ReplaySnapshot,
+    SnapshotManager,
+    SnapshotNotFoundError,
+)
 
 __all__ = [
     "MessageCallback",
@@ -19,4 +24,7 @@ __all__ = [
     "ReplayService",
     "ReplaySession",
     "ReplaySessionNotFoundError",
+    "ReplaySnapshot",
+    "SnapshotManager",
+    "SnapshotNotFoundError",
 ]
