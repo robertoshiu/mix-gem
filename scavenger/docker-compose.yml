@@ -26,25 +26,106 @@ services:
       retries: 5
     restart: unless-stopped
 
+  redis:
+    image: redis:7-alpine
+    container_name: scavenger-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
   scavenger:
-    build: .
+    build:
+      context: .
+      target: api
     container_name: scavenger-app
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
       - "8000:8000"
-      - "5000:5000"
     environment:
       DATABASE_URL: postgresql+asyncpg://scavenger:${DB_PASSWORD:-scavenger_dev}@postgres:5432/onokb
+      REDIS_URL: redis://redis:6379/0
       OPENAI_API_KEY: ${OPENAI_API_KEY}
-      HSMS_PORT: 5000
-      HSMS_DEVICE_ID: 1
     volumes:
       - ./data:/app/data
       - ./src:/app/src:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  simulator:
+    build:
+      context: .
+      target: simulator
+    container_name: scavenger-simulator
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "5000:5000"   # HSMS passive port for equipment simulation
+      - "5001:5001"   # HSMS active port for host client
+    environment:
+      DATABASE_URL: postgresql+asyncpg://scavenger:${DB_PASSWORD:-scavenger_dev}@postgres:5432/onokb
+      REDIS_URL: redis://redis:6379/0
+      HSMS_PASSIVE_PORT: 5000
+      HSMS_ACTIVE_PORT: 5001
+      HSMS_DEVICE_ID: 1
+      EQUIPMENT_ID: SIM001
+      LOG_LEVEL: INFO
+    volumes:
+      - ./data:/app/data
+      - ./scenarios:/app/scenarios:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.settimeout(1); s.connect(('localhost', 5000)); s.close()"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+  recorder:
+    build:
+      context: .
+      target: recorder
+    container_name: scavenger-recorder
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://scavenger:${DB_PASSWORD:-scavenger_dev}@postgres:5432/onokb
+      REDIS_URL: redis://redis:6379/0
+      BATCH_SIZE: 100
+      FLUSH_INTERVAL_MS: 1000
+      LOG_LEVEL: INFO
+    healthcheck:
+      test: ["CMD", "python", "-c", "import redis; r=redis.from_url('redis://redis:6379/0'); r.ping()"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
 
 volumes:
   pgdata:
     name: scavenger_pgdata
+  redisdata:
+    name: scavenger_redisdata
