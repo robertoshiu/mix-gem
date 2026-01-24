@@ -5,32 +5,43 @@ from typing import AsyncGenerator
 import asyncpg
 import redis.asyncio as redis
 import structlog
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 
 from app.config import settings
 
 logger = structlog.get_logger()
 
-# Startup completion flag
-startup_complete = False
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Manage application lifecycle: startup and shutdown."""
-    global startup_complete
+    # Initialize startup flag
+    app.state.startup_complete = False
 
     # Startup
     logger.info("starting_up", postgres_url=settings.postgres_url[:20] + "...")
 
-    app.state.db_pool = await asyncpg.create_pool(
-        settings.postgres_url.replace("+asyncpg", ""),
-        min_size=2,
-        max_size=10,
-    )
-    app.state.redis = redis.from_url(settings.redis_url)
+    try:
+        app.state.db_pool = await asyncpg.create_pool(
+            settings.postgres_url.replace("+asyncpg", ""),
+            min_size=2,
+            max_size=10,
+        )
+        logger.info("db_pool_created")
+    except Exception as e:
+        logger.error("db_pool_creation_failed", error=str(e))
+        raise
 
-    startup_complete = True
+    try:
+        app.state.redis = redis.from_url(settings.redis_url)
+        logger.info("redis_client_created")
+    except Exception as e:
+        logger.error("redis_client_creation_failed", error=str(e))
+        # Clean up db pool if redis fails
+        await app.state.db_pool.close()
+        raise
+
+    app.state.startup_complete = True
     logger.info("startup_complete")
 
     yield
@@ -59,8 +70,6 @@ async def liveness() -> dict[str, str]:
 @app.get("/health/startup")
 async def startup_check() -> dict[str, str]:
     """Startup probe - initialization complete."""
-    if startup_complete:
-        return {"status": "started"}
-    from fastapi.responses import JSONResponse
-
-    return JSONResponse(status_code=503, content={"status": "starting"})
+    if not app.state.startup_complete:
+        raise HTTPException(status_code=503, detail="Service starting")
+    return {"status": "started"}
