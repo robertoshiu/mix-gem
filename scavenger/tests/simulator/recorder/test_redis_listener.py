@@ -504,3 +504,213 @@ class TestRedisListener:
             # Verify cleanup was called at least once (could be called twice due to stop() and finally block)
             assert mock_pubsub.close.call_count >= 1
             assert mock_redis.close.call_count >= 1
+
+    @pytest.mark.asyncio
+    async def test_redis_listener_exponential_backoff_reconnect(self):
+        """Test that listener uses exponential backoff when reconnecting."""
+        from scavenger.simulator.recorder.redis_listener import RedisListener
+
+        # Track sleep calls to verify backoff pattern
+        sleep_calls = []
+
+        async def mock_sleep(duration):
+            sleep_calls.append(duration)
+
+        # Mock Redis to fail multiple times then succeed
+        attempt_count = [0]
+
+        def create_failing_redis(*args, **kwargs):
+            attempt_count[0] += 1
+            if attempt_count[0] < 6:  # Fail first 5 times
+                raise ConnectionError(f"Connection failed (attempt {attempt_count[0]})")
+            # On 6th attempt, succeed
+            mock_redis = MagicMock()
+            mock_pubsub = MagicMock()
+            mock_redis.pubsub.return_value = mock_pubsub
+            mock_pubsub.psubscribe = AsyncMock()
+            mock_pubsub.close = AsyncMock()
+            mock_redis.close = AsyncMock()
+
+            async def mock_listen():
+                return
+                yield
+
+            mock_pubsub.listen = mock_listen
+            return mock_redis
+
+        callback = AsyncMock()
+
+        with patch("redis.asyncio.from_url", side_effect=create_failing_redis):
+            with patch("asyncio.sleep", side_effect=mock_sleep):
+                listener = RedisListener(
+                    redis_url="redis://localhost:6379",
+                    on_message=callback,
+                )
+
+                await listener.start()
+
+                # Verify exponential backoff: 1s → 2s → 4s → 8s → 16s
+                # (5 failures = 5 sleep calls)
+                assert len(sleep_calls) == 5
+                assert sleep_calls[0] == 1.0  # First retry: 1s
+                assert sleep_calls[1] == 2.0  # Second retry: 2s
+                assert sleep_calls[2] == 4.0  # Third retry: 4s
+                assert sleep_calls[3] == 8.0  # Fourth retry: 8s
+                assert sleep_calls[4] == 16.0  # Fifth retry: 16s
+
+    @pytest.mark.asyncio
+    async def test_redis_listener_exponential_backoff_caps_at_30s(self):
+        """Test that backoff caps at 30 seconds."""
+        from scavenger.simulator.recorder.redis_listener import RedisListener
+
+        sleep_calls = []
+
+        async def mock_sleep(duration):
+            sleep_calls.append(duration)
+
+        attempt_count = [0]
+
+        def create_failing_redis(*args, **kwargs):
+            attempt_count[0] += 1
+            if attempt_count[0] < 8:  # Fail 7 times to test cap
+                raise ConnectionError(f"Connection failed (attempt {attempt_count[0]})")
+            # On 8th attempt, succeed
+            mock_redis = MagicMock()
+            mock_pubsub = MagicMock()
+            mock_redis.pubsub.return_value = mock_pubsub
+            mock_pubsub.psubscribe = AsyncMock()
+            mock_pubsub.close = AsyncMock()
+            mock_redis.close = AsyncMock()
+
+            async def mock_listen():
+                return
+                yield
+
+            mock_pubsub.listen = mock_listen
+            return mock_redis
+
+        callback = AsyncMock()
+
+        with patch("redis.asyncio.from_url", side_effect=create_failing_redis):
+            with patch("asyncio.sleep", side_effect=mock_sleep):
+                listener = RedisListener(
+                    redis_url="redis://localhost:6379",
+                    on_message=callback,
+                )
+
+                await listener.start()
+
+                # Verify backoff caps at 30s
+                # 1s → 2s → 4s → 8s → 16s → 30s → 30s
+                assert len(sleep_calls) == 7
+                assert sleep_calls[5] == 30.0  # Capped at 30s
+                assert sleep_calls[6] == 30.0  # Stays capped at 30s
+
+    @pytest.mark.asyncio
+    async def test_redis_listener_handles_malformed_json(self):
+        """Test that listener handles malformed JSON gracefully."""
+        import json
+        from scavenger.simulator.recorder.redis_listener import RedisListener
+
+        session_id = uuid.uuid4()
+
+        # Mock Redis to return malformed JSON
+        mock_redis = MagicMock()
+        mock_pubsub = MagicMock()
+        mock_redis.pubsub.return_value = mock_pubsub
+        mock_pubsub.psubscribe = AsyncMock()
+        mock_pubsub.close = AsyncMock()
+        mock_redis.close = AsyncMock()
+
+        async def mock_listen():
+            # First: malformed JSON
+            yield {
+                "type": "pmessage",
+                "pattern": b"hsms:session:*:messages",
+                "channel": f"hsms:session:{session_id}:messages".encode(),
+                "data": b"{invalid json}",  # Malformed JSON
+            }
+            # Second: valid message to verify processing continues
+            valid_message = HsmsMessage(
+                session_id=session_id,
+                timestamp=datetime.now(timezone.utc),
+                direction="H2E",
+                message_type=HsmsMessageType.DATA_MESSAGE,
+                data=SecsMessageData(stream=1, function=1),
+                sequence_num=1,
+            )
+            yield {
+                "type": "pmessage",
+                "pattern": b"hsms:session:*:messages",
+                "channel": f"hsms:session:{session_id}:messages".encode(),
+                "data": json.dumps(valid_message.to_dict()).encode(),
+            }
+            return
+
+        mock_pubsub.listen = mock_listen
+
+        received_messages = []
+
+        async def callback(msg: HsmsMessage):
+            received_messages.append(msg)
+
+        with patch("redis.asyncio.from_url", return_value=mock_redis):
+            listener = RedisListener(
+                redis_url="redis://localhost:6379",
+                on_message=callback,
+            )
+
+            # Capture logs to verify error logging
+            with patch("scavenger.simulator.recorder.redis_listener.logger") as mock_logger:
+                await listener.start()
+
+                # Verify error was logged for malformed JSON
+                mock_logger.error.assert_any_call(
+                    "Failed to decode JSON message: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)"
+                )
+
+                # Verify processing continued and valid message was received
+                assert len(received_messages) == 1
+                assert received_messages[0].session_id == session_id
+
+    @pytest.mark.asyncio
+    async def test_redis_listener_connection_failure_recovery(self):
+        """Test that listener recovers from connection failures."""
+        from scavenger.simulator.recorder.redis_listener import RedisListener
+
+        # Mock Redis to fail initially then succeed
+        attempt_count = [0]
+
+        def create_redis_with_initial_failure(*args, **kwargs):
+            attempt_count[0] += 1
+            if attempt_count[0] == 1:
+                # First attempt fails
+                raise ConnectionError("Initial connection failed")
+            # Second attempt succeeds
+            mock_redis = MagicMock()
+            mock_pubsub = MagicMock()
+            mock_redis.pubsub.return_value = mock_pubsub
+            mock_pubsub.psubscribe = AsyncMock()
+            mock_pubsub.close = AsyncMock()
+            mock_redis.close = AsyncMock()
+
+            async def mock_listen():
+                return
+                yield
+
+            mock_pubsub.listen = mock_listen
+            return mock_redis
+
+        callback = AsyncMock()
+
+        with patch("redis.asyncio.from_url", side_effect=create_redis_with_initial_failure):
+            with patch("asyncio.sleep", new_callable=AsyncMock):
+                listener = RedisListener(
+                    redis_url="redis://localhost:6379",
+                    on_message=callback,
+                )
+
+                await listener.start()
+
+                # Verify listener eventually started successfully
+                assert attempt_count[0] == 2  # Failed once, succeeded on retry
