@@ -53,7 +53,16 @@
       "Bash(npx create-next-app@latest equipment-monitor --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --yes --turbopack)",
       "Bash(git config:*)",
       "Bash(curl:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(npm test:*)",
+      "Bash(timeout 30 npm run dev:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx next lint:*)",
+      "Bash(node:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(npx shadcn@latest init -d)"
     ]
   }
 }

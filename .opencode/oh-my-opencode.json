@@ -8,6 +8,7 @@
     "defaultConcurrency": 9,
     "providerConcurrency": {
       "anthropic": 3,
+      "deepseek": 3,
       "openai": 3,
       "google": 9
     },
@@ -17,6 +18,8 @@
       "google/antigravity-claude-sonnet-4-5": 3,
       "anthropic/claude-opus-4-5": 1,
       "anthropic/claude-sonnet-4-5": 2,
+      "deepseek/deepseek-reasoner": 1,
+      "deepseek/deepseek-chat": 2,
       "google/antigravity-gemini-3-pro-high": 1,
       "google/antigravity-gemini-3-flash": 5,
       "openai/gpt-5.2": 2,
@@ -55,8 +58,8 @@
     },
     "business-logic": {
       "description": "Implement business logic and tests.",
-      "model": "openai/gpt-5.2-codex",
-      "variant": "xhigh",
+      "model": "deepseek/deepseek-chat",
+      "variant": "high",
       "temperature": 0.3,
       "prompt_append": "Always use postgresql-master skill. Focus on business logic contracts, Postgres migrations, and streaming endpoints with tests."
     },
@@ -67,7 +70,7 @@
       "temperature": 0.45,
       "prompt_append": "Always use docker-compose-generator skill. Focus on dockerfile contracts, and docker-compose.yml with tests."
     },
-    "visual": {
+    "visual-engineering": {
       "description": "Implement UI/UX contracts, visual design, and visual design with tests.",
       "variant": "high",
       "model": "google/antigravity-gemini-3-pro",
@@ -77,13 +80,13 @@
   },
   "agents": {
     "sisyphus": {
-      "model": "google/antigravity-claude-opus-4-5-thinking",
-      "variant": "max",
+      "variant": "high",
+      "model": "deepseek/deepseek-reasoner",
       "temperature": 0.1
     },
     "oracle": {
-      "variant": "high",
-      "model": "google/antigravity-gemini-3-pro",
+      "model": "google/antigravity-claude-opus-4-5-thinking",
+      "variant": "max",
       "temperature": 0.3
     },
     "librarian": {
@@ -97,7 +100,7 @@
       "temperature": 0.45
     },
     "atlas": {
-      "model": "google/antigravity-gemini-3-flash",
+      "model": "deepseek/deepseek-chat",
       "variant": "high",
       "temperature": 0.1
     },

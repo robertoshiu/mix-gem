@@ -1,4 +1,4 @@
-import { type EquipmentStatus } from "./utils";
+import { type EquipmentStatus } from "@/types/equipment";
 
 /**
  * Single data point for time-series trend charts
