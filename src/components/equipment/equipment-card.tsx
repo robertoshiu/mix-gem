@@ -17,12 +17,13 @@ export function EquipmentCard({
   isSelected = false,
   onClick,
 }: EquipmentCardProps) {
-  const borderColor = {
-    normal: "border-l-emerald-500",
+  const borderColor: Record<string, string> = {
+    process: "border-l-emerald-500",
+    idle: "border-l-blue-400",
     warning: "border-l-amber-500",
     alarm: "border-l-red-500",
-    idle: "border-l-blue-400",
     offline: "border-l-slate-500",
+    pm: "border-l-purple-500",
   };
 
   return (

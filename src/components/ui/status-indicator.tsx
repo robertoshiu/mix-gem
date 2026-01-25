@@ -2,11 +2,12 @@ import { cn } from "@/lib/utils";
 import { EquipmentStatus } from "@/types/equipment";
 
 const statusConfig: Record<EquipmentStatus, { color: string; label: string; pulse?: boolean }> = {
-  normal: { color: "bg-emerald-500", label: "Normal" },
+  process: { color: "bg-emerald-500", label: "Process" },
+  idle: { color: "bg-blue-400", label: "Idle" },
   warning: { color: "bg-amber-500", label: "Warning" },
   alarm: { color: "bg-red-500", label: "Alarm", pulse: true },
-  idle: { color: "bg-blue-400", label: "Idle" },
   offline: { color: "bg-slate-500", label: "Offline" },
+  pm: { color: "bg-purple-500", label: "PM" },
 };
 
 interface StatusIndicatorProps {
