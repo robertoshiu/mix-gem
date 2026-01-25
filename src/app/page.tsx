@@ -14,10 +14,19 @@ import {
 } from "@/lib/mock-data";
 import { EquipmentBottomSheet } from "@/components/equipment/equipment-bottom-sheet";
 
+import { AlertBanner } from '@/components/alerts/alert-banner';
+
 export default function DashboardPage() {
   const { equipment, selectedEquipmentId, setEquipment, selectEquipment } =
     useEquipmentStore();
   const [trendData, setTrendData] = useState(generateTrendData(1, 2.3, 3));
+  const [alarms, setAlarms] = useState(mockAlarms);
+
+  const acknowledgeAlarm = (id: string) => {
+    setAlarms((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, acknowledged: true } : a))
+    );
+  };
 
   // Initialize with mock data
   useEffect(() => {
@@ -43,7 +52,8 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const activeAlarms = mockAlarms.filter((a) => !a.acknowledged);
+  const activeAlarms = alarms.filter((a) => !a.acknowledged);
+  const criticalAlarms = activeAlarms.filter((a) => a.severity === 'CRITICAL');
   const selectedEquipment = equipment.find((e) => e.id === selectedEquipmentId);
 
   return (
@@ -69,6 +79,18 @@ export default function DashboardPage() {
                   {selectedEquipment.currentRecipe || "No active recipe"}
                 </p>
               </div>
+
+              {criticalAlarms.length > 0 && (
+                <div className="mb-6 space-y-2">
+                  {criticalAlarms.map((alarm) => (
+                    <AlertBanner
+                      key={alarm.id}
+                      alarm={alarm}
+                      onAcknowledge={acknowledgeAlarm}
+                    />
+                  ))}
+                </div>
+              )}
 
               {/* Gauge Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
