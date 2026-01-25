@@ -4,8 +4,6 @@
 
 @import "tailwindcss";
 
-@import "tw-animate-css";
-
 @custom-variant dark (&:is(.dark *));
 
 @theme {
@@ -161,5 +159,18 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  @media (prefers-reduced-motion: reduce) {
+    .animate-pulse,
+    .animate-pulse-slow {
+      animation: none;
+    }
+
+    * {
+      transition-duration: 0.01ms !important;
+    }
   }
 }

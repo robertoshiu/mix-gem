@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { Providers } from "./providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Equipment Monitor Dashboard",
-  description: "Real-time semiconductor equipment monitoring dashboard",
+  title: "Equipment Monitor",
+  description: "Semiconductor equipment monitoring dashboard",
 };
 
 export default function RootLayout({
@@ -13,8 +14,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className="font-sans antialiased bg-slate-950 text-slate-50 min-h-screen">
-        {children}
+      <body>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
