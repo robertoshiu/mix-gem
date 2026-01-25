@@ -1,0 +1,43 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --font-family-sans: "Inter", system-ui, sans-serif;
+  --font-family-mono: "JetBrains Mono", monospace;
+
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+:root {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+}
+
+body {
+  background-color: theme(colors.slate.950);
+  color: theme(colors.slate.50);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Status utility classes */
+.status-normal {
+  color: theme(colors.emerald.500);
+}
+
+.status-warning {
+  color: theme(colors.amber.500);
+}
+
+.status-alarm {
+  color: theme(colors.red.500);
+}
+
+.status-idle {
+  color: theme(colors.blue.400);
+}
+
+.status-offline {
+  color: theme(colors.slate.500);
+}

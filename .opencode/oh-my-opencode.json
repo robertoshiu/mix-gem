@@ -55,20 +55,22 @@
     },
     "business-logic": {
       "description": "Implement business logic and tests.",
-      "model": "openai/gpt-5.2",
+      "model": "openai/gpt-5.2-codex",
       "variant": "xhigh",
       "temperature": 0.3,
       "prompt_append": "Always use postgresql-master skill. Focus on business logic contracts, Postgres migrations, and streaming endpoints with tests."
     },
     "docker-compose": {
       "description": "Implement docker-compose.yml and dockerfile.",
-      "model": "opencode/minimax-m2.1-free",
+      "variant": "high",
+      "model": "google/antigravity-gemini-3-flash",
       "temperature": 0.45,
       "prompt_append": "Always use docker-compose-generator skill. Focus on dockerfile contracts, and docker-compose.yml with tests."
     },
     "visual": {
       "description": "Implement UI/UX contracts, visual design, and visual design with tests.",
-      "model": "opencode/minimax-m2.1-free",
+      "variant": "high",
+      "model": "google/antigravity-gemini-3-pro",
       "temperature": 0.9,
       "prompt_append": "Always use ui-ux-pro-max skill. Focus on UI/UX contracts, visual design, and visual design with tests."
     }

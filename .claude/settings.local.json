@@ -49,7 +49,11 @@
       "Bash(git -C /mnt/e/repo/mix-gem log --oneline -3)",
       "Bash(git -C /mnt/e/repo/mix-gem add:*)",
       "Bash(git -C /mnt/e/repo/mix-gem commit -m \"$\\(cat <<''EOF''\nfeat\\(rag-engine\\): scaffold project structure\n\n- pyproject.toml with dependencies\n- FastAPI app with lifespan \\(db pool, redis\\)\n- Pydantic settings from env vars\n- Dockerfile for containerization\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(npx create-next-app@latest equipment-monitor --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --yes --turbopack)",
+      "Bash(git config:*)",
+      "Bash(curl:*)",
+      "Bash(npm install:*)"
     ]
   }
 }
