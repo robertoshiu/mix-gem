@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { usePageVisibility } from "./usePageVisibility";
 import {
   type TrendDataPoint,
   type SpecLimits,
@@ -21,6 +22,8 @@ interface UseStreamingDataOptions {
   timeRange?: TimeRange;
   /** Whether to respect prefers-reduced-motion */
   respectReducedMotion?: boolean;
+  /** Start time for data filtering */
+  startTime?: Date;
 }
 
 interface UseStreamingDataReturn {
@@ -60,12 +63,13 @@ export function useStreamingData(
     maxDisplayPoints = 200,
     timeRange = "1H",
     respectReducedMotion = true,
+    startTime,
   } = options;
 
   const [data, setData] = useState<TrendDataPoint[]>([]);
   const [isPaused, setIsPaused] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-  const [isVisible, setIsVisible] = useState(true);
+  const isVisible = usePageVisibility();
   
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -83,18 +87,6 @@ export function useStreamingData(
     mediaQuery.addEventListener("change", handler);
     return () => mediaQuery.removeEventListener("change", handler);
   }, [respectReducedMotion]);
-
-  // Handle page visibility
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      setIsVisible(!document.hidden);
-    };
-    
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, []);
 
   // Generate initial data
   const generateInitialData = useCallback(() => {
@@ -115,7 +107,6 @@ export function useStreamingData(
     setData(generateInitialData());
   }, [generateInitialData]);
 
-  // Add new data point
   const addDataPoint = useCallback(() => {
     setData((prevData) => {
       if (prevData.length === 0) return prevData;
@@ -147,8 +138,9 @@ export function useStreamingData(
       const filteredData = prevData.filter((p) => p.timestamp > cutoffTime);
       const updatedData = [...filteredData, newPoint];
       
-      // Downsample if needed
-      if (updatedData.length > maxDisplayPoints) {
+      // Use LTTB downsampling for historical data retention
+      // If data grows beyond maxDisplayPoints * 2, downsample it to maxDisplayPoints
+      if (updatedData.length > maxDisplayPoints * 2) {
         return lttbDownsample(updatedData, maxDisplayPoints);
       }
       
@@ -186,8 +178,14 @@ export function useStreamingData(
   // Current value
   const currentValue = data.length > 0 ? data[data.length - 1].value : null;
 
+  // Filter data by time range if provided
+  const filteredData = useMemo(() => {
+    if (!startTime) return data;
+    return data.filter((point) => point.timestamp >= startTime.getTime());
+  }, [data, startTime]);
+
   return {
-    data,
+    data: filteredData,
     isPaused: isPaused || !isVisible || prefersReducedMotion,
     prefersReducedMotion,
     pause,
