@@ -59,7 +59,7 @@ export function EquipmentSidebar({ className }: EquipmentSidebarProps) {
     <div
       ref={listRef}
       className={cn(
-        "w-72 bg-slate-900 border-r border-slate-700 overflow-y-auto focus:outline-none focus:ring-2 focus:ring-blue-500",
+        "w-70 bg-slate-900 border-r border-slate-700 overflow-y-auto focus:outline-none focus:ring-2 focus:ring-blue-500",
         className
       )}
       role="list"

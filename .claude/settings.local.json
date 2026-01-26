@@ -62,7 +62,9 @@
       "Bash(node:*)",
       "Bash(npx eslint:*)",
       "Bash(npx shadcn@latest add:*)",
-      "Bash(npx shadcn@latest init -d)"
+      "Bash(npx shadcn@latest init -d)",
+      "Bash(npm run lint:*)",
+      "Bash(git status:*)"
     ]
   }
 }

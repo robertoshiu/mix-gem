@@ -18,6 +18,13 @@ body {
   color: theme(colors.slate.50);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  line-height: 1.625; /* leading-relaxed */
+}
+
+/* Typography utilities */
+.prose-body {
+  line-height: 1.625; /* leading-relaxed */
+  max-width: 65ch; /* max-w-prose */
 }
 
 /* Status utility classes */

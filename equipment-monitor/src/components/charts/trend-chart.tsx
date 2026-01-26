@@ -16,6 +16,8 @@ import { TrendDataPoint } from "@/types/equipment";
 import { cn } from "@/lib/utils";
 import { useChartSync } from "./chart-sync-provider";
 import { lttbDownsample } from "@/lib/chart-types";
+import { ChartDataTable } from "./chart-data-table";
+import { CanvasChart } from "./canvas-chart";
 
 interface TrendChartProps {
   title: string;
@@ -39,12 +41,15 @@ export function TrendChart({
   const { activeIndex, setActiveIndex } = useChartSync();
 
   const displayData = useMemo(() => {
-    // Use LTTB downsampling for datasets > 200 points
-    if (data.length > 200) {
+    // Use LTTB downsampling for datasets > 200 points (but < 1000)
+    if (data.length > 200 && data.length <= 1000) {
       return lttbDownsample(data, 200);
     }
     return data;
   }, [data]);
+
+  // Use canvas rendering for very large datasets
+  const useCanvas = data.length > 1000;
 
   // Calculate warning thresholds (80% of spec)
   const range = usl - lsl;
@@ -93,86 +98,101 @@ export function TrendChart({
       </div>
 
       <div className="h-48">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart
-            data={displayData}
-            margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-            onMouseMove={(state) => {
-              if (state?.activeTooltipIndex !== undefined && typeof state.activeTooltipIndex === 'number') {
-                setActiveIndex(state.activeTooltipIndex);
-              }
-            }}
-            onMouseLeave={() => setActiveIndex(null)}
-          >
-            {/* Warning zones */}
-            <ReferenceArea
-              y1={lsl}
-              y2={warningLow}
-              fill="#F59E0B"
-              fillOpacity={0.1}
+        {useCanvas ? (
+          // Use canvas for large datasets (>1000 points)
+          <div className="flex items-center justify-center w-full h-full">
+            <CanvasChart
+              data={data}
+              width={600}
+              height={192}
+              color={statusColors[status]}
+              lsl={lsl}
+              usl={usl}
             />
-            <ReferenceArea
-              y1={warningHigh}
-              y2={usl}
-              fill="#F59E0B"
-              fillOpacity={0.1}
-            />
-
-            {/* Spec limits */}
-            <ReferenceLine
-              y={usl}
-              stroke="#EF4444"
-              strokeDasharray="4 4"
-              label={{ value: "USL", position: "right", fill: "#EF4444", fontSize: 10 }}
-            />
-            <ReferenceLine
-              y={lsl}
-              stroke="#EF4444"
-              strokeDasharray="4 4"
-              label={{ value: "LSL", position: "right", fill: "#EF4444", fontSize: 10 }}
-            />
-
-            <XAxis
-              dataKey="timestamp"
-              tickFormatter={formatTime}
-              stroke="#64748B"
-              fontSize={10}
-              tickLine={false}
-              axisLine={false}
-            />
-            <YAxis
-              domain={[lsl - range * 0.1, usl + range * 0.1]}
-              stroke="#64748B"
-              fontSize={10}
-              tickLine={false}
-              axisLine={false}
-              tickFormatter={(v) => v.toFixed(0)}
-            />
-            <Tooltip
-              cursor={{ stroke: "#3b82f6", strokeWidth: 1 }}
-              active={activeIndex !== null}
-              contentStyle={{
-                backgroundColor: "#1E293B",
-                border: "1px solid #334155",
-                borderRadius: "6px",
-                fontSize: "12px",
+          </div>
+        ) : (
+          // Use Recharts for smaller datasets
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart
+              data={displayData}
+              margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+              onMouseMove={(state) => {
+                if (state?.activeTooltipIndex !== undefined && typeof state.activeTooltipIndex === 'number') {
+                  setActiveIndex(state.activeTooltipIndex);
+                }
               }}
-              labelFormatter={(timestamp) => new Date(timestamp).toLocaleString()}
-              formatter={(value: number | undefined) => [
-                value !== undefined ? `${value.toFixed(2)} ${unit}` : "No Data",
-                title,
-              ]}
-            />
-            <Area
-              type="monotone"
-              dataKey="value"
-              stroke={statusColors[status]}
-              fill={statusColors[status]}
-              fillOpacity={0.2}
-              strokeWidth={2}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+              onMouseLeave={() => setActiveIndex(null)}
+            >
+              {/* Warning zones */}
+              <ReferenceArea
+                y1={lsl}
+                y2={warningLow}
+                fill="#F59E0B"
+                fillOpacity={0.1}
+              />
+              <ReferenceArea
+                y1={warningHigh}
+                y2={usl}
+                fill="#F59E0B"
+                fillOpacity={0.1}
+              />
+
+              {/* Spec limits */}
+              <ReferenceLine
+                y={usl}
+                stroke="#EF4444"
+                strokeDasharray="4 4"
+                label={{ value: "USL", position: "right", fill: "#EF4444", fontSize: 10 }}
+              />
+              <ReferenceLine
+                y={lsl}
+                stroke="#EF4444"
+                strokeDasharray="4 4"
+                label={{ value: "LSL", position: "right", fill: "#EF4444", fontSize: 10 }}
+              />
+
+              <XAxis
+                dataKey="timestamp"
+                tickFormatter={formatTime}
+                stroke="#64748B"
+                fontSize={10}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis
+                domain={[lsl - range * 0.1, usl + range * 0.1]}
+                stroke="#64748B"
+                fontSize={10}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(v) => v.toFixed(0)}
+              />
+              <Tooltip
+                cursor={{ stroke: "#3b82f6", strokeWidth: 1 }}
+                active={activeIndex !== null}
+                contentStyle={{
+                  backgroundColor: "#1E293B",
+                  border: "1px solid #334155",
+                  borderRadius: "6px",
+                  fontSize: "12px",
+                }}
+                labelFormatter={(timestamp) => new Date(timestamp).toLocaleString()}
+                formatter={(value: number | undefined) => [
+                  value !== undefined ? `${value.toFixed(2)} ${unit}` : "No Data",
+                  title,
+                ]}
+              />
+              <Area
+                type="monotone"
+                dataKey="value"
+                stroke={statusColors[status]}
+                fill={statusColors[status]}
+                fillOpacity={0.2}
+                strokeWidth={2}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
       </div>
 
       <div className="flex justify-center gap-2 mt-2">
@@ -185,6 +205,9 @@ export function TrendChart({
           </button>
         ))}
       </div>
+
+      {/* Accessible data table */}
+      <ChartDataTable data={data} title={title} unit={unit} />
     </Card>
   );
 }

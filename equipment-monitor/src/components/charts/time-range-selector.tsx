@@ -1,46 +1,41 @@
-"use client";
+'use client';
 
-import { cn } from "@/lib/utils";
-
-type TimeRange = "1H" | "4H" | "24H" | "7D";
+import { Button } from '@/components/ui/button';
+import { useTimeRange, type TimeRange } from '@/hooks/useTimeRange';
 
 interface TimeRangeSelectorProps {
-  value: TimeRange;
-  onChange: (range: TimeRange) => void;
-  className?: string;
+  onChange?: (range: TimeRange) => void;
 }
 
-const ranges: TimeRange[] = ["1H", "4H", "24H", "7D"];
+const ranges: { label: string; value: TimeRange }[] = [
+  { label: '15m', value: '15m' },
+  { label: '1h', value: '1h' },
+  { label: '6h', value: '6h' },
+  { label: '24h', value: '24h' },
+  { label: '7d', value: '7d' },
+];
 
-export function TimeRangeSelector({
-  value,
-  onChange,
-  className,
-}: TimeRangeSelectorProps) {
+export function TimeRangeSelector({ onChange }: TimeRangeSelectorProps) {
+  const { range, setRange } = useTimeRange();
+
+  const handleRangeChange = (newRange: TimeRange) => {
+    setRange(newRange);
+    onChange?.(newRange);
+  };
+
   return (
-    <div
-      className={cn("inline-flex rounded-md bg-slate-800 p-1", className)}
-      role="radiogroup"
-      aria-label="Time range"
-    >
-      {ranges.map((range) => (
-        <button
-          key={range}
-          role="radio"
-          aria-checked={value === range}
-          onClick={() => onChange(range)}
-          className={cn(
-            "px-3 py-1.5 text-sm font-medium rounded transition-colors min-h-[44px]",
-            value === range
-              ? "bg-blue-500 text-white"
-              : "text-slate-400 hover:text-slate-50 hover:bg-slate-700"
-          )}
+    <div className="flex gap-2" role="group" aria-label="Time range selector">
+      {ranges.map((r) => (
+        <Button
+          key={r.value}
+          variant={range === r.value ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => handleRangeChange(r.value)}
+          className="min-h-[44px] min-w-[44px]"
         >
-          {range}
-        </button>
+          {r.label}
+        </Button>
       ))}
     </div>
   );
 }
-
-export type { TimeRange };

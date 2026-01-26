@@ -6,6 +6,29 @@
     "opencode-openai-codex-auth"
   ],
   "provider": {
+    "nvidia": {
+      "name": "NVIDIA",
+      "options": {
+        "baseURL": "https://integrate.api.nvidia.com/v1",
+        "apiKey": "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"
+      },
+      "models": {
+        "minimaxai/minimax-m2.1": {
+          "name": "Minimax M2.1",
+          "limit": {
+            "context": 204800,
+            "output": 131072
+          }
+        },
+        "moonshotai/kimi-k2-thinking": {
+          "name": "Kimi K2 Thinking",
+          "limit": {
+            "context": 262144,
+            "output": 262144
+          }
+        }
+      }
+    },
     "google": {
       "name": "Google",
       "models": {
