@@ -1,7 +1,7 @@
 'use client';
 
 interface ChartDataPoint {
-  timestamp: Date;
+  timestamp: Date | number;
   value: number;
 }
 
@@ -42,7 +42,9 @@ export function ChartDataTable({ data, title, unit, className }: ChartDataTableP
               recentData.map((point, idx) => (
                 <tr key={idx} className="border-b border-slate-800">
                   <td className="py-2 px-2 text-slate-300">
-                    {point.timestamp.toLocaleTimeString()}
+                    {typeof point.timestamp === 'number'
+                      ? new Date(point.timestamp).toLocaleTimeString()
+                      : point.timestamp.toLocaleTimeString()}
                   </td>
                   <td className="py-2 px-2 text-right text-slate-200 font-mono">
                     {point.value.toFixed(2)}
