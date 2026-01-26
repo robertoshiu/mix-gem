@@ -14,6 +14,8 @@ import {
 import { Card } from "@/components/ui/card";
 import { TrendDataPoint } from "@/types/equipment";
 import { cn } from "@/lib/utils";
+import { useChartSync } from "./chart-sync-provider";
+import { lttbDownsample } from "@/lib/chart-types";
 
 interface TrendChartProps {
   title: string;
@@ -34,6 +36,16 @@ export function TrendChart({
   currentValue,
   className,
 }: TrendChartProps) {
+  const { activeIndex, setActiveIndex } = useChartSync();
+
+  const displayData = useMemo(() => {
+    // Use LTTB downsampling for datasets > 200 points
+    if (data.length > 200) {
+      return lttbDownsample(data, 200);
+    }
+    return data;
+  }, [data]);
+
   // Calculate warning thresholds (80% of spec)
   const range = usl - lsl;
   const warningLow = lsl + range * 0.2;
@@ -82,7 +94,16 @@ export function TrendChart({
 
       <div className="h-48">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+          <AreaChart
+            data={displayData}
+            margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+            onMouseMove={(state) => {
+              if (state?.activeTooltipIndex !== undefined && typeof state.activeTooltipIndex === 'number') {
+                setActiveIndex(state.activeTooltipIndex);
+              }
+            }}
+            onMouseLeave={() => setActiveIndex(null)}
+          >
             {/* Warning zones */}
             <ReferenceArea
               y1={lsl}
@@ -128,6 +149,8 @@ export function TrendChart({
               tickFormatter={(v) => v.toFixed(0)}
             />
             <Tooltip
+              cursor={{ stroke: "#3b82f6", strokeWidth: 1 }}
+              active={activeIndex !== null}
               contentStyle={{
                 backgroundColor: "#1E293B",
                 border: "1px solid #334155",
