@@ -2,8 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
-
-export type AlarmSeverity = 'CRITICAL' | 'MAJOR' | 'MINOR' | 'INFO';
+import type { AlarmSeverity } from '@/types/equipment';
 
 interface AlertToastProps {
   id: string;
@@ -28,6 +27,8 @@ const severityText = {
   INFO: 'text-blue-400',
 };
 
+const AUTO_DISMISS_MS = 5000;
+
 export function AlertToast({
   id,
   severity,
@@ -41,7 +42,7 @@ export function AlertToast({
   useEffect(() => {
     timerRef.current = setTimeout(() => {
       onDismiss(id);
-    }, 5000);
+    }, AUTO_DISMISS_MS);
 
     return () => {
       if (timerRef.current) {
