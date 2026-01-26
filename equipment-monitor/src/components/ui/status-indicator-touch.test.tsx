@@ -79,9 +79,9 @@ describe("StatusIndicator Touch Targets", () => {
       ];
 
       statuses.forEach(({ status, label }) => {
-        const { rerender } = render(<StatusIndicator status={status} />);
+        const { unmount } = render(<StatusIndicator status={status} />);
         expect(screen.getByText(label)).toBeInTheDocument();
-        rerender(<div />); // Clean up for next iteration
+        unmount(); // Clean up before next iteration
       });
     });
   });
