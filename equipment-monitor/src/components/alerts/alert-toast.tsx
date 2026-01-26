@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 
 export type AlarmSeverity = 'CRITICAL' | 'MAJOR' | 'MINOR' | 'INFO';
@@ -36,13 +36,27 @@ export function AlertToast({
   timestamp = new Date(),
   onDismiss,
 }: AlertToastProps) {
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
-    const timer = setTimeout(() => {
+    timerRef.current = setTimeout(() => {
       onDismiss(id);
     }, 5000);
 
-    return () => clearTimeout(timer);
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
   }, [id, onDismiss]);
+
+  const handleDismiss = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    onDismiss(id);
+  };
 
   return (
     <div
@@ -66,7 +80,7 @@ export function AlertToast({
         <p className="mt-1 text-sm text-slate-200">{message}</p>
       </div>
       <button
-        onClick={() => onDismiss(id)}
+        onClick={handleDismiss}
         className="text-slate-400 hover:text-slate-200 transition-colors"
         aria-label="Dismiss alert"
       >
