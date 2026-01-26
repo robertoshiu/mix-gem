@@ -34,6 +34,12 @@ export function GaugeCard({ parameter, className }: GaugeCardProps) {
 
   const { stroke, text } = statusColors[status];
 
+  const statusMessage = status === 'alarm'
+    ? `${name} alarm: ${value}${unit}`
+    : status === 'warning'
+    ? `${name} warning: ${value}${unit}`
+    : `${name}: ${value}${unit}`;
+
   // SVG arc calculation
   const radius = 40;
   const circumference = Math.PI * radius; // Half circle
@@ -85,6 +91,14 @@ export function GaugeCard({ parameter, className }: GaugeCardProps) {
 
       <div className="text-center text-xs text-slate-500">
         Spec: {lsl} to {usl} {unit}
+      </div>
+      
+      <div
+        className="sr-only"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {statusMessage}
       </div>
     </Card>
   );
