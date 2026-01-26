@@ -64,6 +64,7 @@ export function AlertBanner({ alarm, onAcknowledge }: AlertBannerProps) {
         size="sm"
         onClick={() => onAcknowledge(alarm.id)}
         className="shrink-0"
+        aria-label={`Acknowledge ${alarm.severity} alarm for ${alarm.equipmentId}`}
       >
         Acknowledge
       </Button>

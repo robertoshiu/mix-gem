@@ -127,7 +127,6 @@ export const mockEquipment: Equipment[] = [
     name: "PVD-01",
     type: "pvd",
     model: "Endura_Clover",
-    module: null,
     status: "pm",
     currentRecipe: null,
     lotId: null,
@@ -601,3 +600,5 @@ export function countAlarmsBySeverity(): Record<AlarmSeverity, number> {
 
   return counts;
 }
+
+export const mockParameters = scannerParameters;

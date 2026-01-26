@@ -224,7 +224,7 @@ export function generateMockData(
 /**
  * Get status color as hex for Recharts
  */
-export function getStatusHexColor(status: EquipmentStatus): string {
+export function getStatusHexColor(status: EquipmentStatus | "normal"): string {
   switch (status) {
     case "normal":
       return "#10B981"; // emerald-500
