@@ -224,7 +224,7 @@ export function generateMockData(
 /**
  * Get status color as hex for Recharts
  */
-export function getStatusHexColor(status: EquipmentStatus): string {
+export function getStatusHexColor(status: EquipmentStatus | "normal"): string {
   switch (status) {
     case "normal":
       return "#10B981"; // emerald-500
@@ -262,3 +262,39 @@ export const CHART_COLORS = {
     text: "#F8FAFC", // slate-50
   },
 } as const;
+
+export interface BoxPlotDataPoint {
+  parameter: string;
+  min: number;
+  q1: number;
+  median: number;
+  q3: number;
+  max: number;
+  outliers: number[];
+}
+
+export function calculateBoxPlotStats(values: number[]): Omit<BoxPlotDataPoint, 'parameter'> {
+  const sorted = [...values].sort((a, b) => a - b);
+  const q1Index = Math.floor(sorted.length * 0.25);
+  const medianIndex = Math.floor(sorted.length * 0.5);
+  const q3Index = Math.floor(sorted.length * 0.75);
+
+  const q1 = sorted[q1Index];
+  const median = sorted[medianIndex];
+  const q3 = sorted[q3Index];
+  const iqr = q3 - q1;
+  const lowerFence = q1 - 1.5 * iqr;
+  const upperFence = q3 + 1.5 * iqr;
+
+  const outliers = sorted.filter((v) => v < lowerFence || v > upperFence);
+  const filtered = sorted.filter((v) => v >= lowerFence && v <= upperFence);
+
+  return {
+    min: filtered[0] || 0, // Fallback if filtered is empty
+    q1,
+    median,
+    q3,
+    max: filtered[filtered.length - 1] || 0, // Fallback
+    outliers,
+  };
+}
