@@ -1,0 +1,33 @@
+version: "3.9"
+
+# Production Docker Compose for Mix-GEM Full Stack
+# Use profiles to selectively enable service groups
+
+networks:
+  frontend_network:
+    driver: bridge
+    name: mixgem_frontend
+  backend_network:
+    driver: bridge
+    name: mixgem_backend
+  monitoring_network:
+    driver: bridge
+    name: mixgem_monitoring
+
+volumes:
+  mixgem_pgdata:
+    name: mixgem_pgdata
+  mixgem_redisdata:
+    name: mixgem_redisdata
+  mixgem_ollama_data:
+    name: mixgem_ollama_data
+  mixgem_rag_storage:
+    name: mixgem_rag_storage
+  mixgem_prometheus_data:
+    name: mixgem_prometheus_data
+  mixgem_grafana_data:
+    name: mixgem_grafana_data
+  mixgem_backup_data:
+    name: mixgem_backup_data
+
+services:
