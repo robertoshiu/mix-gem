@@ -30,29 +30,29 @@
   "categories": {
     "secs-gem-protocol": {
       "description": "Implement HSMS/SECS-II/GEM stream and function.",
-      "variant": "high",
-      "model": "nvidia/minimaxai/minimax-m2.1",
+      "variant": "max",
+      "model": "google/antigravity-claude-sonnet-4-5-thinking",
       "temperature": 0.3,
       "prompt_append": "Always use secs-gem-open-source-docs skill. Focus on HSMS/SECS-II/GEM correctness, timeouts, state models, and deterministic traceability."
     },
     "lithography": {
       "description": "Implement lithography workflow and golden recipe management.",
-      "variant": "high",
-      "model": "nvidia/minimaxai/minimax-m2.1",
+      "variant": "xhigh",
+      "model": "openai/gpt-5.2-codex",
       "temperature": 0.45,
       "prompt_append": "Always use lithography-expert skill. Focus on lithography correctness, timeouts, state models, and deterministic traceability."
     },
     "rag-expert": {
       "description": "Implement ACE Context Pack builder + Agentic RAG orchestration + evidence-chain and evaluation loop.",
-      "variant": "high",
-      "model": "nvidia/minimaxai/minimax-m2.1",
+      "variant": "xhigh",
+      "model": "openai/gpt-5.2-codex",
       "temperature": 0.7,
       "prompt_append": "Always use ollama-rag and pgvector-setup skills. Focus on Agentic RAG and Agentic Context Engineering, vector database correctness."
     },
     "backend-services": {
       "description": "Implement backend services and database migrations.",
       "variant": "high",
-      "model": "nvidia/minimaxai/minimax-m2.1",
+      "model": "google/antigravity-claude-sonnet-4-5",
       "temperature": 0.1,
       "prompt_append": "Always use fastapi-patterns and asyncio-concurrency-patterns and postgresql-master skills. Focus on FastAPI contracts, Postgres migrations, and streaming endpoints with tests."
     },
@@ -73,18 +73,18 @@
   },
   "agents": {
     "sisyphus": {
-      "variant": "high",
-      "model": "nvidia/moonshotai/kimi-k2-thinking",
+      "variant": "xhigh",
+      "model": "openai/gpt-5.2",
       "temperature": 0.1
     },
     "oracle": {
-      "model": "nvidia/moonshotai/kimi-k2-thinking",
-      "variant": "high",
+      "model": "google/antigravity-claude-opus-4-5-thinking",
+      "variant": "max",
       "temperature": 0.3
     },
     "librarian": {
-      "model": "nvidia/minimaxai/minimax-m2.1",
-      "variant": "high",
+      "model": "google/antigravity-claude-sonnet-4-5-thinking",
+      "variant": "max",
       "temperature": 0.3
     },
     "explore": {
@@ -103,8 +103,8 @@
       "temperature": 0.3
     },
     "prometheus": {
-      "model": "nvidia/moonshotai/kimi-k2-thinking",
-      "variant": "high",
+      "model": "google/antigravity-claude-opus-4-5-thinking",
+      "variant": "max",
       "temperature": 0.45
     },
     "metis": {
@@ -113,7 +113,7 @@
       "temperature": 0.3
     },
     "momus": {
-      "model": "google/antigravity-gemini-3-pro",
+      "model": "nvidia/moonshotai/kimi-k2-thinking",
       "variant": "high",
       "temperature": 0.1
     },
@@ -131,7 +131,7 @@
     "description": "Recursive Agent Loop for Persistent Hierarchical task execution",
     "orchestrator": {
       "name": "sisyphus",
-      "model": "moonshotai/kimi-k2-thinking",
+      "model": "openai/gpt-5.2",
       "persona": "Tireless orchestrator who breaks down complex tasks and delegates to specialists",
       "max_iterations": 45,
       "continuation": {
