@@ -1,27 +1,129 @@
-version: '3.9'
+version: "3.9"
+
+# Production Docker Compose for Mix-GEM Full Stack
+# Use profiles to selectively enable service groups
 
 networks:
   frontend_network:
     driver: bridge
+    name: mixgem_frontend
   backend_network:
     driver: bridge
+    name: mixgem_backend
   monitoring_network:
     driver: bridge
+    name: mixgem_monitoring
 
 volumes:
   mixgem_pgdata:
-    driver: local
+    name: mixgem_pgdata
   mixgem_redisdata:
-    driver: local
+    name: mixgem_redisdata
   mixgem_ollama_data:
-    driver: local
+    name: mixgem_ollama_data
   mixgem_rag_storage:
-    driver: local
+    name: mixgem_rag_storage
   mixgem_prometheus_data:
-    driver: local
+    name: mixgem_prometheus_data
   mixgem_grafana_data:
-    driver: local
+    name: mixgem_grafana_data
   mixgem_backup_data:
-    driver: local
+    name: mixgem_backup_data
 
-services: {}
+services:
+  # ============================================================================
+  # Core Infrastructure (always enabled, no profile needed)
+  # ============================================================================
+
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: mixgem_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mixgem}
+      POSTGRES_USER: ${POSTGRES_USER:-mixgem}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+      POSTGRES_HOST_AUTH_METHOD: ${POSTGRES_HOST_AUTH_METHOD:-scram-sha-256}
+      # Performance tuning
+      POSTGRES_SHARED_BUFFERS: ${POSTGRES_SHARED_BUFFERS:-1GB}
+      POSTGRES_WORK_MEM: ${POSTGRES_WORK_MEM:-64MB}
+      POSTGRES_MAINTENANCE_WORK_MEM: ${POSTGRES_MAINTENANCE_WORK_MEM:-256MB}
+      POSTGRES_EFFECTIVE_CACHE_SIZE: ${POSTGRES_EFFECTIVE_CACHE_SIZE:-3GB}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - mixgem_pgdata:/var/lib/postgresql/data
+    shm_size: 256mb
+    command: >
+      postgres
+      -c shared_buffers=${POSTGRES_SHARED_BUFFERS:-1GB}
+      -c work_mem=${POSTGRES_WORK_MEM:-64MB}
+      -c maintenance_work_mem=${POSTGRES_MAINTENANCE_WORK_MEM:-256MB}
+      -c effective_cache_size=${POSTGRES_EFFECTIVE_CACHE_SIZE:-3GB}
+      -c max_connections=${POSTGRES_MAX_CONNECTIONS:-200}
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c max_wal_size=2GB
+      -c min_wal_size=1GB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mixgem} -d ${POSTGRES_DB:-mixgem}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - backend_network
+      - monitoring_network
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    image: redis:7-alpine
+    container_name: mixgem_redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - mixgem_redisdata:/data
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --save 60 1000
+      --save 300 100
+      --save 900 1
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - backend_network
+      - monitoring_network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
