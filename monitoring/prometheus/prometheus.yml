@@ -1,0 +1,84 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'mixgem-prod'
+    environment: 'production'
+
+# Alertmanager configuration (optional, for future)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#           - alertmanager:9093
+
+# Rule files (optional, for future)
+# rule_files:
+#   - "rules/*.yml"
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+
+  # Node Exporter - system metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          service: 'node-exporter'
+          instance: 'docker-host'
+
+  # PostgreSQL Exporter
+  - job_name: 'postgres-exporter'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+        labels:
+          service: 'postgres'
+          instance: 'mixgem-postgres'
+
+  # Redis Exporter
+  - job_name: 'redis-exporter'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+        labels:
+          service: 'redis'
+          instance: 'mixgem-redis'
+
+  # cAdvisor - container metrics
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          service: 'cadvisor'
+          instance: 'docker-host'
+
+  # Scavenger API metrics (if exposed)
+  - job_name: 'scavenger-api'
+    static_configs:
+      - targets: ['scavenger-api:8000']
+        labels:
+          service: 'scavenger-api'
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # RAG Engine metrics (if exposed)
+  - job_name: 'rag-engine'
+    static_configs:
+      - targets: ['rag-engine:8001']
+        labels:
+          service: 'rag-engine'
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Ollama metrics (if exposed)
+  - job_name: 'ollama'
+    static_configs:
+      - targets: ['ollama:11434']
+        labels:
+          service: 'ollama'
+    metrics_path: '/metrics'
+    scrape_interval: 60s
