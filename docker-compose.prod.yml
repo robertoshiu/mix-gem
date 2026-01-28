@@ -1,0 +1,27 @@
+version: '3.9'
+
+networks:
+  frontend_network:
+    driver: bridge
+  backend_network:
+    driver: bridge
+  monitoring_network:
+    driver: bridge
+
+volumes:
+  mixgem_pgdata:
+    driver: local
+  mixgem_redisdata:
+    driver: local
+  mixgem_ollama_data:
+    driver: local
+  mixgem_rag_storage:
+    driver: local
+  mixgem_prometheus_data:
+    driver: local
+  mixgem_grafana_data:
+    driver: local
+  mixgem_backup_data:
+    driver: local
+
+services: {}
