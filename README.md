@@ -12,6 +12,8 @@ Mix-GEM is a comprehensive platform for:
 
 ## Quick Start
 
+**See [docs/QUICK_START.md](docs/QUICK_START.md) for detailed 5-minute setup guide.**
+
 ### Prerequisites
 
 - Docker 20.10+
@@ -187,10 +189,13 @@ POSTGRES_MAX_CONNECTIONS=200
 
 ## Documentation
 
+- **[QUICK_START.md](docs/QUICK_START.md)**: 5-minute setup guide with examples
 - **[DEPLOYMENT.md](docs/DEPLOYMENT.md)**: Production deployment guide
 - **[MONITORING.md](docs/MONITORING.md)**: Monitoring and observability
+- **[VALIDATION_REPORT.md](docs/VALIDATION_REPORT.md)**: Configuration validation results
 - **[Backup README](backup/README.md)**: Backup and restore procedures
 - **[Nginx README](nginx/ssl/README.md)**: SSL certificate management
+- **[CHANGELOG.md](CHANGELOG.md)**: Version history and release notes
 
 ## Development
 
