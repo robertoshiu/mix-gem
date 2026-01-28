@@ -164,3 +164,60 @@ services:
         max-size: "10m"
         max-file: "3"
         compress: "true"
+
+  # ============================================================================
+  # RAG Engine - LangGraph + LightRAG (profile: rag)
+  # ============================================================================
+
+  rag-engine:
+    build:
+      context: ./rag-engine
+      dockerfile: Dockerfile
+    container_name: mixgem_rag_engine
+    profiles: ["rag"]
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-mixgem}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DATABASE: ${POSTGRES_DB:-mixgem}
+      REDIS_URL: redis://redis:6379
+      OLLAMA_HOST: http://ollama:11434
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?Anthropic API key required}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-snowflake-arctic-embed2}
+      LLM_MODEL: ${LLM_MODEL:-claude-sonnet-4-20250514}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports:
+      - "${RAG_PORT:-8001}:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    volumes:
+      - mixgem_rag_storage:/app/lightrag_storage
+    networks:
+      - frontend_network
+      - backend_network
+      - monitoring_network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
