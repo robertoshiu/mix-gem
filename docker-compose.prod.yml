@@ -313,3 +313,56 @@ services:
         max-size: "10m"
         max-file: "3"
         compress: "true"
+
+  # ============================================================================
+  # SECS/GEM Simulator (profile: simulator)
+  # ============================================================================
+
+  scavenger-simulator:
+    build:
+      context: ./scavenger
+      target: simulator
+    container_name: mixgem_simulator
+    profiles: ["simulator"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${HSMS_PASSIVE_PORT:-5000}:5000"
+      - "${HSMS_ACTIVE_PORT:-5001}:5001"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-mixgem}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-mixgem}
+      REDIS_URL: redis://redis:6379/0
+      HSMS_PASSIVE_PORT: 5000
+      HSMS_ACTIVE_PORT: 5001
+      HSMS_DEVICE_ID: ${HSMS_DEVICE_ID:-1}
+      EQUIPMENT_ID: ${EQUIPMENT_ID:-LITHO01}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - ./scavenger/scenarios:/app/scenarios:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.settimeout(1); s.connect(('localhost', 5000)); s.close()"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - backend_network
+      - monitoring_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
