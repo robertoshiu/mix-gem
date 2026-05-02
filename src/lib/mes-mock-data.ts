@@ -16,11 +16,18 @@ export const MOCK_LOTS: Lot[] = [
 // Deterministic pseudo-noise using a string hash — NOT Math.random()
 // Returns a value in [-1.5, 1.5]
 function stableNoise(lotId: string, wafer: number, param: string): number {
-  const seed = (lotId + wafer + param).split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  const t = ((seed * 9301 + 49297) % 233280) / 233280;
-  // Map [0, 1] → [-1.5, 1.5]
+  const str = `${lotId}:${wafer}:${param}`;
+  let hash = 2166136261; // FNV-1a offset basis
+  for (let i = 0; i < str.length; i++) {
+    hash ^= str.charCodeAt(i);
+    hash = Math.imul(hash, 16777619) >>> 0; // FNV prime, keep 32-bit unsigned
+  }
+  // Normalize to [-1.5, 1.5]
+  const t = (hash / 0xffffffff);
   return (t - 0.5) * 3;
 }
+
+const SEED_ANCHOR = new Date('2026-05-02T08:00:00').getTime();
 
 export function generateSeedMeasurements(lotId: string, count: number): SpcMeasurement[] {
   return Array.from({ length: count }, (_, i) => {
@@ -35,7 +42,7 @@ export function generateSeedMeasurements(lotId: string, count: number): SpcMeasu
       id: `${lotId}-w${waferNumber}`,
       lotId,
       waferNumber,
-      timestamp: new Date(Date.now() - (count - waferNumber) * 2000),
+      timestamp: new Date(SEED_ANCHOR + waferNumber * 2000),
       cd:    base.cd,
       cdu:   base.cdu,
       ovl_x: base.ovl_x,
