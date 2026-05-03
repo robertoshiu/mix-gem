@@ -41,3 +41,19 @@ describe('makeS2F49', () => {
     expect(event.secsMessage.function).toBe(49);
   });
 });
+
+describe('makeS2F41Resume', () => {
+  it('has rcmd RESUME', () => {
+    expect(makeS2F41Resume().secsMessage.rcmd).toBe('RESUME');
+  });
+});
+
+describe('makeS2F50', () => {
+  it('hcack is 0 on success', () => {
+    expect(makeS2F50(true).secsMessage.hcack).toBe(0);
+  });
+
+  it('hcack is 1 on failure', () => {
+    expect(makeS2F50(false).secsMessage.hcack).toBe(1);
+  });
+});
