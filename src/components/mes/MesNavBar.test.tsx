@@ -17,7 +17,8 @@ import { MesNavBar } from './MesNavBar';
 describe('MesNavBar', () => {
   it('renders all four nav items', () => {
     render(<MesNavBar />);
-    expect(screen.getByText('Equipment')).toBeInTheDocument();
+    // Two nav items have the 'Equipment' label (home and /mes/equipment)
+    expect(screen.getAllByText('Equipment').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Lot Tracker')).toBeInTheDocument();
     expect(screen.getByText('Recipe Manager')).toBeInTheDocument();
     expect(screen.getByText('SPC Dashboard')).toBeInTheDocument();

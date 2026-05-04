@@ -27,6 +27,7 @@ describe('ThumbnailChart', () => {
     const { container } = render(
       <ThumbnailChart label="CDU" unit="nm" data={mockData} ucl={2.9} lcl={1.1} isActive={false} />
     );
-    expect(container.querySelector('.recharts-wrapper')).toBeInTheDocument();
+    // ResponsiveContainer renders in jsdom but recharts-wrapper requires a real DOM with layout
+    expect(container.querySelector('.recharts-responsive-container')).toBeInTheDocument();
   });
 });

@@ -12,7 +12,7 @@ describe('ViolationCard', () => {
   it('displays rule and parameter', () => {
     render(<ViolationCard violation={mockViolation} onAcknowledge={jest.fn()} />);
     expect(screen.getByText(/Rule 1/i)).toBeInTheDocument();
-    expect(screen.getByText(/cd/i)).toBeInTheDocument();
+    expect(screen.getByText(/Critical Dimension/i)).toBeInTheDocument();
   });
 
   it('shows lot ID', () => {

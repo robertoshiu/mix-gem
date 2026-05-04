@@ -59,7 +59,7 @@ describe('AlertsPanel', () => {
     it('should render all alarms grouped by equipment', () => {
       render(<AlertsPanel {...defaultProps} />);
 
-      expect(screen.getByText('ETCH-001')).toBeInTheDocument();
+      expect(screen.getAllByText('ETCH-001').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText(/Chamber pressure critical/)).toBeInTheDocument();
       expect(screen.getByText(/Temperature exceeds limit/)).toBeInTheDocument();
     });
@@ -149,7 +149,7 @@ describe('AlertsPanel', () => {
       const searchInput = screen.getByLabelText(/Search alerts by message or equipment/);
       fireEvent.change(searchInput, { target: { value: 'ETCH' } });
 
-      expect(screen.getByText(/ETCH-001/)).toBeInTheDocument();
+      expect(screen.getAllByText(/ETCH-001/).length).toBeGreaterThanOrEqual(1);
       expect(screen.queryByText(/CVD-002/)).not.toBeInTheDocument();
       expect(screen.queryByText(/PVD-003/)).not.toBeInTheDocument();
     });
@@ -204,9 +204,9 @@ describe('AlertsPanel', () => {
     it('should show equipment group with alarm count', () => {
       render(<AlertsPanel {...defaultProps} />);
 
-      // Check for equipment ID text (count is in separate element)
-      expect(screen.getByText('ETCH-001')).toBeInTheDocument();
-      expect(screen.getByText('CVD-002')).toBeInTheDocument();
+      // Check for equipment ID text (count is in separate element; ETCH-001 appears in group header + each alert row)
+      expect(screen.getAllByText('ETCH-001').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText('CVD-002').length).toBeGreaterThanOrEqual(1);
     });
 
     it('should show only alarms for filtered equipment', async () => {
@@ -215,7 +215,7 @@ describe('AlertsPanel', () => {
       const searchInput = screen.getByLabelText(/Search alerts by message or equipment/);
       fireEvent.change(searchInput, { target: { value: 'ETCH-001' } });
 
-      expect(screen.getByText('ETCH-001')).toBeInTheDocument();
+      expect(screen.getAllByText('ETCH-001').length).toBeGreaterThanOrEqual(1);
       expect(screen.queryByText(/CVD-002/)).not.toBeInTheDocument();
     });
   });
@@ -236,7 +236,7 @@ describe('AlertsPanel', () => {
       fireEvent.click(checkbox);
 
       expect(screen.getByText(/Vent valve open/)).toBeInTheDocument();
-      expect(screen.getByText(/PVD-003/)).toBeInTheDocument();
+      expect(screen.getAllByText(/PVD-003/).length).toBeGreaterThanOrEqual(1);
     });
   });
 
