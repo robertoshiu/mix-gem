@@ -13,3 +13,8 @@ export { TimeRangeSelector } from "./charts/time-range-selector";
 
 // UI
 export { StatusIndicator } from "./ui/status-indicator";
+
+// SPC
+export { KpiStrip } from "./spc/KpiStrip";
+export { KpiGaugeCard } from "./spc/KpiGaugeCard";
+

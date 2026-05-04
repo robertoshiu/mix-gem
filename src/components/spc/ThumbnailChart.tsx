@@ -24,26 +24,26 @@ export function ThumbnailChart({ label, unit, data, ucl, lcl, isActive, onClick 
       className={cn(
         'flex flex-col gap-1 p-2 rounded border cursor-pointer transition-colors w-full text-left',
         isActive
-          ? 'border-l-2 border-l-[#2563EB] border-[#2563EB] bg-[#182840]'
-          : 'border-[#1E3A5F] bg-[#111D2E] hover:bg-[#182840]'
+          ? 'border-l-2 border-l-[var(--smartfactory-border-active)] border-[var(--smartfactory-border-active)] bg-[var(--smartfactory-surface-elevated)]'
+          : 'border-[var(--smartfactory-border-default)] bg-[var(--smartfactory-surface-card)] hover:bg-[var(--smartfactory-surface-elevated)]'
       )}
     >
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-[#94A3B8]">{label}</span>
+        <span className="text-xs font-medium text-[var(--smartfactory-text-secondary)]">{label}</span>
         {isActive && (
-          <span className="text-[10px] font-semibold text-[#2563EB] bg-blue-900/30 px-1 rounded">ACTIVE</span>
+          <span className="text-[10px] font-semibold text-[var(--smartfactory-border-active)] bg-blue-900/30 px-1 rounded">ACTIVE</span>
         )}
       </div>
 
       <div className="h-10">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data}>
-            <ReferenceLine y={ucl} stroke="#EF4444" strokeDasharray="3 3" strokeOpacity={0.5} />
-            <ReferenceLine y={lcl} stroke="#EF4444" strokeDasharray="3 3" strokeOpacity={0.5} />
+            <ReferenceLine y={ucl} stroke="var(--smartfactory-status-red)" strokeDasharray="3 3" strokeOpacity={0.5} />
+            <ReferenceLine y={lcl} stroke="var(--smartfactory-status-red)" strokeDasharray="3 3" strokeOpacity={0.5} />
             <Line
               type="monotone"
               dataKey="value"
-              stroke={isOk ? '#3B82F6' : '#EF4444'}
+              stroke={isOk ? 'var(--smartfactory-accent-blue)' : 'var(--smartfactory-status-red)'}
               dot={false}
               strokeWidth={1.5}
               isAnimationActive={false}
@@ -53,9 +53,9 @@ export function ThumbnailChart({ label, unit, data, ucl, lcl, isActive, onClick 
       </div>
 
       {latest !== undefined && (
-        <span className={cn('font-[\'Fira_Code\',monospace] text-sm font-semibold', isOk ? 'text-[#10B981]' : 'text-[#EF4444]')}>
+        <span className={cn('font-[\'Fira_Code\',monospace] text-sm font-semibold', isOk ? 'text-[var(--smartfactory-status-green)]' : 'text-[var(--smartfactory-status-red)]')}>
           {latest.toFixed(2)}
-          <span className="text-[10px] font-normal text-[#94A3B8] ml-1">{unit}</span>
+          <span className="text-[10px] font-normal text-[var(--smartfactory-text-secondary)] ml-1">{unit}</span>
         </span>
       )}
     </button>

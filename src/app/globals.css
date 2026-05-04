@@ -161,6 +161,33 @@ body {
   --sidebar-ring: oklch(0.551 0.027 264.364);
 }
 
+/* SmartFactory Design Tokens */
+:root {
+  --smartfactory-bg-canvas: #0B0F19;
+  --smartfactory-bg-base: #0A1628;
+  --smartfactory-surface-card: #111D2E;
+  --smartfactory-surface-elevated: #182840;
+  --smartfactory-surface-panel: #151B2B;
+  --smartfactory-surface-panel-alt: #1A2236;
+  --smartfactory-border-default: #1E3A5F;
+  --smartfactory-border-active: #2563EB;
+  --smartfactory-text-primary: #F1F5F9;
+  --smartfactory-text-secondary: #94A3B8;
+  --smartfactory-text-muted: #475569;
+  --smartfactory-accent-orange: #F47920;
+  --smartfactory-accent-blue: #3B82F6;
+  --smartfactory-accent-teal: #14B8A6;
+  --smartfactory-accent-cyan: #22D3EE;
+  --smartfactory-accent-violet: #8B5CF6;
+  --smartfactory-accent-electric-blue: #2979FF;
+  --smartfactory-status-green: #10B981;
+  --smartfactory-status-amber: #F59E0B;
+  --smartfactory-status-red: #EF4444;
+  --smartfactory-status-neon-green: #00E676;
+  --smartfactory-status-neon-red: #FF1744;
+  --smartfactory-status-neon-amber: #FFC107;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

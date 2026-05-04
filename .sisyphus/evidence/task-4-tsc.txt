@@ -1,0 +1,227 @@
+src/app/mes/lots/page.test.tsx(12,40): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/app/mes/lots/page.test.tsx(13,41): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/app/mes/lots/page.test.tsx(14,40): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/app/mes/lots/page.test.tsx(19,46): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/app/mes/lots/page.test.tsx(20,46): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/app/mes/lots/page.test.tsx(21,46): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/app/mes/lots/page.test.tsx(26,46): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/app/mes/recipes/page.test.tsx(12,48): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/app/mes/recipes/page.test.tsx(13,45): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/app/mes/recipes/page.test.tsx(14,49): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/app/mes/spc/page.test.tsx(21,54): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/app/mes/spc/page.test.tsx(26,50): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/app/mes/spc/page.test.tsx(31,44): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alert-banner.test.tsx(17,20): error TS2739: Type '{ id: string; equipmentId: string; severity: "CRITICAL"; message: string; timestamp: Date; acknowledged: boolean; }' is missing the following properties from type 'Alarm': alarmId, alarmCode
+src/components/alerts/alert-banner.test.tsx(19,59): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alert-banner.test.tsx(20,42): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alert-banner.test.tsx(26,20): error TS2739: Type '{ id: string; equipmentId: string; severity: "CRITICAL"; message: string; timestamp: Date; acknowledged: boolean; }' is missing the following properties from type 'Alarm': alarmId, alarmCode
+src/components/alerts/alert-banner.test.tsx(38,9): error TS2739: Type '{ acknowledged: true; id: string; equipmentId: string; severity: "CRITICAL"; message: string; timestamp: Date; }' is missing the following properties from type 'Alarm': alarmId, alarmCode
+src/components/alerts/alert-banner.test.tsx(48,22): error TS2739: Type '{ id: string; equipmentId: string; severity: "CRITICAL"; message: string; timestamp: Date; acknowledged: boolean; }' is missing the following properties from type 'Alarm': alarmId, alarmCode
+src/components/alerts/alert-banner.test.tsx(51,21): error TS2339: Property 'toHaveAttribute' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alert-banner.test.tsx(52,21): error TS2339: Property 'toHaveAttribute' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alert-banner.test.tsx(57,22): error TS2739: Type '{ id: string; equipmentId: string; severity: "CRITICAL"; message: string; timestamp: Date; acknowledged: boolean; }' is missing the following properties from type 'Alarm': alarmId, alarmCode
+src/components/alerts/alert-banner.test.tsx(60,22): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alert-banner.test.tsx(70,22): error TS2739: Type '{ severity: "MAJOR"; equipmentId: string; id: string; message: string; timestamp: Date; acknowledged: boolean; }' is missing the following properties from type 'Alarm': alarmId, alarmCode
+src/components/alerts/alert-banner.test.tsx(73,22): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alert-banner.test.tsx(85,49): error TS2739: Type '{ severity: AlarmSeverity; id: string; equipmentId: string; message: string; timestamp: Date; acknowledged: boolean; }' is missing the following properties from type 'Alarm': alarmId, alarmCode
+src/components/alerts/alert-banner.test.tsx(101,49): error TS2739: Type '{ severity: AlarmSeverity; id: string; equipmentId: string; message: string; timestamp: Date; acknowledged: boolean; }' is missing the following properties from type 'Alarm': alarmId, alarmCode
+src/components/alerts/alert-banner.test.tsx(105,26): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<SVGSVGElement | null>'.
+src/components/alerts/alert-banner.test.tsx(112,51): error TS2739: Type '{ severity: AlarmSeverity; id: string; equipmentId: string; message: string; timestamp: Date; acknowledged: boolean; }' is missing the following properties from type 'Alarm': alarmId, alarmCode
+src/components/alerts/alert-row.test.tsx(34,66): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alert-row.test.tsx(39,42): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alert-row.test.tsx(44,45): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alert-row.test.tsx(62,20): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alert-row.test.tsx(63,20): error TS2339: Property 'toBeDisabled' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alert-row.test.tsx(71,18): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<SVGSVGElement | null>'.
+src/components/alerts/alert-toast.test.tsx(30,60): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alert-toast.test.tsx(35,43): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alert-toast.test.tsx(40,47): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alert-toast.test.tsx(46,21): error TS2339: Property 'toHaveAttribute' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alert-toast.test.tsx(52,21): error TS2339: Property 'toHaveAttribute' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alert-toast.test.tsx(60,21): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alert-toast.test.tsx(66,21): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alert-toast.test.tsx(72,21): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alert-toast.test.tsx(78,21): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alert-toast.test.tsx(117,29): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(62,44): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(63,61): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(64,61): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(71,61): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(77,46): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(83,61): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(84,61): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(85,53): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(101,67): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Matchers<void, HTMLElement | null>'.
+src/components/alerts/alerts-panel.test.tsx(102,59): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Matchers<void, HTMLElement | null>'.
+src/components/alerts/alerts-panel.test.tsx(103,61): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(119,61): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(120,61): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(121,59): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Matchers<void, HTMLElement | null>'.
+src/components/alerts/alerts-panel.test.tsx(131,64): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(142,61): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(143,67): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Matchers<void, HTMLElement | null>'.
+src/components/alerts/alerts-panel.test.tsx(152,44): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(153,49): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Matchers<void, HTMLElement | null>'.
+src/components/alerts/alerts-panel.test.tsx(154,49): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Matchers<void, HTMLElement | null>'.
+src/components/alerts/alerts-panel.test.tsx(163,61): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(172,53): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(184,61): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(185,61): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(195,25): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(198,72): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(201,78): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Matchers<void, HTMLElement | null>'.
+src/components/alerts/alerts-panel.test.tsx(208,44): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(209,43): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(218,44): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(219,49): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Matchers<void, HTMLElement | null>'.
+src/components/alerts/alerts-panel.test.tsx(228,57): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Matchers<void, HTMLElement | null>'.
+src/components/alerts/alerts-panel.test.tsx(229,49): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Matchers<void, HTMLElement | null>'.
+src/components/alerts/alerts-panel.test.tsx(238,51): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(239,43): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(247,65): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(254,27): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(261,30): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/alerts-panel.test.tsx(291,27): error TS2322: Type '{ id: string; alarmId: number; alarmCode: string; equipmentId: string; severity: string; message: string; timestamp: Date; acknowledged: boolean; }[]' is not assignable to type 'Alarm[]'.
+  Type '{ id: string; alarmId: number; alarmCode: string; equipmentId: string; severity: string; message: string; timestamp: Date; acknowledged: boolean; }' is not assignable to type 'Alarm'.
+    Types of property 'severity' are incompatible.
+      Type 'string' is not assignable to type 'AlarmSeverity'.
+src/components/alerts/alerts-panel.test.tsx(297,60): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/toast-container.test.tsx(30,28): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/toast-container.test.tsx(55,60): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/toast-container.test.tsx(56,41): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/toast-container.test.tsx(80,66): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Matchers<void, HTMLElement | null>'.
+src/components/alerts/toast-container.test.tsx(104,66): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Matchers<void, HTMLElement | null>'.
+src/components/alerts/toast-container.test.tsx(139,60): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/toast-container.test.tsx(140,58): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/toast-container.test.tsx(151,28): error TS2339: Property 'toHaveAttribute' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/toast-container.test.tsx(152,28): error TS2339: Property 'toHaveAttribute' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/toast-container.test.tsx(163,28): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/toast-container.test.tsx(164,28): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/toast-container.test.tsx(165,28): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/toast-container.test.tsx(166,28): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/alerts/toast-container.test.tsx(167,28): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/charts/box-plot.test.tsx(12,45): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/charts/box-plot.test.tsx(13,42): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/charts/canvas-chart.test.tsx(30,20): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLCanvasElement | null>'.
+src/components/charts/canvas-chart.test.tsx(49,20): error TS2339: Property 'toHaveAttribute' does not exist on type 'JestMatchers<HTMLCanvasElement | null>'.
+src/components/charts/canvas-chart.test.tsx(50,20): error TS2339: Property 'toHaveAttribute' does not exist on type 'JestMatchers<HTMLCanvasElement | null>'.
+src/components/charts/canvas-chart.test.tsx(59,20): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLCanvasElement | null>'.
+src/components/charts/canvas-chart.test.tsx(68,20): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLCanvasElement | null>'.
+src/components/charts/canvas-chart.test.tsx(77,20): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLCanvasElement | null>'.
+src/components/charts/canvas-chart.test.tsx(115,20): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLCanvasElement | null>'.
+src/components/charts/chart-data-table.test.tsx(17,21): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/charts/chart-data-table.test.tsx(28,19): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/charts/chart-data-table.test.tsx(37,38): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/charts/chart-data-table.test.tsx(38,44): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/charts/chart-data-table.test.tsx(47,39): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/charts/chart-data-table.test.tsx(48,39): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/charts/chart-data-table.test.tsx(63,67): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/charts/chart-data-table.test.tsx(66,39): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/charts/chart-data-table.test.tsx(75,51): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/charts/gauge-card-a11y.test.tsx(14,13): error TS2353: Object literal may only specify known properties, and 'min' does not exist in type 'ProcessParameter'.
+src/components/charts/gauge-card-a11y.test.tsx(24,24): error TS2339: Property 'toHaveAttribute' does not exist on type 'JestMatchers<Element | null>'.
+src/components/charts/gauge-card-a11y.test.tsx(36,13): error TS2353: Object literal may only specify known properties, and 'min' does not exist in type 'ProcessParameter'.
+src/components/charts/gauge-card-a11y.test.tsx(53,13): error TS2353: Object literal may only specify known properties, and 'min' does not exist in type 'ProcessParameter'.
+src/components/charts/timeline-chart.test.tsx(30,43): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/charts/timeline-chart.test.tsx(31,46): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/charts/timeline-chart.test.tsx(36,39): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/charts/timeline-chart.test.tsx(37,39): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/error-boundary.test.tsx(20,10): error TS2786: 'ThrowError' cannot be used as a JSX component.
+  Its type '() => void' is not a valid JSX element type.
+    Type '() => void' is not assignable to type '(props: any) => ReactNode | Promise<ReactNode>'.
+      Type 'void' is not assignable to type 'ReactNode | Promise<ReactNode>'.
+src/components/error-boundary.test.tsx(24,54): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/error-boundary.test.tsx(29,17): error TS2540: Cannot assign to 'NODE_ENV' because it is a read-only property.
+src/components/error-boundary.test.tsx(33,10): error TS2786: 'ThrowError' cannot be used as a JSX component.
+  Its type '() => void' is not a valid JSX element type.
+    Type '() => void' is not assignable to type '(props: any) => ReactNode | Promise<ReactNode>'.
+      Type 'void' is not assignable to type 'ReactNode | Promise<ReactNode>'.
+src/components/error-boundary.test.tsx(37,44): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/error-boundary.test.tsx(39,17): error TS2540: Cannot assign to 'NODE_ENV' because it is a read-only property.
+src/components/layout/tabs-navigation.test.tsx(14,60): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/layout/tabs-navigation.test.tsx(15,57): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/layout/tabs-navigation.test.tsx(16,57): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/layout/tabs-navigation.test.tsx(29,51): error TS2339: Property 'toBeVisible' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/layout/tabs-navigation.test.tsx(30,54): error TS2339: Property 'toBeVisible' does not exist on type 'Matchers<void, HTMLElement | null>'.
+src/components/layout/tabs-navigation.test.tsx(39,48): error TS2339: Property 'toBeVisible' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/layout/tabs-navigation.test.tsx(40,57): error TS2339: Property 'toBeVisible' does not exist on type 'Matchers<void, HTMLElement | null>'.
+src/components/layout/tabs-navigation.test.tsx(62,26): error TS2339: Property 'toHaveAttribute' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/layout/tabs-navigation.test.tsx(63,26): error TS2339: Property 'toHaveAttribute' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/layout/tabs-navigation.test.tsx(66,22): error TS2339: Property 'toHaveAttribute' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/layout/tabs-navigation.test.tsx(72,48): error TS2339: Property 'toBeVisible' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/layout/tabs-navigation.test.tsx(73,57): error TS2339: Property 'toBeVisible' does not exist on type 'Matchers<void, HTMLElement | null>'.
+src/components/layout/tabs-navigation.test.tsx(76,23): error TS2339: Property 'toHaveAttribute' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/layout/tabs-navigation.test.tsx(96,21): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/mes/MesNavBar.test.tsx(20,43): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/mes/MesNavBar.test.tsx(21,45): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/mes/MesNavBar.test.tsx(22,48): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/mes/MesNavBar.test.tsx(23,47): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/mes/MesNavBar.test.tsx(29,20): error TS2339: Property 'toHaveAttribute' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/spc/ControlChart.test.tsx(18,57): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/spc/ControlChart.test.tsx(23,39): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/spc/ControlChart.test.tsx(28,39): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/spc/ControlChart.test.tsx(33,58): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<Element | null>'.
+src/components/spc/EventLog.test.tsx(19,56): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/spc/EventLog.test.tsx(20,44): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/spc/EventLog.test.tsx(30,44): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/spc/FaultInjector.test.tsx(7,67): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/spc/FaultInjector.test.tsx(19,66): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/spc/KpiStrip.test.tsx(13,52): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/spc/KpiStrip.test.tsx(14,47): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/spc/KpiStrip.test.tsx(15,43): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/spc/KpiStrip.test.tsx(16,43): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/spc/KpiStrip.test.tsx(17,53): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/spc/KpiStrip.test.tsx(27,39): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/spc/KpiStrip.test.tsx(32,54): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/spc/ThumbnailChart.test.tsx(16,37): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/spc/ThumbnailChart.test.tsx(23,40): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/spc/ThumbnailChart.test.tsx(30,58): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<Element | null>'.
+src/components/spc/ViolationCard.test.tsx(14,41): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/spc/ViolationCard.test.tsx(15,37): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/spc/ViolationCard.test.tsx(20,46): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/spc/ViolationCard.test.tsx(25,66): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/spc/ViolationCard.test.tsx(37,47): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/button-touch.test.tsx(9,22): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/button-touch.test.tsx(15,22): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/button-touch.test.tsx(25,22): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/button-touch.test.tsx(26,22): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/button-touch.test.tsx(32,22): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/button-touch.test.tsx(40,22): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/button-touch.test.tsx(48,22): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/button-touch.test.tsx(54,22): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/button-touch.test.tsx(60,22): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/button-touch.test.tsx(66,22): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/button-touch.test.tsx(72,22): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/button-touch.test.tsx(84,22): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/button-touch.test.tsx(85,22): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/button.test.tsx(9,22): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/button.test.tsx(15,22): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/button.test.tsx(21,22): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/button.test.tsx(27,22): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/button.test.tsx(28,22): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/button.test.tsx(36,22): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/button.test.tsx(42,22): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/button.test.tsx(50,22): error TS2339: Property 'toBeDisabled' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/status-indicator-touch.test.tsx(9,25): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/status-indicator-touch.test.tsx(10,25): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/status-indicator-touch.test.tsx(16,25): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/status-indicator-touch.test.tsx(17,25): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/status-indicator-touch.test.tsx(23,25): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/status-indicator-touch.test.tsx(24,25): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/status-indicator-touch.test.tsx(31,43): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/status-indicator-touch.test.tsx(36,40): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/status-indicator-touch.test.tsx(41,44): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Matchers<void, HTMLElement | null>'.
+src/components/ui/status-indicator-touch.test.tsx(49,25): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/status-indicator-touch.test.tsx(55,25): error TS2339: Property 'toHaveAttribute' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/status-indicator-touch.test.tsx(66,27): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<Element | null>'.
+src/components/ui/status-indicator-touch.test.tsx(67,27): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<Element | null>'.
+src/components/ui/status-indicator-touch.test.tsx(83,41): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/status-indicator.test.tsx(9,17): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<ChildNode | null>'.
+src/components/ui/status-indicator.test.tsx(16,17): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<ChildNode | null>'.
+src/components/ui/status-indicator.test.tsx(17,17): error TS2339: Property 'toHaveClass' does not exist on type 'JestMatchers<ChildNode | null>'.
+src/components/ui/status-indicator.test.tsx(22,41): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/time-range-pill.test.tsx(23,40): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+src/components/ui/time-range-pill.test.tsx(57,20): error TS2339: Property 'toHaveAttribute' does not exist on type 'JestMatchers<HTMLElement>'.
+tests/integration/alert-flow.test.tsx(20,64): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+tests/integration/alert-flow.test.tsx(29,64): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
+tests/integration/alert-flow.test.tsx(30,74): error TS2339: Property 'toBeInTheDocument' does not exist on type 'JestMatchers<HTMLElement>'.
