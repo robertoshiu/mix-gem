@@ -1,70 +1,177 @@
 "use client";
 
-import { Bell, Settings, User } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Bell, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useMesSpcStore } from "@/stores/mes-spc-store";
 
-interface HeaderProps {
-  alarmCount?: number;
-  className?: string;
-}
+export function Header({ className }: { className?: string }) {
+  const [clock, setClock] = useState(() =>
+    new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+  );
+  const iconAreaRef = useRef<HTMLDivElement>(null);
 
-export function Header({ alarmCount = 0, className }: HeaderProps) {
+  const notifications = useMesSpcStore((s) => s.notifications);
+  const isNotificationPanelOpen = useMesSpcStore((s) => s.isNotificationPanelOpen);
+  const isSettingsPanelOpen = useMesSpcStore((s) => s.isSettingsPanelOpen);
+  const isUserDropdownOpen = useMesSpcStore((s) => s.isUserDropdownOpen);
+  const toggleNotificationPanel = useMesSpcStore((s) => s.toggleNotificationPanel);
+  const toggleSettingsPanel = useMesSpcStore((s) => s.toggleSettingsPanel);
+  const toggleUserDropdown = useMesSpcStore((s) => s.toggleUserDropdown);
+  const closeAllPanels = useMesSpcStore((s) => s.closeAllPanels);
+
+  const anyPanelOpen = isNotificationPanelOpen || isSettingsPanelOpen || isUserDropdownOpen;
+
+  // Live clock
+  useEffect(() => {
+    const id = setInterval(() => {
+      setClock(
+        new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+      );
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Click-outside handler
+  const handleMouseDown = useCallback(
+    (e: MouseEvent) => {
+      if (!anyPanelOpen) return;
+      if (iconAreaRef.current && !iconAreaRef.current.contains(e.target as Node)) {
+        closeAllPanels();
+      }
+    },
+    [anyPanelOpen, closeAllPanels]
+  );
+
+  useEffect(() => {
+    document.addEventListener("mousedown", handleMouseDown);
+    return () => document.removeEventListener("mousedown", handleMouseDown);
+  }, [handleMouseDown]);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
   return (
-    <header
-      className={cn(
-        "h-14 px-4 flex items-center justify-between",
-        "bg-slate-900 border-b border-slate-700",
-        "sticky top-0 z-50",
-        className
-      )}
-    >
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded bg-blue-500 flex items-center justify-center">
-          <span className="text-white font-bold text-sm">EM</span>
+    <>
+      <header
+        className={cn(
+          "h-14 px-4 flex items-center justify-between",
+          "bg-[var(--smartfactory-bg-canvas)] border-b border-[var(--smartfactory-border-default)]",
+          "sticky top-0 z-50",
+          className
+        )}
+      >
+        {/* Left: Logo + Title */}
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded bg-[var(--smartfactory-accent-blue)] flex items-center justify-center shrink-0">
+            <span className="text-white font-bold text-sm">AM</span>
+          </div>
+          <div className="flex flex-col leading-tight">
+            <h1 className="text-sm font-semibold text-[var(--smartfactory-text-primary)]">
+              Equipment Monitor
+            </h1>
+            <span className="text-[11px] text-[var(--smartfactory-text-secondary)]">
+              Applied SmartFactory
+            </span>
+          </div>
         </div>
-        <h1 className="text-lg font-semibold text-slate-50">
-          Equipment Monitor
-        </h1>
+
+        {/* Center: Live Clock */}
+        <div
+          className="font-['Fira_Code',monospace] text-sm text-[var(--smartfactory-text-secondary)] tabular-nums"
+          data-testid="header-clock"
+        >
+          {clock}
+        </div>
+
+        {/* Right: Icon buttons */}
+        <div ref={iconAreaRef} className="flex items-center gap-1">
+          {/* Bell / Notifications */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "relative",
+              isNotificationPanelOpen
+                ? "text-[var(--smartfactory-accent-blue)]"
+                : "text-[var(--smartfactory-text-secondary)]",
+              "hover:text-[var(--smartfactory-text-primary)] hover:bg-[var(--smartfactory-surface-elevated)]"
+            )}
+            onClick={toggleNotificationPanel}
+            aria-label="Notifications"
+            data-testid="bell-icon"
+          >
+            <Bell className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <Badge
+                variant="destructive"
+                className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-xs"
+              >
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </Badge>
+            )}
+          </Button>
+
+          {/* Settings */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              isSettingsPanelOpen
+                ? "text-[var(--smartfactory-accent-blue)]"
+                : "text-[var(--smartfactory-text-secondary)]",
+              "hover:text-[var(--smartfactory-text-primary)] hover:bg-[var(--smartfactory-surface-elevated)]"
+            )}
+            onClick={toggleSettingsPanel}
+            aria-label="Settings"
+            data-testid="settings-icon"
+          >
+            <Settings className="w-5 h-5" />
+          </Button>
+
+          {/* User avatar */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "relative",
+              isUserDropdownOpen
+                ? "text-[var(--smartfactory-accent-blue)]"
+                : "text-[var(--smartfactory-text-secondary)]",
+              "hover:text-[var(--smartfactory-text-primary)] hover:bg-[var(--smartfactory-surface-elevated)]"
+            )}
+            onClick={toggleUserDropdown}
+            aria-label="User"
+            data-testid="user-icon"
+          >
+            <div className="w-7 h-7 rounded-full bg-[var(--smartfactory-accent-blue)] flex items-center justify-center text-white text-xs font-bold">
+              AC
+            </div>
+          </Button>
+        </div>
+      </header>
+
+      {/* Placeholder panels */}
+      <div className="relative z-40">
+        {isNotificationPanelOpen && (
+          <div className="absolute top-0 right-16 w-80 border border-[var(--smartfactory-border-default)] bg-[var(--smartfactory-surface-card)] rounded-b-lg shadow-lg p-4">
+            <p className="text-sm text-[var(--smartfactory-text-primary)] font-medium">Notification Panel</p>
+            <p className="text-xs text-[var(--smartfactory-text-secondary)]">{unreadCount} unread notifications</p>
+          </div>
+        )}
+        {isSettingsPanelOpen && (
+          <div className="absolute top-0 right-12 w-80 border border-[var(--smartfactory-border-default)] bg-[var(--smartfactory-surface-card)] rounded-b-lg shadow-lg p-4">
+            <p className="text-sm text-[var(--smartfactory-text-primary)] font-medium">Settings Panel</p>
+          </div>
+        )}
+        {isUserDropdownOpen && (
+          <div className="absolute top-0 right-4 w-56 border border-[var(--smartfactory-border-default)] bg-[var(--smartfactory-surface-card)] rounded-b-lg shadow-lg p-4">
+            <p className="text-sm text-[var(--smartfactory-text-primary)] font-medium">User Profile</p>
+            <p className="text-xs text-[var(--smartfactory-text-secondary)]">Admin User (AC)</p>
+          </div>
+        )}
       </div>
-
-      <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative text-slate-400 hover:text-slate-50 hover:bg-slate-800"
-          aria-label={`Alerts: ${alarmCount} active`}
-        >
-          <Bell className="w-5 h-5" />
-          {alarmCount > 0 && (
-            <Badge
-              variant="destructive"
-              className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-xs"
-            >
-              {alarmCount > 99 ? "99+" : alarmCount}
-            </Badge>
-          )}
-        </Button>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-slate-400 hover:text-slate-50 hover:bg-slate-800"
-          aria-label="Settings"
-        >
-          <Settings className="w-5 h-5" />
-        </Button>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-slate-400 hover:text-slate-50 hover:bg-slate-800"
-          aria-label="User profile"
-        >
-          <User className="w-5 h-5" />
-        </Button>
-      </div>
-    </header>
+    </>
   );
 }

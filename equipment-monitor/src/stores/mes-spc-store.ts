@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type {
   Lot, Recipe, SpcMeasurement, SpcViolation, SecsEvent, FaultConfig,
+  AiRecommendation, Notification, Equipment,
 } from '@/lib/mes-types';
 import { MOCK_LOTS, MOCK_RECIPES } from '@/lib/mes-mock-data';
 
@@ -15,6 +16,32 @@ interface MesSpcState {
   measurements: SpcMeasurement[];
   violations: SpcViolation[];
   events: SecsEvent[];
+
+  // ai slice
+  recommendations: AiRecommendation[];
+  addRecommendation: (r: AiRecommendation) => void;
+  applyRecommendation: (id: string) => void;
+  overrideRecommendation: (id: string) => void;
+
+  // ui slice
+  notifications: Notification[];
+  isNotificationPanelOpen: boolean;
+  isSettingsPanelOpen: boolean;
+  isUserDropdownOpen: boolean;
+  settings: { refreshInterval: number; showAnimations: boolean; compactMode: boolean };
+  toggleNotificationPanel: () => void;
+  toggleSettingsPanel: () => void;
+  toggleUserDropdown: () => void;
+  closeAllPanels: () => void;
+  addNotification: (n: Notification) => void;
+  dismissNotification: (id: string) => void;
+  markAllNotificationsRead: () => void;
+  updateSettings: (patch: Partial<MesSpcState['settings']>) => void;
+
+  // equipment slice
+  equipments: Equipment[];
+  selectedEquipmentId: string | null;
+  setSelectedEquipment: (id: string | null) => void;
 
   updateLot: (lotId: string, patch: Partial<Lot>) => void;
   startProcessing: (lotId: string, recipeId: string) => void;
@@ -34,6 +61,10 @@ export const INITIAL_MES_SPC_STATE: Omit<MesSpcState,
   | 'addMeasurement' | 'addViolation' | 'acknowledgeViolation'
   | 'resumeEquipment' | 'addEvent' | 'injectFault' | 'clearFault'
   | 'incrementWafer'
+  | 'addRecommendation' | 'applyRecommendation' | 'overrideRecommendation'
+  | 'toggleNotificationPanel' | 'toggleSettingsPanel' | 'toggleUserDropdown'
+  | 'closeAllPanels' | 'addNotification' | 'dismissNotification'
+  | 'markAllNotificationsRead' | 'updateSettings' | 'setSelectedEquipment'
 > = {
   lots: MOCK_LOTS,
   recipes: MOCK_RECIPES,
@@ -45,6 +76,14 @@ export const INITIAL_MES_SPC_STATE: Omit<MesSpcState,
   measurements: [],
   violations: [],
   events: [],
+  recommendations: [],
+  notifications: [],
+  isNotificationPanelOpen: false,
+  isSettingsPanelOpen: false,
+  isUserDropdownOpen: false,
+  settings: { refreshInterval: 2000, showAnimations: true, compactMode: false },
+  equipments: [],
+  selectedEquipmentId: null,
 };
 
 export const useMesSpcStore = create<MesSpcState>((set, get) => ({
@@ -92,4 +131,17 @@ export const useMesSpcStore = create<MesSpcState>((set, get) => ({
 
   incrementWafer: () =>
     set((s) => ({ waferNumber: s.waferNumber + 1 })),
+
+  addRecommendation: (r) => set((s) => ({ recommendations: [...s.recommendations, r] })),
+  applyRecommendation: (id) => set((s) => ({ recommendations: s.recommendations.map(r => r.id === id ? { ...r, status: 'applied' as const } : r) })),
+  overrideRecommendation: (id) => set((s) => ({ recommendations: s.recommendations.map(r => r.id === id ? { ...r, status: 'overridden' as const } : r) })),
+  toggleNotificationPanel: () => set((s) => ({ isNotificationPanelOpen: !s.isNotificationPanelOpen, isSettingsPanelOpen: false, isUserDropdownOpen: false })),
+  toggleSettingsPanel: () => set((s) => ({ isSettingsPanelOpen: !s.isSettingsPanelOpen, isNotificationPanelOpen: false, isUserDropdownOpen: false })),
+  toggleUserDropdown: () => set((s) => ({ isUserDropdownOpen: !s.isUserDropdownOpen, isNotificationPanelOpen: false, isSettingsPanelOpen: false })),
+  closeAllPanels: () => set({ isNotificationPanelOpen: false, isSettingsPanelOpen: false, isUserDropdownOpen: false }),
+  addNotification: (n) => set((s) => ({ notifications: [...s.notifications, n] })),
+  dismissNotification: (id) => set((s) => ({ notifications: s.notifications.filter(n => n.id !== id) })),
+  markAllNotificationsRead: () => set((s) => ({ notifications: s.notifications.map(n => ({ ...n, read: true })) })),
+  updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
+  setSelectedEquipment: (id) => set({ selectedEquipmentId: id }),
 }));

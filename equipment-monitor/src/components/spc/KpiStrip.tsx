@@ -13,16 +13,16 @@ interface KpiStripProps {
 export function KpiStrip({ latest, hasViolation, violatedParam }: KpiStripProps) {
   if (!latest) {
     return (
-      <div data-testid="kpi-strip-skeleton" className="grid grid-cols-2 md:grid-cols-5 gap-2 p-3 bg-[#111D2E] rounded border border-[#1E3A5F] animate-pulse">
+      <div data-testid="kpi-strip-skeleton" className="grid grid-cols-2 md:grid-cols-5 gap-2 p-3 bg-[var(--smartfactory-surface-card)] rounded border border-[var(--smartfactory-border-default)] animate-pulse">
         {SPC_PARAM_KEYS.map((param) => (
-          <div key={param} className="h-14 bg-[#182840] rounded" />
+          <div key={param} className="h-14 bg-[var(--smartfactory-surface-elevated)] rounded" />
         ))}
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-5 gap-2 p-3 bg-[#111D2E] rounded border border-[#1E3A5F]">
+    <div className="grid grid-cols-2 md:grid-cols-5 gap-2 p-3 bg-[var(--smartfactory-surface-card)] rounded border border-[var(--smartfactory-border-default)]">
       {SPC_PARAM_KEYS.map((param) => {
         const config = SPC_PARAMETERS[param];
         const value = latest[param as keyof SpcMeasurement] as number;
@@ -34,15 +34,15 @@ export function KpiStrip({ latest, hasViolation, violatedParam }: KpiStripProps)
             key={param}
             className={cn(
               'flex flex-col gap-0.5 px-3 py-2 rounded',
-              isViolating ? 'bg-red-950/40 border border-[#EF4444]' : 'bg-[#182840]'
+              isViolating ? 'bg-red-950/40 border border-[var(--smartfactory-status-red)]' : 'bg-[var(--smartfactory-surface-elevated)]'
             )}
           >
-            <span className="text-xs text-[#94A3B8] truncate">{config.label}</span>
-            <span className="font-['Fira_Code',monospace] text-lg font-semibold text-[#F1F5F9]">
+            <span className="text-xs text-[var(--smartfactory-text-secondary)] truncate">{config.label}</span>
+            <span className="font-['Fira_Code',monospace] text-lg font-semibold text-[var(--smartfactory-text-primary)]">
               {value.toFixed(2)}
-              <span className="text-xs font-normal text-[#94A3B8] ml-1">{config.unit}</span>
+              <span className="text-xs font-normal text-[var(--smartfactory-text-secondary)] ml-1">{config.unit}</span>
             </span>
-            <span className={cn('text-xs font-medium', isOk ? 'text-[#10B981]' : 'text-[#EF4444]')}>
+            <span className={cn('text-xs font-medium', isOk ? 'text-[var(--smartfactory-status-green)]' : 'text-[var(--smartfactory-status-red)]')}>
               {isOk ? 'OK' : 'OOC'}
             </span>
           </div>

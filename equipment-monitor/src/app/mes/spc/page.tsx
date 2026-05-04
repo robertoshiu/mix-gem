@@ -1,17 +1,22 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { useMesSpcStore } from '@/stores/mes-spc-store';
 import { SimulatorEngine } from '@/lib/simulator-engine';
 import { generateSeedMeasurements } from '@/lib/mes-mock-data';
 import { SPC_PARAMETERS, SPC_PARAM_KEYS } from '@/lib/spc-parameters';
 import { makeS2F41Resume, makeS2F42Ack } from '@/lib/secs-message-log';
-import { KpiStrip } from '@/components/spc/KpiStrip';
+import { KpiGaugeCard } from '@/components/spc/KpiGaugeCard';
 import { ControlChart } from '@/components/spc/ControlChart';
 import { ThumbnailChart } from '@/components/spc/ThumbnailChart';
 import { FaultInjector } from '@/components/spc/FaultInjector';
 import { ViolationCard } from '@/components/spc/ViolationCard';
 import { EventLog } from '@/components/spc/EventLog';
+import { ProcessFlow } from '@/components/spc/ProcessFlow';
+import { WipDonutChart } from '@/components/spc/WipDonutChart';
+import { AiRecommendations } from '@/components/spc/AiRecommendations';
+import FooterStatusBar from '@/components/spc/FooterStatusBar';
 import type { SpcParameter } from '@/lib/mes-types';
 
 export default function SpcPage() {
@@ -60,74 +65,98 @@ export default function SpcPage() {
   }
 
   return (
-    <div className="p-4 space-y-4">
-      {/* KPI Strip */}
-      <KpiStrip
-        latest={latest}
-        hasViolation={!!activeViolation}
-        violatedParam={activeViolation?.parameter}
-      />
-
-      {/* Main Control Chart */}
-      <ControlChart
-        paramLabel={`${SPC_PARAMETERS[activeParam].label} (${activeParam.toUpperCase()})`}
-        config={SPC_PARAMETERS[activeParam]}
-        data={chartData}
-      />
-
-      {/* Thumbnail Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-        {SPC_PARAM_KEYS.map((param) => {
-          const thumbData = lotMeasurements.map((m) => ({
-            waferNumber: m.waferNumber,
-            value: m[param as keyof typeof m] as number,
-          }));
-          return (
-            <ThumbnailChart
-              key={param}
-              label={param.toUpperCase()}
-              unit={SPC_PARAMETERS[param].unit}
-              data={thumbData}
-              ucl={SPC_PARAMETERS[param].ucl}
-              lcl={SPC_PARAMETERS[param].lcl}
-              isActive={activeParam === param}
-              onClick={() => setActiveParam(param)}
-            />
-          );
-        })}
-        {/* Fault Injector as 6th tile */}
-        <FaultInjector
-          activeFault={activeFault}
-          currentWafer={store.waferNumber}
-          onInject={(fault) => store.injectFault(fault)}
-          onClear={() => store.clearFault()}
+    <AnimatePresence mode="wait">
+      <div className="p-4 space-y-4" data-testid="spc-dashboard">
+        {/* KPI Gauge Row */}
+        <KpiGaugeCard
+          latest={latest}
+          activeParam={activeParam}
+          onParamSelect={setActiveParam}
+          hasViolation={!!activeViolation}
+          violatedParam={activeViolation?.parameter}
+          history={lotMeasurements}
         />
-      </div>
 
-      {/* Bottom Row: Event Log + Violation Panel */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="min-h-40">
-          <EventLog events={events} />
-        </div>
+        {/* Process Flow */}
+        <ProcessFlow />
 
-        <div className="space-y-2">
-          {violations.length === 0 && (
-            <div className="bg-[#111D2E] border border-[#1E3A5F] rounded p-3 text-xs text-[#475569]">
-              No violations — system in control
+        {/* Main Split: Control Chart + Thumbnails | WIP + AI Insights */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Left: Chart + Thumbnails */}
+          <div className="lg:col-span-2 space-y-4">
+            <ControlChart
+              paramLabel={`${SPC_PARAMETERS[activeParam].label} (${activeParam.toUpperCase()})`}
+              config={SPC_PARAMETERS[activeParam]}
+              data={chartData}
+            />
+
+            {/* Thumbnail Row */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+              {SPC_PARAM_KEYS.map((param) => {
+                const thumbData = lotMeasurements.map((m) => ({
+                  waferNumber: m.waferNumber,
+                  value: m[param as keyof typeof m] as number,
+                }));
+                return (
+                  <ThumbnailChart
+                    key={param}
+                    label={param.toUpperCase()}
+                    unit={SPC_PARAMETERS[param].unit}
+                    data={thumbData}
+                    ucl={SPC_PARAMETERS[param].ucl}
+                    lcl={SPC_PARAMETERS[param].lcl}
+                    isActive={activeParam === param}
+                    onClick={() => setActiveParam(param)}
+                  />
+                );
+              })}
+              {/* Fault Injector as 6th tile */}
+              <FaultInjector
+                activeFault={activeFault}
+                currentWafer={store.waferNumber}
+                onInject={(fault) => store.injectFault(fault)}
+                onClear={() => store.clearFault()}
+              />
             </div>
-          )}
-          {violations.map((v) => (
-            <ViolationCard key={v.id} violation={v} onAcknowledge={handleAcknowledge} />
-          ))}
-        </div>
-      </div>
+          </div>
 
-      {/* Equipment State Banner */}
-      {equipmentState === 'inhibited' && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-red-950 border border-[#EF4444] rounded px-4 py-2 text-sm font-semibold text-[#EF4444] z-50">
-          Equipment Inhibited — Acknowledge violation to resume
+          {/* Right: WIP Donut + AI Recommendations */}
+          <div className="lg:col-span-1 flex flex-col gap-4">
+            <WipDonutChart />
+            <div className="flex-1 overflow-y-auto">
+              <AiRecommendations />
+            </div>
+          </div>
         </div>
-      )}
-    </div>
+
+        {/* Bottom Row: Event Log + Violation Panel */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="min-h-40">
+            <EventLog events={events} />
+          </div>
+
+          <div className="space-y-2">
+            {violations.length === 0 && (
+              <div className="bg-[var(--smartfactory-surface-card)] border border-[var(--smartfactory-border-default)] rounded p-3 text-xs text-[var(--smartfactory-text-muted)]">
+                No violations — system in control
+              </div>
+            )}
+            {violations.map((v) => (
+              <ViolationCard key={v.id} violation={v} onAcknowledge={handleAcknowledge} />
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <FooterStatusBar />
+
+        {/* Equipment State Banner */}
+        {equipmentState === 'inhibited' && (
+          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-red-950 border border-[var(--smartfactory-status-red)] rounded px-4 py-2 text-sm font-semibold text-[var(--smartfactory-status-red)] z-50">
+            Equipment Inhibited — Acknowledge violation to resume
+          </div>
+        )}
+      </div>
+    </AnimatePresence>
   );
 }

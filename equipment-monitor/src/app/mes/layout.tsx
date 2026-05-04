@@ -3,7 +3,7 @@ import { MesNavBar } from '@/components/mes/MesNavBar';
 
 export default function MesLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-col min-h-screen bg-[#0A1628]">
+    <div className="flex flex-col min-h-screen bg-[var(--smartfactory-bg-base)]">
       <Header />
       <MesNavBar />
       <main className="flex-1 overflow-y-auto">

@@ -63,7 +63,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col h-screen bg-slate-950">
-      <Header alarmCount={activeAlarms.length} />
+      <Header />
 
       <div className="flex flex-1 overflow-hidden">
         <EquipmentSidebar
