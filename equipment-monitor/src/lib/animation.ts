@@ -1,5 +1,3 @@
-'use client';
-
 import type { Variants, Transition } from 'framer-motion';
 
 // Shared spring config for smooth UI animations
