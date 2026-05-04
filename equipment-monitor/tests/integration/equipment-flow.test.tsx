@@ -19,8 +19,9 @@ describe('Equipment Selection Flow', () => {
     render(<Page />);
 
     // Wait for equipment list to load and click - use correct ID from mock data
-    const equipmentCard = await screen.findByText('SCANNER-01');
-    fireEvent.click(equipmentCard);
+    // SCANNER-01 may appear in multiple places (sidebar + main content), use first match
+    const equipmentCards = await screen.findAllByText('SCANNER-01');
+    fireEvent.click(equipmentCards[0]);
 
     // Verify gauge cards appear (might need waitFor due to state updates)
     await waitFor(() => {

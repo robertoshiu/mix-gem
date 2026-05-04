@@ -2,6 +2,12 @@ import { render, screen } from '@testing-library/react';
 import { useMesSpcStore, INITIAL_MES_SPC_STATE } from '@/stores/mes-spc-store';
 import LotsPage from './page';
 
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
+  usePathname: () => '/mes/lots',
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 beforeEach(() => {
   useMesSpcStore.setState(INITIAL_MES_SPC_STATE);
 });

@@ -10,7 +10,7 @@ describe('FaultInjector', () => {
   it('inject button uses AMAT Orange style', () => {
     render(<FaultInjector onInject={jest.fn()} onClear={jest.fn()} activeFault={null} />);
     const btn = screen.getByRole('button', { name: /inject fault/i });
-    expect(btn.className).toMatch(/F47920|\[#F47920\]/);
+    expect(btn.className).toMatch(/smartfactory-accent-orange/);
   });
 
   it('shows Clear Fault button when fault is active', () => {

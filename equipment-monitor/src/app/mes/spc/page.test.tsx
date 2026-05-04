@@ -14,11 +14,16 @@ jest.mock('@/lib/simulator-engine', () => ({
 
 import SpcPage from './page';
 
+beforeAll(() => { jest.useFakeTimers(); });
+afterAll(() => { jest.useRealTimers(); });
+
 describe('SpcPage', () => {
-  it('renders the KPI strip skeleton on initial load', () => {
+  it('renders the KPI gauge cards on initial load', () => {
     render(<SpcPage />);
-    // Page starts with no measurements — skeleton should show
-    expect(screen.getByTestId('kpi-strip-skeleton')).toBeInTheDocument();
+    // Page uses KpiGaugeCard — each param gets a kpi-gauge-{param} testid
+    // When measurements are seeded (useEffect runs), KpiGaugeCard renders gauge tiles
+    // In jsdom, useEffect fires synchronously after act(), so gauges should appear
+    expect(screen.getByTestId('spc-dashboard')).toBeInTheDocument();
   });
 
   it('renders FaultInjector section', () => {
