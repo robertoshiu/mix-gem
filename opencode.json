@@ -20,6 +20,12 @@
             "output": 131072
           }
         },
+        "moonshotai/kimi-k2.5-thinking": {
+          "name": "Kimi K2.5 Thinking"
+        },
+        "moonshotai/kimi-k2.5": {
+          "name": "Kimi K2.5"
+        },
         "moonshotai/kimi-k2-thinking": {
           "name": "Kimi K2 Thinking",
           "limit": {

@@ -7,119 +7,335 @@
   "background_task": {
     "defaultConcurrency": 9,
     "providerConcurrency": {
-      "anthropic": 3,
-      "deepseek": 3,
-      "openai": 3,
+      "opencode-go": 22,
+      "openai": 6,
       "google": 9
     },
     "modelConcurrency": {
-      "google/antigravity-claude-opus-4-5-thinking": 1,
-      "google/antigravity-claude-sonnet-4-5-thinking": 2,
-      "google/antigravity-claude-sonnet-4-5": 3,
-      "anthropic/claude-opus-4-5": 1,
-      "anthropic/claude-sonnet-4-5": 2,
-      "deepseek/deepseek-reasoner": 1,
-      "deepseek/deepseek-chat": 2,
-      "google/antigravity-gemini-3-pro-high": 1,
-      "google/antigravity-gemini-3-flash": 5,
+      "google/antigravity-claude-opus-4-6-thinking": 1,
+      "google/antigravity-claude-sonnet-4-6": 1,
+      "google/antigravity-gemini-3.1-pro": 3,
+      "google/antigravity-gemini-3-pro": 3,
+      "google/antigravity-gemini-3-flash": 3,
+      "opencode-go/kimi-k2.6": 3,
       "openai/gpt-5.2": 2,
       "openai/gpt-5.2-codex": 2,
-      "google/gemini-3-flash": 3
+      "opencode-go/opencode-go/glm-5.1": 3
     }
   },
   "categories": {
-    "secs-gem-protocol": {
-      "description": "Implement HSMS/SECS-II/GEM stream and function.",
+    "visual-engineering": {
+      "model": "google/antigravity-gemini-3.1-pro",
+      "variant": "high",
+      "fallback_models": [
+        {
+          "model": "opencode-go/glm-5.1",
+          "variant": "max"
+        },
+        {
+          "model": "opencode-go/glm-5"
+        }
+      ]
+    },
+    "ultrabrain": {
+      "model": "google/antigravity-gemini-3.1-pro",
+      "variant": "high",
+      "fallback_models": [
+        {
+          "model": "opencode-go/deepseek-v4-pro",
+          "variant": "max"
+        },
+        {
+          "model": "openai/gpt-5.5",
+          "variant": "xhigh"
+        },
+        {
+          "model": "opencode-go/glm-5"
+        }
+      ]
+    },
+    "deep": {
+      "model": "google/antigravity-gemini-3-pro",
+      "variant": "high",
+      "fallback_models": [
+        {
+          "model": "opencode-go/deepseek-v4-pro",
+          "variant": "max"
+        },
+        {
+          "model": "openai/gpt-5.5",
+          "variant": "medium"
+        }
+      ]
+    },
+    "artistry": {
+      "model": "google/antigravity-gemini-3.1-pro",
+      "variant": "high",
+      "fallback_models": [
+        {
+          "model": "google/antigravity-gemini-3-pro",
+          "variant": "high"
+        },
+        {
+          "model": "opencode-go/qwen3.6-plus",
+          "variant": "max"
+        },
+        {
+          "model": "openai/gpt-5.5"
+        }
+      ]
+    },
+    "quick": {
+      "model": "google/antigravity-gemini-3.1-flash",
+      "fallback_models": [
+        {
+          "model": "opencode-go/minimax-m2.7"
+        },
+        {
+          "model": "openai/gpt-5.4-mini"
+        }
+      ]
+    },
+    "unspecified-low": {
+      "model": "opencode-go/qwen3.6-plus",
+      "fallback_models": [
+        {
+          "model": "opencode-go/minimax-m2.7"
+        },
+        {
+          "model": "openai/gpt-5.3-codex",
+          "variant": "medium"
+        }
+      ]
+    },
+    "unspecified-high": {
+      "model": "opencode-go/deepseek-v4-flash",
       "variant": "max",
-      "model": "google/antigravity-claude-sonnet-4-5-thinking",
-      "temperature": 0.3,
-      "prompt_append": "Always use secs-gem-open-source-docs skill. Focus on HSMS/SECS-II/GEM correctness, timeouts, state models, and deterministic traceability."
+      "fallback_models": [
+        {
+          "model": "opencode-go/qwen3.6-plus",
+          "variant": "max"
+        },
+        {
+          "model": "openai/gpt-5.3-codex",
+          "variant": "medium"
+        },
+        {
+          "model": "opencode-go/minimax-m2.7"
+        }
+      ]
+    },
+    "writing": {
+      "model": "google/antigravity-gemini-3-flash",
+      "variant": "high",
+      "fallback_models": [
+        {
+          "model": "opencode-go/minimax-m2.7"
+        },
+        {
+          "model": "opencode-go/qwen3.6-plus"
+        }
+      ]
     },
     "lithography": {
       "description": "Implement lithography workflow and golden recipe management.",
-      "variant": "xhigh",
-      "model": "openai/gpt-5.2-codex",
+      "variant": "max",
+      "model": "opencode-go/deepseek-v4-flash",
       "temperature": 0.45,
       "prompt_append": "Always use lithography-expert skill. Focus on lithography correctness, timeouts, state models, and deterministic traceability."
     },
     "rag-expert": {
       "description": "Implement ACE Context Pack builder + Agentic RAG orchestration + evidence-chain and evaluation loop.",
-      "variant": "xhigh",
-      "model": "openai/gpt-5.2-codex",
+      "variant": "max",
+      "model": "opencode-go/deepseek-v4-flash",
       "temperature": 0.7,
       "prompt_append": "Always use ollama-rag and pgvector-setup skills. Focus on Agentic RAG and Agentic Context Engineering, vector database correctness."
     },
     "backend-services": {
       "description": "Implement backend services and database migrations.",
-      "variant": "high",
-      "model": "google/antigravity-claude-sonnet-4-5",
+      "variant": "max",
+      "model": "opencode-go/deepseek-v4-flash",
       "temperature": 0.1,
       "prompt_append": "Always use fastapi-patterns and asyncio-concurrency-patterns and postgresql-master skills. Focus on FastAPI contracts, Postgres migrations, and streaming endpoints with tests."
     },
     "docker-compose": {
       "description": "Implement docker-compose.yml and dockerfile.",
-      "variant": "high",
-      "model": "nvidia/minimaxai/minimax-m2.1",
+      "variant": "max",
+      "model": "opencode-go/deepseek-v4-flash",
       "temperature": 0.45,
       "prompt_append": "Always use docker-compose-generator skill. Focus on dockerfile contracts, and docker-compose.yml with tests."
     },
     "uiux-master": {
       "description": "Implement UI/UX contracts, visual design, and visual design with tests.",
       "variant": "high",
-      "model": "nvidia/minimaxai/minimax-m2.1",
+      "model": "opencode-go/minimax-m2.7",
       "temperature": 0.9,
       "prompt_append": "Always use ui-ux-pro-max skill. Focus on UI/UX contracts, visual design, and visual design with tests."
     }
   },
   "agents": {
     "sisyphus": {
-      "variant": "xhigh",
-      "model": "openai/gpt-5.2",
+      "model": "opencode-go/deepseek-v4-pro",
+      "variant": "max",
+      "fallback_models": [
+        {
+          "model": "opencode-go/kimi-k2.6"
+        },
+        {
+          "model": "openai/gpt-5.5",
+          "variant": "medium"
+        }
+      ],
+      "temperature": 0.3
+    },
+    "hephaestus": {
+      "model": "opencode-go/deepseek-v4-pro",
+      "variant": "max",
+      "fallback_models": [
+        {
+          "model": "opencode-go/deepseek-v4-flash",
+          "variant": "max"
+        },
+        {
+          "model": "opencode-go/qwen3.6-plus",
+          "variant": "high"
+        },
+        {
+          "model": "openai/gpt-5.5",
+          "variant": "medium"
+        }
+      ],
       "temperature": 0.1
     },
     "oracle": {
-      "model": "google/antigravity-claude-opus-4-5-thinking",
-      "variant": "max",
-      "temperature": 0.3
+      "model": "google/antigravity-gemini-3.1-pro",
+      "variant": "high",
+      "fallback_models": [
+        {
+          "model": "opencode-go/glm-5.1"
+        },
+        {
+          "model": "openai/gpt-5.4",
+          "variant": "high"
+        },
+        {
+          "model": "openai/gpt-5.2",
+          "variant": "xhigh"
+        }
+      ],
+      "temperature": 0.1
     },
     "librarian": {
-      "model": "google/antigravity-claude-sonnet-4-5-thinking",
-      "variant": "max",
+      "model": "google/antigravity-gemini-3-flash",
+      "fallback_models": [
+        {
+          "model": "opencode-go/minimax-m2.7"
+        },
+        {
+          "model": "openai/gpt-5.4-nano"
+        }
+      ],
       "temperature": 0.3
     },
     "explore": {
-      "model": "google/antigravity-gemini-3-flash",
-      "variant": "high",
-      "temperature": 0.45
-    },
-    "atlas": {
-      "model": "nvidia/minimaxai/minimax-m2.1",
-      "variant": "high",
-      "temperature": 0.1
-    },
-    "OpenCode-Builder": {
-      "model": "nvidia/moonshotai/kimi-k2-thinking",
-      "variant": "high",
-      "temperature": 0.3
-    },
-    "prometheus": {
-      "model": "google/antigravity-claude-opus-4-5-thinking",
-      "variant": "max",
-      "temperature": 0.45
-    },
-    "metis": {
-      "model": "nvidia/minimaxai/minimax-m2.1",
-      "variant": "high",
-      "temperature": 0.3
-    },
-    "momus": {
-      "model": "nvidia/moonshotai/kimi-k2-thinking",
-      "variant": "high",
-      "temperature": 0.1
+      "model": "opencode-go/minimax-m2.7",
+      "fallback_models": [
+        {
+          "model": "google/gemini-3.1-flash-lite-preview"
+        },
+        {
+          "model": "openai/gpt-5.4-nano"
+        }
+      ]
     },
     "multimodal-looker": {
+      "model": "opencode-go/kimi-k2.6",
       "variant": "high",
-      "model": "google/antigravity-gemini-3-pro"
+      "fallback_models": [
+        {
+          "model": "opencode-go/kimi-k2.5"
+        },
+        {
+          "model": "openai/gpt-5.4",
+          "variant": "medium"
+        }
+      ]
+    },
+    "prometheus": {
+      "model": "opencode-go/glm-5.1",
+      "variant": "high",
+      "fallback_models": [
+        {
+          "model": "google/antigravity-gemini-3.1-pro",
+          "variant": "high"
+        },
+        {
+          "model": "openai/gpt-5.5",
+          "variant": "high"
+        }
+      ]
+    },
+    "metis": {
+      "model": "opencode-go/kimi-k2.6",
+      "variant": "high",
+      "fallback_models": [
+        {
+          "model": "opencode-go/glm-5"
+        },
+        {
+          "model": "openai/gpt-5.5",
+          "variant": "high"
+        }
+      ],
+      "temperature": 0.45
+    },
+    "momus": {
+      "model": "google/antigravity-gemini-3-pro",
+      "variant": "high",
+      "fallback_models": [
+        {
+          "model": "opencode-go/glm-5.1"
+        },
+        {
+          "model": "openai/gpt-5.5",
+          "variant": "xhigh"
+        },
+        {
+          "model": "opencode-go/glm-5"
+        }
+      ]
+    },
+    "atlas": {
+      "model": "antigravity-claude-sonnet-4-6",
+      "variant": "max",
+      "fallback_models": [
+        {
+          "model": "opencode-go/kimi-k2.6"
+        },
+        {
+          "model": "openai/gpt-5.5",
+          "variant": "medium"
+        },
+        {
+          "model": "opencode-go/minimax-m2.7"
+        }
+      ]
+    },
+    "sisyphus-junior": {
+      "model": "opencode-go/kimi-k2.6",
+      "variant": "max",
+      "fallback_models": [
+        {
+          "model": "opencode-go/kimi-k2.5"
+        },
+        {
+          "model": "openai/gpt-5.5",
+          "variant": "medium"
+        },
+        {
+          "model": "opencode-go/minimax-m2.7"
+        }
+      ]
     }
   },
   "disabled_hooks": [

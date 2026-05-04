@@ -1,0 +1,143 @@
+# Docker Compose Override Template
+#
+# This file allows you to customize your local development environment
+# without modifying docker-compose.dev.yml
+#
+# Usage:
+#   1. Copy this file to docker-compose.override.yml
+#   2. Uncomment and modify the sections you need
+#   3. Docker Compose will automatically merge this with docker-compose.dev.yml
+#
+# Note: docker-compose.override.yml is gitignored by default
+
+version: "3.9"
+
+services:
+  # ============================================================================
+  # Example: Customize PostgreSQL
+  # ============================================================================
+
+  # postgres:
+  #   environment:
+  #     # Custom database settings
+  #     POSTGRES_MAX_CONNECTIONS: 300
+  #   ports:
+  #     # Use different port
+  #     - "5433:5432"
+  #   volumes:
+  #     # Mount custom init scripts
+  #     - ./scripts/init-db:/docker-entrypoint-initdb.d:ro
+
+  # ============================================================================
+  # Example: Customize RAG Engine
+  # ============================================================================
+
+  # rag-engine:
+  #   environment:
+  #     # Use Claude API instead of local Ollama
+  #     ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+  #     LLM_MODEL: claude-sonnet-4-20250514
+  #     # Adjust log level
+  #     LOG_LEVEL: INFO
+  #   volumes:
+  #     # Mount local code for development
+  #     - ./rag-engine:/app:cached
+
+  # ============================================================================
+  # Example: Customize Scavenger API
+  # ============================================================================
+
+  # scavenger-api:
+  #   environment:
+  #     # Custom settings
+  #     LOG_LEVEL: INFO
+  #     # Enable OpenAI integration
+  #     OPENAI_API_KEY: ${OPENAI_API_KEY}
+  #   ports:
+  #     # Use different port
+  #     - "8080:8000"
+  #   volumes:
+  #     # Mount local code for hot reload
+  #     - ./scavenger:/app:cached
+
+  # ============================================================================
+  # Example: Disable Heavy Services
+  # ============================================================================
+
+  # # Disable Ollama if not needed (saves 4GB+ RAM)
+  # ollama:
+  #   restart: "no"
+  #   profiles:
+  #     - disabled
+
+  # # Disable Grafana if not monitoring
+  # grafana:
+  #   restart: "no"
+  #   profiles:
+  #     - disabled
+
+  # # Disable cAdvisor if not needed
+  # cadvisor:
+  #   restart: "no"
+  #   profiles:
+  #     - disabled
+
+  # ============================================================================
+  # Example: Add Custom Service
+  # ============================================================================
+
+  # my-custom-service:
+  #   image: my-custom-image:latest
+  #   container_name: mixgem_custom
+  #   environment:
+  #     DATABASE_URL: postgresql://mixgem:dev_password_change_in_prod@postgres:5432/mixgem_dev
+  #     REDIS_URL: redis://redis:6379
+  #   ports:
+  #     - "8888:8888"
+  #   depends_on:
+  #     - postgres
+  #     - redis
+  #   networks:
+  #     - dev_network
+
+  # ============================================================================
+  # Example: Mount Additional Volumes
+  # ============================================================================
+
+  # scavenger-api:
+  #   volumes:
+  #     # Mount test data
+  #     - ./test-data:/app/test-data:ro
+  #     # Mount custom config
+  #     - ./config/scavenger.yml:/app/config.yml:ro
+
+  # ============================================================================
+  # Example: Resource Limits
+  # ============================================================================
+
+  # postgres:
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '2.0'
+  #         memory: 2G
+
+  # redis:
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '0.5'
+  #         memory: 256M
+
+  # ============================================================================
+  # Example: Custom Network
+  # ============================================================================
+
+# networks:
+#   custom_network:
+#     external: true
+#     name: my_existing_network
+
+# volumes:
+#   my_custom_volume:
+#     driver: local

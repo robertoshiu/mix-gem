@@ -1,0 +1,378 @@
+version: "3.9"
+
+# Development Docker Compose for Mix-GEM Full Stack
+# All services enabled by default - no profiles needed
+# Usage: docker-compose -f docker-compose.dev.yml up
+
+networks:
+  dev_network:
+    driver: bridge
+    name: mixgem_dev
+
+volumes:
+  dev_pgdata:
+    name: mixgem_dev_pgdata
+  dev_redisdata:
+    name: mixgem_dev_redisdata
+  dev_ollama_data:
+    name: mixgem_dev_ollama
+  dev_rag_storage:
+    name: mixgem_dev_rag
+  dev_prometheus_data:
+    name: mixgem_dev_prometheus
+  dev_grafana_data:
+    name: mixgem_dev_grafana
+
+services:
+  # ============================================================================
+  # Core Infrastructure
+  # ============================================================================
+
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: mixgem_dev_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mixgem_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-mixgem}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev_password_change_in_prod}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+      POSTGRES_HOST_AUTH_METHOD: ${POSTGRES_HOST_AUTH_METHOD:-md5}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - dev_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mixgem} -d ${POSTGRES_DB:-mixgem_dev}"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    restart: on-failure
+    networks:
+      - dev_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: mixgem_dev_redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - dev_redisdata:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    restart: on-failure
+    networks:
+      - dev_network
+
+  # ============================================================================
+  # Ollama - Local LLM
+  # ============================================================================
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: mixgem_dev_ollama
+    volumes:
+      - dev_ollama_data:/root/.ollama
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: on-failure
+    networks:
+      - dev_network
+
+  # ============================================================================
+  # RAG Engine - LangGraph + LightRAG
+  # ============================================================================
+
+  rag-engine:
+    build:
+      context: ./rag-engine
+      dockerfile: Dockerfile
+    container_name: mixgem_dev_rag
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-mixgem}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev_password_change_in_prod}
+      POSTGRES_DATABASE: ${POSTGRES_DB:-mixgem_dev}
+      REDIS_URL: redis://redis:6379
+      OLLAMA_HOST: http://ollama:11434
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-nomic-embed-text}
+      LLM_MODEL: ${LLM_MODEL:-llama3.2:3b}
+      LOG_LEVEL: ${LOG_LEVEL:-DEBUG}
+    ports:
+      - "${RAG_PORT:-8001}:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: on-failure
+    volumes:
+      - dev_rag_storage:/app/lightrag_storage
+      - ./rag-engine:/app:cached
+    networks:
+      - dev_network
+
+  # ============================================================================
+  # Scavenger - SECS/GEM Ingestion
+  # ============================================================================
+
+  scavenger-api:
+    build:
+      context: ./scavenger
+      target: api
+    container_name: mixgem_dev_scavenger_api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${SCAVENGER_PORT:-8000}:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-mixgem}:${POSTGRES_PASSWORD:-dev_password_change_in_prod}@postgres:5432/${POSTGRES_DB:-mixgem_dev}
+      REDIS_URL: redis://redis:6379/0
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      LOG_LEVEL: ${LOG_LEVEL:-DEBUG}
+    volumes:
+      - ./scavenger:/app:cached
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: on-failure
+    networks:
+      - dev_network
+
+  scavenger-recorder:
+    build:
+      context: ./scavenger
+      target: recorder
+    container_name: mixgem_dev_scavenger_recorder
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-mixgem}:${POSTGRES_PASSWORD:-dev_password_change_in_prod}@postgres:5432/${POSTGRES_DB:-mixgem_dev}
+      REDIS_URL: redis://redis:6379/0
+      BATCH_SIZE: ${BATCH_SIZE:-50}
+      FLUSH_INTERVAL_MS: ${FLUSH_INTERVAL_MS:-500}
+      LOG_LEVEL: ${LOG_LEVEL:-DEBUG}
+    restart: on-failure
+    networks:
+      - dev_network
+
+  # ============================================================================
+  # SECS/GEM Simulator
+  # ============================================================================
+
+  simulator:
+    build:
+      context: ./scavenger
+      target: simulator
+    container_name: mixgem_dev_simulator
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${HSMS_PASSIVE_PORT:-5000}:5000"
+      - "${HSMS_ACTIVE_PORT:-5001}:5001"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-mixgem}:${POSTGRES_PASSWORD:-dev_password_change_in_prod}@postgres:5432/${POSTGRES_DB:-mixgem_dev}
+      REDIS_URL: redis://redis:6379/0
+      HSMS_PASSIVE_PORT: 5000
+      HSMS_ACTIVE_PORT: 5001
+      HSMS_DEVICE_ID: ${HSMS_DEVICE_ID:-1}
+      EQUIPMENT_ID: ${EQUIPMENT_ID:-LITHO_DEV}
+      LOG_LEVEL: ${LOG_LEVEL:-DEBUG}
+    volumes:
+      - ./scavenger/scenarios:/app/scenarios:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.settimeout(1); s.connect(('localhost', 5000)); s.close()"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: on-failure
+    networks:
+      - dev_network
+
+  # ============================================================================
+  # Monitoring Stack
+  # ============================================================================
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: mixgem_dev_prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'
+      - '--web.enable-lifecycle'
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./equipment-monitor/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - dev_prometheus_data:/prometheus
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: on-failure
+    networks:
+      - dev_network
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: mixgem_dev_node_exporter
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    ports:
+      - "${NODE_EXPORTER_PORT:-9100}:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    restart: on-failure
+    networks:
+      - dev_network
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: mixgem_dev_postgres_exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-mixgem}:${POSTGRES_PASSWORD:-dev_password_change_in_prod}@postgres:5432/${POSTGRES_DB:-mixgem_dev}?sslmode=disable"
+    ports:
+      - "${POSTGRES_EXPORTER_PORT:-9187}:9187"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - dev_network
+
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: mixgem_dev_redis_exporter
+    environment:
+      REDIS_ADDR: "redis:6379"
+    ports:
+      - "${REDIS_EXPORTER_PORT:-9121}:9121"
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - dev_network
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: mixgem_dev_cadvisor
+    ports:
+      - "${CADVISOR_PORT:-8080}:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    privileged: true
+    restart: on-failure
+    networks:
+      - dev_network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: mixgem_dev_grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3001}
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Viewer"
+      GF_LOG_LEVEL: ${GRAFANA_LOG_LEVEL:-debug}
+    ports:
+      - "${GRAFANA_PORT:-3001}:3000"
+    volumes:
+      - dev_grafana_data:/var/lib/grafana
+      - ./equipment-monitor/monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./equipment-monitor/monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: on-failure
+    networks:
+      - dev_network
+
+  # ============================================================================
+  # Development Tools
+  # ============================================================================
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: mixgem_dev_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@mixgem.dev}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - dev_network
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: mixgem_dev_redis_commander
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "${REDIS_COMMANDER_PORT:-8081}:8081"
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - dev_network

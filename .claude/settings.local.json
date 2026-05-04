@@ -64,7 +64,18 @@
       "Bash(npx shadcn@latest add:*)",
       "Bash(npx shadcn@latest init -d)",
       "Bash(npm run lint:*)",
-      "Bash(git status:*)"
+      "Bash(git status:*)",
+      "Bash(chmod:*)",
+      "Bash(bash:*)",
+      "Bash(./start-dev.bat up -d)",
+      "Bash(/c/Program Files/Docker/Docker/resources/bin/docker.exe --version)",
+      "Bash(make dev-up:*)",
+      "Bash(docker:*)",
+      "Bash(docker info:*)",
+      "Bash(sudo apt-get update:*)",
+      "Bash(sudo apt-get install:*)",
+      "Bash(~/.local/bin/docker-compose --version)",
+      "Bash(~/.local/bin/docker-compose -f docker-compose.dev.yml --env-file .env.dev up -d)"
     ]
   }
 }
