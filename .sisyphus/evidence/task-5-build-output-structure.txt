@@ -1,0 +1,68 @@
+﻿node : 鈿?Warning: Next.js inferred your workspace root, but it may not be correct.
+所在位置 行:1 字符: 66
++ ... buildOutput = node node_modules/next/dist/bin/next build 2>&1; $exitC ...
++                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (鈿?Warning: Next...not be correct.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ We detected multiple lockfiles and selected the directory of E:\repo\mix-gem\package-lock.json as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it'
+s not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * E:\repo\mix-gem\equipment-monitor\package-lock.json
+
+鈻?Next.js 16.2.4 (Turbopack)
+
+  Creating an optimized production build ...
+鉁?Compiled successfully in 14.1s
+  Running TypeScript ...
+  Finished TypeScript in 6.9s ...
+  Collecting page data using 8 workers ...
+  Generating static pages using 8 workers (0/7) ...
+The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+  Generating static pages using 8 workers (1/7) 
+  Generating static pages using 8 workers (3/7) 
+  Generating static pages using 8 workers (5/7) 
+鉁?Generating static pages using 8 workers (7/7) in 3.1s
+  Finalizing page optimization ...
+
+Route (app)
+鈹?鈼?/
+鈹?鈼?/_not-found
+鈹?鈼?/mes/lots
+鈹?鈼?/mes/recipes
+鈹?鈼?/mes/spc
+
+
+鈼? (Static)  prerendered as static content
+
+E:\repo\mix-gem\equipment-monitor\out\index.html : True
+E:\repo\mix-gem\equipment-monitor\out\mes\spc\index.html : True
+E:\repo\mix-gem\equipment-monitor\out\mes\lots\index.html : True
+E:\repo\mix-gem\equipment-monitor\out\mes\recipes\index.html : True
+E:\repo\mix-gem\equipment-monitor\out\.nojekyll : True
+E:\repo\mix-gem\equipment-monitor\out\_next\static : True

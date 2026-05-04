@@ -1,0 +1,6 @@
+﻿
+.github\workflows\deploy.yml:45:          path: equipment-monitor/out
+
+
+
+Matches: 1 (expected 1)

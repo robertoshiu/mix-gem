@@ -1,0 +1,8 @@
+﻿
+.github\workflows\deploy.yml:32:        working-directory: equipment-monitor
+.github\workflows\deploy.yml:36:        working-directory: equipment-monitor
+.github\workflows\deploy.yml:40:        working-directory: equipment-monitor
+
+
+
+Matches: 3 (expected >= 3)

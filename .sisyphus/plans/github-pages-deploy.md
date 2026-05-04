@@ -155,7 +155,7 @@ Max Concurrent: 3 (Wave 1)
 
 ## TODOs
 
-- [ ] 1. Configure next.config.ts for static export
+- [x] 1. Configure next.config.ts for static export
 
   **What to do**:
   - Open `equipment-monitor/next.config.ts`
@@ -259,7 +259,7 @@ Max Concurrent: 3 (Wave 1)
   - Files: `equipment-monitor/next.config.ts`, `equipment-monitor/public/.nojekyll`, `equipment-monitor/package.json`
   - Pre-commit: None (config only)
 
-- [ ] 2. Add .nojekyll and 404.html support
+- [x] 2. Add .nojekyll and 404.html support
 
   **What to do**:
   - Create `equipment-monitor/public/.nojekyll` — empty file that Next.js copies to `out/` during build, preventing GitHub Pages from processing `_next/` as Jekyll
@@ -324,7 +324,7 @@ Max Concurrent: 3 (Wave 1)
   - Files: `equipment-monitor/public/.nojekyll`
   - Pre-commit: None
 
-- [ ] 3. Add build:static script to package.json
+- [x] 3. Add build:static script to package.json
 
   **What to do**:
   - Open `equipment-monitor/package.json`
@@ -405,7 +405,7 @@ Max Concurrent: 3 (Wave 1)
   - Files: `equipment-monitor/package.json`
   - Pre-commit: None
 
-- [ ] 4. Create GitHub Actions deploy workflow
+- [x] 4. Create GitHub Actions deploy workflow
 
   **What to do**:
   - Create `.github/workflows/deploy.yml` at the repo root (NOT in `equipment-monitor/`)
@@ -556,7 +556,7 @@ Max Concurrent: 3 (Wave 1)
   - Files: `.github/workflows/deploy.yml`
   - Pre-commit: None
 
-- [ ] 5. Build verification + local dev regression test
+- [x] 5. Build verification + local dev regression test
 
   **What to do**:
   - Run `npm run build:static` in `equipment-monitor/` to produce the `out/` directory
@@ -686,15 +686,15 @@ Max Concurrent: 3 (Wave 1)
 
 > 3 review agents run in PARALLEL. ALL must APPROVE. Present consolidated results to user and get explicit "okay" before completing.
 
-- [ ] F1. **Plan Compliance Audit** — `oracle`
+- [x] F1. **Plan Compliance Audit** — `oracle`
   Read the plan end-to-end. For each "Must Have": verify implementation exists (read file, run command). For each "Must NOT Have": search codebase for forbidden patterns — reject with file:line if found. Check evidence files exist in `.sisyphus/evidence/`. Compare deliverables against plan.
   Output: `Must Have [N/N] | Must NOT Have [N/N] | Tasks [N/N] | VERDICT: APPROVE/REJECT`
 
-- [ ] F2. **Config Quality Review** — `unspecified-high`
+- [x] F2. **Config Quality Review** — `unspecified-high`
   Review all config files (next.config.ts, deploy.yml, package.json) for: correct YAML syntax, all required workflow permissions, correct working-directory paths, valid GitHub Actions action versions (not deprecated), correct basePath spelling, no typos in URLs. Verify `.nojekyll` is in `equipment-monitor/public/` not repo root. Verify `build:static` script exists and is correct.
   Output: `Config files [N clean/N issues] | Workflow [VALID/INVALID] | Paths [CORRECT/WRONG] | VERDICT`
 
-- [ ] F3. **Scope Fidelity Check** — `deep`
+- [x] F3. **Scope Fidelity Check** — `deep`
   For each task: read "What to do", read actual file changes. Verify 1:1 — everything in spec was done (no missing), nothing beyond spec was done (no creep). Check "Must NOT do" compliance — no source files in `src/` were modified. Detect unaccounted changes.
   Output: `Tasks [N/N compliant] | Source files modified [NONE/FILES] | Unaccounted [CLEAN/N files] | VERDICT`
 

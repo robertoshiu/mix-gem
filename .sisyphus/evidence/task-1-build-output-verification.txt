@@ -1,0 +1,6 @@
+﻿equipment-monitor\out\index.html exists: True
+equipment-monitor\out\mes\spc\index.html exists: True
+equipment-monitor\out\mes\lots\index.html exists: True
+equipment-monitor\out\mes\recipes\index.html exists: True
+equipment-monitor\out\.nojekyll exists: True
+equipment-monitor\out\_next\static exists: True

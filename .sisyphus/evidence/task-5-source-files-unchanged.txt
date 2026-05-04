@@ -1,0 +1,1 @@
+﻿PASS: No src/ files modified in working tree or staged

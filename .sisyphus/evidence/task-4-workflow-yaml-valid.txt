@@ -1,0 +1,13 @@
+﻿File: .github\workflows\deploy.yml
+
+
+    目录: E:\repo\mix-gem\.github\workflows
+
+
+Mode                 LastWriteTime         Length Name                                                                 
+----                 -------------         ------ ----                                                                 
+-a----          2026/5/4     20:32           1241 deploy.yml                                                           
+
+
+
+VALID YAML (strict)

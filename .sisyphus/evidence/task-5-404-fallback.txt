@@ -1,0 +1,1 @@
+﻿PASS: 404.html created and identical to index.html
