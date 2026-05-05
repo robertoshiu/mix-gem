@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
-  { href: '/', label: 'Equipment' },
+  { href: '/', label: 'Dashboard' },
   { href: '/mes/equipment', label: 'Equipment' },
   { href: '/mes/lots', label: 'Lot Tracker' },
   { href: '/mes/recipes', label: 'Recipe Manager' },

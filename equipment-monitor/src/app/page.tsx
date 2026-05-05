@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Header } from "@/components/layout/header";
+import { MesNavBar } from "@/components/mes/MesNavBar";
 import { EquipmentSidebar } from "@/components/equipment/equipment-sidebar";
 import { useEquipmentStore } from "@/stores/equipment-store";
 import {
@@ -54,6 +55,7 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col h-screen bg-slate-950">
       <Header />
+      <MesNavBar />
 
       <div className="flex flex-1 overflow-hidden">
         <EquipmentSidebar
