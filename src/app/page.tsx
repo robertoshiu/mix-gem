@@ -5,7 +5,6 @@ import { Header } from "@/components/layout/header";
 import { EquipmentSidebar } from "@/components/equipment/equipment-sidebar";
 import { useEquipmentStore } from "@/stores/equipment-store";
 import {
-  mockEquipment,
   mockParameters,
   mockAlarms,
   generateTrendData,
@@ -22,7 +21,7 @@ const TrendChart = lazy(() => import('@/components/charts/trend-chart').then((m)
 const GaugeCard = lazy(() => import('@/components/charts/gauge-card').then((m) => ({ default: m.GaugeCard })));
 
 export default function DashboardPage() {
-  const { equipment, selectedEquipmentId, setEquipment, selectEquipment } =
+  const { equipment, selectedEquipmentId, selectEquipment } =
     useEquipmentStore();
   const [trendData, setTrendData] = useState(generateTrendData(1, 2.3, 3));
   const [alarms, setAlarms] = useState(mockAlarms);
@@ -32,15 +31,6 @@ export default function DashboardPage() {
       prev.map((a) => (a.id === id ? { ...a, acknowledged: true } : a))
     );
   };
-
-  // Initialize with mock data
-  useEffect(() => {
-    setEquipment(mockEquipment);
-    // Select first equipment by default
-    if (mockEquipment.length > 0) {
-      selectEquipment(mockEquipment[0].id);
-    }
-  }, [setEquipment, selectEquipment]);
 
   // Simulate real-time updates
   useEffect(() => {
