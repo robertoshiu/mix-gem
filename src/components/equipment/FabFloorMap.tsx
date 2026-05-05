@@ -102,7 +102,9 @@ export function FabFloorMap() {
                   backgroundSize: "180px 130px",
                 }}
               >
-                {equipments.map((eq) => {
+                {[...equipments]
+                  .sort((a, b) => (b.x + b.y) - (a.x + a.y))
+                  .map((eq) => {
                   const isSelected = eq.id === selectedEquipmentId;
                   const s = STATUS_STYLE[eq.status] ?? STATUS_STYLE.idle;
                   return (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Bell, Settings } from "lucide-react";
+import { Bell, Settings, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -71,8 +71,9 @@ export function Header({ className }: { className?: string }) {
             <h1 className="text-sm font-semibold text-[var(--smartfactory-text-primary)]">
               Equipment Monitor
             </h1>
-            <span className="text-[11px] text-[var(--smartfactory-text-secondary)]">
-              Applied SmartFactory
+            <span className="text-[11px] text-[var(--smartfactory-text-secondary)] flex items-center gap-1">
+              <Zap className="w-3 h-3 shrink-0" />
+              Better SmartFactory
             </span>
           </div>
         </div>
