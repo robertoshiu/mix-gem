@@ -72,7 +72,7 @@ export function Header({ className }: { className?: string }) {
               Equipment Monitor
             </h1>
             <span className="text-[11px] text-[var(--smartfactory-text-secondary)]">
-              Applied SmartFactory
+              Better SmartFactory
             </span>
           </div>
         </div>
