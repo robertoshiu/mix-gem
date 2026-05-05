@@ -1,0 +1,6 @@
+1:"$Sreact.fragment"
+2:I[95346,["/mix-gem/_next/static/chunks/038y41c44tk-k.js","/mix-gem/_next/static/chunks/12rpq7x0lci6w.js","/mix-gem/_next/static/chunks/0ugiaag1vsb_c.js","/mix-gem/_next/static/chunks/02-nbuwehr_s..js"],"Header"]
+3:I[55236,["/mix-gem/_next/static/chunks/038y41c44tk-k.js","/mix-gem/_next/static/chunks/12rpq7x0lci6w.js","/mix-gem/_next/static/chunks/0ugiaag1vsb_c.js","/mix-gem/_next/static/chunks/02-nbuwehr_s..js"],"MesNavBar"]
+4:I[4757,["/mix-gem/_next/static/chunks/038y41c44tk-k.js","/mix-gem/_next/static/chunks/12rpq7x0lci6w.js"],"default"]
+5:I[12298,["/mix-gem/_next/static/chunks/038y41c44tk-k.js","/mix-gem/_next/static/chunks/12rpq7x0lci6w.js"],"default"]
+0:{"rsc":["$","$1","c",{"children":[[["$","script","script-0",{"src":"/mix-gem/_next/static/chunks/0ugiaag1vsb_c.js","async":true}],["$","script","script-1",{"src":"/mix-gem/_next/static/chunks/02-nbuwehr_s..js","async":true}]],["$","div",null,{"className":"flex flex-col min-h-screen bg-[var(--smartfactory-bg-base)]","children":[["$","$L2",null,{}],["$","$L3",null,{}],["$","main",null,{"className":"flex-1 overflow-y-auto","children":["$","$L4",null,{"parallelRouterKey":"children","template":["$","$L5",null,{}]}]}]]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"uYf1mR-n8p5w4Ve1_dz_7"}

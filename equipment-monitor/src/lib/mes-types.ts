@@ -68,8 +68,7 @@ export interface SecsEvent {
   type: SecsEventType;
   label: string;
   timestamp: Date;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  secsMessage: Record<string, any>;
+  secsMessage: Record<string, unknown>;
 }
 
 // Fault
@@ -115,6 +114,40 @@ export interface Notification {
   timestamp: Date;
   read: boolean;
 }
+
+// MES UI Reconstruction — Yield & Defect
+export interface YieldTrendPoint {
+  date: string;
+  overallYield: number;
+  targetYield: number;
+}
+
+export interface DefectRecord {
+  type: string;
+  count: number;
+  cumulativePercent: number;
+}
+
+export interface WaferDie {
+  row: number;
+  col: number;
+  status: 'pass' | 'fail' | 'retest' | 'not_tested';
+}
+
+export interface ProcessStepYield {
+  name: string;
+  yield: number;
+  status: 'running' | 'warning' | 'alarm';
+}
+
+export interface HeatmapCell {
+  lot: string;
+  param: string;
+  value: number;
+  status: 'ok' | 'warning' | 'alarm';
+}
+
+export type ConfidenceLevel = number; // 0-100
 
 // Equipment (for fab floor map)
 export type EquipmentType = 'lithography' | 'coater' | 'developer' | 'metrology' | 'cmp';

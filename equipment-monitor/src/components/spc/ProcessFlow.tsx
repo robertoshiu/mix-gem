@@ -12,6 +12,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { fadeIn, useReducedMotion } from '@/lib/animation';
+import { generateProcessYields } from '@/lib/mes-mock-data';
 
 const FLOW_STEPS = [
   { id: 'coat', label: 'COAT', equipment: 'COAT-01', icon: Droplets },
@@ -54,18 +55,31 @@ function getStepDisplay(equipmentState: 'idle' | 'processing' | 'inhibited'): St
   }
 }
 
+function getYieldColor(yieldVal: number): string {
+  if (yieldVal >= 95) return 'var(--smartfactory-status-green)';
+  if (yieldVal >= 85) return 'var(--smartfactory-status-amber)';
+  return 'var(--smartfactory-status-red)';
+}
+
 export function ProcessFlow() {
   const { equipmentState } = useMesSpcStore();
   const reduced = useReducedMotion();
   const display = getStepDisplay(equipmentState);
   const fadeInProps = reduced ? {} : { variants: fadeIn, initial: 'initial' as const, animate: 'animate' as const };
+  const processYields = generateProcessYields();
 
   return (
     <div
       data-testid="process-flow"
       className="flex items-center gap-0 overflow-x-auto p-3 bg-[var(--smartfactory-surface-card)] rounded border border-[var(--smartfactory-border-default)]"
     >
-      {FLOW_STEPS.map((step, index) => (
+      {FLOW_STEPS.map((step, index) => {
+        const stepYield = processYields.find(
+          (y) => y.name === step.label || (step.label === 'SPC EVAL' && y.name === 'SPC')
+        );
+        const yieldColor = stepYield ? getYieldColor(stepYield.yield) : display.badgeColor;
+
+        return (
         <motion.div key={step.id} className="flex items-center gap-0" {...fadeInProps}>
           <div
             className={cn(
@@ -86,6 +100,20 @@ export function ProcessFlow() {
             <div className="text-[10px] text-[var(--smartfactory-text-secondary)]">
               {step.equipment}
             </div>
+            {stepYield && (
+              <div className="flex items-center justify-center gap-1 mt-0.5">
+                <span
+                  className="inline-block w-1.5 h-1.5 rounded-full"
+                  style={{ backgroundColor: yieldColor }}
+                />
+                <span
+                  className="text-[9px] font-medium"
+                  style={{ color: yieldColor }}
+                >
+                  {stepYield.yield}%
+                </span>
+              </div>
+            )}
             <div
               className="text-[9px] font-medium mt-0.5"
               style={{ color: display.badgeColor }}
@@ -103,7 +131,8 @@ export function ProcessFlow() {
             />
           )}
         </motion.div>
-      ))}
+        );
+      })}
     </div>
   );
 }

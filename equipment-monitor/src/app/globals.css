@@ -186,6 +186,7 @@ body {
   --smartfactory-status-neon-green: #00E676;
   --smartfactory-status-neon-red: #FF1744;
   --smartfactory-status-neon-amber: #FFC107;
+  --smartfactory-surface-row-alt: #0D1825;
 }
 
 @layer base {

@@ -27,9 +27,9 @@ export function GaugeCard({ parameter, className }: GaugeCardProps) {
   const percentage = Math.max(0, Math.min(100, ((value - lsl) / range) * 100));
 
   const statusColors = {
-    normal: { stroke: "#10B981", text: "text-emerald-500" },
-    warning: { stroke: "#F59E0B", text: "text-amber-500" },
-    alarm: { stroke: "#EF4444", text: "text-red-500" },
+    normal: { stroke: "var(--smartfactory-status-green)", text: "text-emerald-500" },
+    warning: { stroke: "var(--smartfactory-status-amber)", text: "text-amber-500" },
+    alarm: { stroke: "var(--smartfactory-status-red)", text: "text-red-500" },
   };
 
   const { stroke, text } = statusColors[status];
@@ -41,9 +41,13 @@ export function GaugeCard({ parameter, className }: GaugeCardProps) {
     : `${name}: ${value}${unit}`;
 
   // SVG arc calculation
-  const radius = 40;
+  const radius = 50;
   const circumference = Math.PI * radius; // Half circle
   const offset = circumference - (percentage / 100) * circumference;
+
+  // Dynamic font sizing based on value length to prevent overflow
+  const formattedValue = `${value >= 0 ? "+" : ""}${value.toFixed(1)}`;
+  const valueFontSize = formattedValue.length > 6 ? "text-sm" : "text-lg";
 
   return (
     <Card className={cn("p-4 bg-slate-900 border-slate-700", className)}>
@@ -55,22 +59,22 @@ export function GaugeCard({ parameter, className }: GaugeCardProps) {
 
       <div className="relative flex justify-center my-2">
         <svg
-          width="100"
-          height="60"
-          viewBox="0 0 100 60"
+          width="120"
+          height="70"
+          viewBox="0 0 120 70"
           className="overflow-visible"
         >
           {/* Background arc */}
           <path
-            d="M 10 50 A 40 40 0 0 1 90 50"
+            d="M 10 60 A 50 50 0 0 1 110 60"
             fill="none"
-            stroke="#334155"
+            stroke="var(--smartfactory-border-default)"
             strokeWidth="8"
             strokeLinecap="round"
           />
           {/* Value arc */}
           <path
-            d="M 10 50 A 40 40 0 0 1 90 50"
+            d="M 10 60 A 50 50 0 0 1 110 60"
             fill="none"
             stroke={stroke}
             strokeWidth="8"
@@ -81,11 +85,11 @@ export function GaugeCard({ parameter, className }: GaugeCardProps) {
           />
         </svg>
 
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
-          <span className={cn("text-2xl font-mono font-medium", text)}>
-            {value >= 0 ? "+" : ""}{value.toFixed(1)}
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex items-baseline overflow-hidden max-w-full">
+          <span className={cn("font-mono font-medium whitespace-nowrap", valueFontSize, text)}>
+            {formattedValue}
           </span>
-          <span className="text-sm text-slate-400 ml-1">{unit}</span>
+          <span className="text-sm text-slate-400 ml-1 whitespace-nowrap">{unit}</span>
         </div>
       </div>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Bell, Settings, Zap } from "lucide-react";
+import { Bell, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -64,15 +64,12 @@ export function Header({ className }: { className?: string }) {
       >
         {/* Left: Logo + Title */}
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded bg-[var(--smartfactory-accent-blue)] flex items-center justify-center shrink-0">
-            <span className="text-white font-bold text-sm">AM</span>
-          </div>
+          <img src="/mix-gem/better-logo.png" className="h-12 w-auto shrink-0" alt="Better SmartFactory Logo" />
           <div className="flex flex-col leading-tight">
             <h1 className="text-sm font-semibold text-[var(--smartfactory-text-primary)]">
               Equipment Monitor
             </h1>
-            <span className="text-[11px] text-[var(--smartfactory-text-secondary)] flex items-center gap-1">
-              <Zap className="w-3 h-3 shrink-0" />
+            <span className="text-[11px] text-[var(--smartfactory-text-secondary)]">
               Better SmartFactory
             </span>
           </div>
