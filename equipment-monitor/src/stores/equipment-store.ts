@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { Equipment, Alarm } from "@/types/equipment";
 import { AuditEntry } from "@/types/audit";
+import { mockEquipment } from "@/lib/mock-data";
 
 interface EquipmentState {
   equipment: Equipment[];
@@ -21,8 +22,8 @@ interface EquipmentState {
 }
 
 export const useEquipmentStore = create<EquipmentState>((set, get) => ({
-  equipment: [],
-  selectedEquipmentId: null,
+  equipment: mockEquipment,
+  selectedEquipmentId: mockEquipment[0]?.id ?? null,
   alarms: [],
   auditTrail: [],
 
