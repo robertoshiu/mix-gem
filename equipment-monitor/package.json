@@ -10,7 +10,11 @@
     "start": "next start",
     "lint": "eslint",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "test:e2e": "playwright test",
+    "test:e2e:list": "playwright test --list --pass-with-no-tests",
+    "test:e2e:install": "playwright install --with-deps chromium",
+    "test:e2e:serve": "node tests/e2e/static-server.mjs --dir out --basePath /mix-gem --port 3000"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
@@ -36,6 +40,7 @@
     "lightningcss-linux-x64-gnu": "^1.30.2"
   },
   "devDependencies": {
+    "@playwright/test": "^1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

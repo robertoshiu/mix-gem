@@ -52,7 +52,7 @@ export function FactoryCanvas({ children, className }: FactoryCanvasProps) {
       <ErrorBoundary fallback={<CanvasErrorFallback />}>
         <Suspense fallback={<CanvasLoadingFallback />}>
           <R3FCanvas
-            camera={{ position: [17, 16, 18], fov: 45, near: 0.1, far: 140 }}
+            camera={{ position: [22, 18, 22], fov: 50, near: 0.1, far: 140 }}
             frameloop="always"
             dpr={[1, 1.5]}
             gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}

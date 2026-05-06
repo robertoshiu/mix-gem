@@ -1,48 +1,86 @@
 {
-  "active_plan": "E:/repo/mix-gem/.sisyphus/plans/github-pages-deploy.md",
-  "started_at": "2026-05-04T12:20:44.726Z",
+  "active_plan": "E:\\repo\\mix-gem\\.sisyphus\\plans\\smart-factory-war-room-gauges.md",
+  "started_at": "2026-05-06T06:21:24.175Z",
   "session_ids": [
-    "ses_20d10f81bffe5ekQtsLLKqxYYA"
+    "ses_20450be1affe2Vvl217CsYIAr6"
   ],
-  "plan_name": "github-pages-deploy",
   "session_origins": {
-    "ses_20d10f81bffe5ekQtsLLKqxYYA": "direct"
+    "ses_20450be1affe2Vvl217CsYIAr6": "direct"
   },
+  "plan_name": "smart-factory-war-room-gauges",
+  "agent": "atlas",
   "task_sessions": {
     "todo:1": {
       "task_key": "todo:1",
       "task_label": "1",
-      "task_title": "Configure next.config.ts for static export",
-      "session_id": "ses_20d0a950affeDv3Pb3H5qz4fPn",
+      "task_title": "Add Playwright static-export QA foundation",
+      "session_id": "ses_2040b8ea1ffee6vONid2kNgwEl",
       "agent": "Sisyphus-Junior",
-      "category": "unspecified-high",
-      "updated_at": "2026-05-04T12:30:35.407Z"
+      "category": "uiux-master",
+      "updated_at": "2026-05-06T06:27:27.354Z"
+    },
+    "todo:2": {
+      "task_key": "todo:2",
+      "task_label": "2",
+      "task_title": "Extend SmartFactory gauge and scene tokens",
+      "session_id": "ses_204056b9affeF9wWWR9yZ1388s",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-06T06:32:14.705Z"
+    },
+    "todo:3": {
+      "task_key": "todo:3",
+      "task_label": "3",
+      "task_title": "Create shared gauge geometry helpers with Jest coverage",
+      "session_id": "ses_20400c0d7ffelVFpt6CPmbPLny",
+      "agent": "Sisyphus-Junior",
+      "category": "visual-engineering",
+      "updated_at": "2026-05-06T06:38:18.072Z"
     },
     "todo:4": {
       "task_key": "todo:4",
       "task_label": "4",
-      "task_title": "Create GitHub Actions deploy workflow",
-      "session_id": "ses_20d06c20fffeMC0Tf9SjXSbM97",
+      "task_title": "Refactor war-room/equipment GaugeCard to shared gauge design",
+      "session_id": "ses_203f750a2ffeoGBoHrCGPNiiir",
       "agent": "Sisyphus-Junior",
-      "category": "unspecified-high",
-      "updated_at": "2026-05-04T12:33:45.967Z"
+      "category": "visual-engineering",
+      "updated_at": "2026-05-06T06:49:23.430Z"
     },
-    "todo:5": {
-      "task_key": "todo:5",
-      "task_label": "5",
-      "task_title": "Build verification + local dev regression test",
-      "session_id": "ses_20d03f396ffeFFmKWvU0ikn9P8",
+    "todo:6": {
+      "task_key": "todo:6",
+      "task_label": "6",
+      "task_title": "Add procedural semiconductor fab scene details",
+      "session_id": "ses_203ed2b28ffeheklNoYK91riSl",
       "agent": "Sisyphus-Junior",
-      "category": "unspecified-high",
-      "updated_at": "2026-05-04T12:40:06.681Z"
+      "category": "visual-engineering",
+      "updated_at": "2026-05-06T06:59:48.309Z"
+    },
+    "todo:7": {
+      "task_key": "todo:7",
+      "task_label": "7",
+      "task_title": "Upgrade SubsystemZone alert hierarchy and 3D labels",
+      "session_id": "ses_203e93449ffeXr8FYE0wGNrnIe",
+      "agent": "Sisyphus-Junior",
+      "category": "visual-engineering",
+      "updated_at": "2026-05-06T07:07:32.263Z"
+    },
+    "todo:9": {
+      "task_key": "todo:9",
+      "task_label": "9",
+      "task_title": "Add Playwright specs and CI quality gates",
+      "session_id": "ses_203e1e078ffexzZ14KIxm0qm8r",
+      "agent": "Sisyphus-Junior",
+      "category": "uiux-master",
+      "updated_at": "2026-05-06T07:38:51.771Z"
     },
     "final-wave:f1": {
       "task_key": "final-wave:f1",
       "task_label": "F1",
-      "task_title": "**Plan Compliance Audit** — `oracle`",
-      "session_id": "ses_20cfa33dfffeoIIlrQ3j6kZgmb",
-      "agent": "oracle",
-      "updated_at": "2026-05-04T12:46:00.963Z"
+      "task_title": "Plan Compliance Audit — oracle",
+      "session_id": "ses_203b940b6ffeqlkKRdcstnT1DX",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-06T07:54:22.643Z"
     }
   }
 }

@@ -3,6 +3,18 @@
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import type { ProcessParameter } from "@/types/equipment";
+import {
+  GAUGE_VIEWBOX,
+  GAUGE_ARC,
+  GAUGE_TEXT,
+  polarToCartesian,
+  describeGaugeArc,
+  safeRange,
+  clampPercentage,
+  computeGaugeValueFontSize,
+  formatGaugeValue,
+  sanitizeSvgId,
+} from "@/lib/gauge-geometry";
 
 interface GaugeCardProps {
   parameter: ProcessParameter;
@@ -10,31 +22,6 @@ interface GaugeCardProps {
 }
 
 type GaugeStatus = "normal" | "warning" | "alarm";
-
-const VIEWBOX_WIDTH = 240;
-const VIEWBOX_HEIGHT = 154;
-const CENTER_X = VIEWBOX_WIDTH / 2;
-const CENTER_Y = 124;
-const RADIUS = 86;
-const ARC_LENGTH = Math.PI * RADIUS;
-
-function polarToCartesian(angle: number, radius = RADIUS) {
-  const radians = (angle * Math.PI) / 180;
-  return {
-    x: CENTER_X + radius * Math.cos(radians),
-    y: CENTER_Y + radius * Math.sin(radians),
-  };
-}
-
-function describeArc(startAngle: number, endAngle: number, radius = RADIUS) {
-  const start = polarToCartesian(startAngle, radius);
-  const end = polarToCartesian(endAngle, radius);
-  return `M ${start.x} ${start.y} A ${radius} ${radius} 0 0 1 ${end.x} ${end.y}`;
-}
-
-function safeRange(lsl: number, usl: number) {
-  return Math.max(Math.abs(usl - lsl), Number.EPSILON);
-}
 
 function getStatus(value: number, lsl: number, usl: number): GaugeStatus {
   const range = safeRange(lsl, usl);
@@ -45,28 +32,23 @@ function getStatus(value: number, lsl: number, usl: number): GaugeStatus {
   return "normal";
 }
 
-function formatValue(value: number) {
-  const abs = Math.abs(value);
-  if (abs >= 100) return value.toFixed(1);
-  if (abs >= 10) return value.toFixed(2);
-  return value.toFixed(3);
-}
-
 export function GaugeCard({ parameter, className }: GaugeCardProps) {
   const { name, value, unit, lsl, usl } = parameter;
   const status = getStatus(value, lsl, usl);
   const range = safeRange(lsl, usl);
-  const pct = Math.max(0, Math.min(100, ((value - lsl) / range) * 100));
+  const pct = clampPercentage(((value - lsl) / range) * 100);
+  const ARC_LENGTH = Math.PI * GAUGE_ARC.radius;
   const needleAngle = -180 + (pct / 100) * 180;
-  const needleEnd = polarToCartesian(needleAngle, RADIUS - 16);
-  const formatted = formatValue(value);
+  const needleEnd = polarToCartesian(needleAngle, GAUGE_ARC.radius - 16);
+  const formatted = formatGaugeValue(value);
+  const filterId = sanitizeSvgId(name);
 
   const statusColorVar =
     status === "alarm"
-      ? "var(--sf-status-red)"
+      ? "var(--sf-gauge-zone-red)"
       : status === "warning"
-        ? "var(--sf-status-amber)"
-        : "var(--sf-status-green)";
+        ? "var(--sf-gauge-zone-amber)"
+        : "var(--sf-gauge-zone-green)";
 
   const statusMessage =
     status === "alarm"
@@ -82,8 +64,7 @@ export function GaugeCard({ parameter, className }: GaugeCardProps) {
         className,
       )}
       style={{
-        background:
-          "linear-gradient(180deg, rgba(24,40,64,0.94), rgba(10,22,40,0.96))",
+        background: "var(--sf-gauge-bg-gradient)",
         borderColor: "var(--sf-border-default)",
       }}
     >
@@ -108,16 +89,17 @@ export function GaugeCard({ parameter, className }: GaugeCardProps) {
       </div>
 
       <svg
-        viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
+        viewBox={`0 0 ${GAUGE_VIEWBOX.width} ${GAUGE_VIEWBOX.height}`}
         className="block h-auto w-full overflow-visible"
         role="meter"
         aria-label={statusMessage}
         aria-valuemin={lsl}
         aria-valuemax={usl}
         aria-valuenow={value}
+        aria-valuetext={`${name}: ${formatted} ${unit || 'ratio'}, status ${status}, spec ${lsl} to ${usl}`}
       >
         <defs>
-          <filter id={`gauge-glow-${name.replace(/\W+/g, "-")}`} x="-40%" y="-40%" width="180%" height="180%">
+          <filter id={`gauge-glow-${filterId}`} x="-40%" y="-40%" width="180%" height="180%">
             <feGaussianBlur stdDeviation="3" result="blur" />
             <feMerge>
               <feMergeNode in="blur" />
@@ -127,14 +109,14 @@ export function GaugeCard({ parameter, className }: GaugeCardProps) {
         </defs>
 
         <path
-          d={describeArc(-180, 0)}
+          d={describeGaugeArc(-180, 0)}
           fill="none"
-          stroke="rgba(148, 163, 184, 0.18)"
+          stroke="var(--sf-gauge-arc-track)"
           strokeWidth="13"
           strokeLinecap="round"
         />
         <path
-          d={describeArc(-180, 0)}
+          d={describeGaugeArc(-180, 0)}
           fill="none"
           stroke={statusColorVar}
           strokeWidth="13"
@@ -145,8 +127,8 @@ export function GaugeCard({ parameter, className }: GaugeCardProps) {
         />
 
         {[-180, -135, -90, -45, 0].map((angle) => {
-          const outer = polarToCartesian(angle, RADIUS + 10);
-          const inner = polarToCartesian(angle, RADIUS - 4);
+          const outer = polarToCartesian(angle, GAUGE_ARC.radius + 10);
+          const inner = polarToCartesian(angle, GAUGE_ARC.radius - 4);
           return (
             <line
               key={angle}
@@ -162,44 +144,48 @@ export function GaugeCard({ parameter, className }: GaugeCardProps) {
         })}
 
         <line
-          x1={CENTER_X}
-          y1={CENTER_Y}
+          x1={GAUGE_ARC.centerX}
+          y1={GAUGE_ARC.centerY}
           x2={needleEnd.x}
           y2={needleEnd.y}
           stroke={statusColorVar}
           strokeWidth="4"
           strokeLinecap="round"
-          filter={`url(#gauge-glow-${name.replace(/\W+/g, "-")})`}
+          filter={`url(#gauge-glow-${filterId})`}
           className="transition-all duration-500 motion-reduce:transition-none"
         />
-        <circle cx={CENTER_X} cy={CENTER_Y} r="7" fill="var(--sf-bg-base)" stroke={statusColorVar} strokeWidth="3" />
+        <circle cx={GAUGE_ARC.centerX} cy={GAUGE_ARC.centerY} r="7" fill="var(--sf-bg-base)" stroke={statusColorVar} strokeWidth="3" />
 
         <text
-          x={CENTER_X}
+          x={GAUGE_ARC.centerX}
           y="66"
           textAnchor="middle"
-          fontSize={formatted.length > 7 ? 24 : 29}
+          fontSize={computeGaugeValueFontSize(formatted)}
           fontFamily="var(--font-family-mono), 'Fira Code', monospace"
           fontWeight="700"
-          fill="var(--gauge-value-color)"
+          fill="var(--sf-gauge-value-color)"
+          textLength={GAUGE_TEXT.valueWidth}
+          lengthAdjust="spacingAndGlyphs"
         >
           {formatted}
         </text>
         <text
-          x={CENTER_X}
+          x={GAUGE_ARC.centerX}
           y="88"
           textAnchor="middle"
           fontSize="12"
           fontWeight="600"
           letterSpacing="0.14em"
-          fill="var(--sf-text-secondary)"
+          fill="var(--sf-gauge-unit-color)"
+          textLength={GAUGE_TEXT.unitWidth}
+          lengthAdjust="spacingAndGlyphs"
         >
           {unit || "RATIO"}
         </text>
-        <text x="18" y="146" fontSize="11" fill="var(--sf-text-muted)">
+        <text x="18" y="146" fontSize="11" fill="var(--sf-gauge-label-color)" textLength={GAUGE_TEXT.labelWidth} lengthAdjust="spacingAndGlyphs">
           {lsl}
         </text>
-        <text x={VIEWBOX_WIDTH - 18} y="146" textAnchor="end" fontSize="11" fill="var(--sf-text-muted)">
+        <text x={GAUGE_VIEWBOX.width - 18} y="146" textAnchor="end" fontSize="11" fill="var(--sf-gauge-label-color)" textLength={GAUGE_TEXT.labelWidth} lengthAdjust="spacingAndGlyphs">
           {usl}
         </text>
       </svg>

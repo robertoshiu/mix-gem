@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { X, Zap, Activity, AlertTriangle, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useDialogFocusTrap } from "@/hooks/use-dialog-focus-trap";
 import { GaugeCard } from "@/components/charts/gauge-card";
 import {
   LineChart,
@@ -162,6 +163,7 @@ export function PowerMonitoringPanel({
   );
 
   const panelRef = useRef<HTMLDivElement>(null);
+  useDialogFocusTrap(panelRef, isOpen, onClose);
 
   // Refresh live data on interval
   useEffect(() => {
@@ -261,7 +263,8 @@ export function PowerMonitoringPanel({
           isOpen ? "translate-x-0" : "translate-x-full"
         )}
         style={{
-          width: "min(100vw, 560px)",
+          width: 'var(--sf-overlay-width)',
+          minWidth: 'var(--sf-overlay-min-width, 360px)',
           backgroundColor: "var(--sf-bg-base)",
           borderLeft: "1px solid var(--sf-border-default)",
         }}

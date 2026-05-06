@@ -20,6 +20,7 @@ import type {
   AlarmEntry,
 } from "@/lib/war-room-types";
 import { generateFireAlarmSubsystemData } from "@/lib/war-room-mock-data";
+import { useDialogFocusTrap } from "@/hooks/use-dialog-focus-trap";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -182,6 +183,7 @@ export function FireAlarmPanel({
   );
 
   const panelRef = useRef<HTMLDivElement>(null);
+  useDialogFocusTrap(panelRef, isOpen, onClose);
 
   // Refresh on interval
   useEffect(() => {
@@ -240,8 +242,8 @@ export function FireAlarmPanel({
           isOpen ? "translate-x-0" : "translate-x-full"
         )}
         style={{
-          width: "min(40vw, 480px)",
-          minWidth: 360,
+          width: 'var(--sf-overlay-width)',
+          minWidth: 'var(--sf-overlay-min-width, 360px)',
           backgroundColor: "var(--sf-bg-base)",
           borderLeft: "1px solid var(--sf-border-default)",
         }}

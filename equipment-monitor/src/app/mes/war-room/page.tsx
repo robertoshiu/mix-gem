@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useSyncExternalStore } from 'react';
+import { useEffect, useCallback, useRef, useSyncExternalStore } from 'react';
 import dynamic from 'next/dynamic';
 import { Activity, AlertTriangle } from 'lucide-react';
 import { useWarRoomStore } from '@/stores/war-room-store';
@@ -88,6 +88,7 @@ export default function WarRoomPage() {
   const setActiveZone = useWarRoomStore((s) => s.setActiveZone);
   const closeOverlay = useWarRoomStore((s) => s.closeOverlay);
   const refreshData = useWarRoomStore((s) => s.refreshData);
+  const lastFocusedZoneRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     refreshData();
@@ -150,7 +151,11 @@ export default function WarRoomPage() {
               <button
                 key={zone.id}
                 type="button"
-                onClick={() => setActiveZone(zone.id)}
+                onClick={(e) => {
+                  lastFocusedZoneRef.current = e.currentTarget;
+                  setActiveZone(zone.id);
+                }}
+                aria-label={`${zone.label}: ${displayedAlerts[zone.id] ? 'Alerts active' : 'Nominal'}, ${zone.description}`}
                 className={cn(
                   'flex min-w-0 items-center gap-2 rounded-full border px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 motion-reduce:transition-none',
                   activeZone === zone.id ? 'bg-white/10' : 'bg-white/[0.03] hover:bg-white/[0.07]',
@@ -185,6 +190,8 @@ export default function WarRoomPage() {
               position={zone.position}
               onClick={() => setActiveZone(zone.id)}
               hasAlert={displayedAlerts[zone.id]}
+              alertCount={subsystemData[zone.id].alarms.length}
+              statusLabel={displayedAlerts[zone.id] ? `${subsystemData[zone.id].alarms.length} ALERTS` : 'NOMINAL'}
             />
           ))}
         </FactoryCanvas>
@@ -194,18 +201,22 @@ export default function WarRoomPage() {
           className="pointer-events-none absolute inset-x-3 bottom-3 z-20 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
         >
           {ZONE_META.map((zone) => (
-            <button
-              key={zone.id}
-              type="button"
-              onClick={() => setActiveZone(zone.id)}
-              className={cn(
-                'pointer-events-auto min-w-0 rounded-2xl border p-4 text-left shadow-[0_18px_48px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-transform duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 motion-reduce:transition-none motion-reduce:hover:translate-y-0',
-                activeZone === zone.id ? 'bg-white/12' : 'bg-[rgba(17,29,46,0.78)]',
-              )}
-              style={{
-                borderColor: activeZone === zone.id ? zone.colorVar : 'var(--sf-border-default)',
-              }}
-            >
+<button
+               key={zone.id}
+               type="button"
+               onClick={(e) => {
+                 lastFocusedZoneRef.current = e.currentTarget;
+                 setActiveZone(zone.id);
+               }}
+               aria-label={`${zone.label}: ${displayedAlerts[zone.id] ? 'Alerts active' : 'Nominal'}, ${zone.description}`}
+               className={cn(
+                 'pointer-events-auto min-w-0 rounded-2xl border p-4 text-left shadow-[0_18px_48px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-transform duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 motion-reduce:transition-none motion-reduce:hover:translate-y-0',
+                 activeZone === zone.id ? 'bg-white/12' : 'bg-[rgba(17,29,46,0.78)]',
+               )}
+               style={{
+                 borderColor: activeZone === zone.id ? zone.colorVar : 'var(--sf-border-default)',
+               }}
+             >
               <div className="mb-2 flex items-center justify-between gap-3">
                 <span className="truncate text-sm font-semibold" style={{ color: 'var(--sf-text-primary)' }}>
                   {zone.label}
@@ -231,10 +242,17 @@ export default function WarRoomPage() {
           <button
             type="button"
             className="absolute inset-0 z-30 cursor-default"
-            onClick={closeOverlay}
+            onClick={() => {
+              closeOverlay();
+              setTimeout(() => lastFocusedZoneRef.current?.focus(), 0);
+            }}
             aria-label="Close overlay"
           />
         )}
+
+        <div className="sr-only" aria-live="polite" aria-atomic="true">
+          {activeZone ? `${ZONE_META.find((z) => z.id === activeZone)?.label ?? activeZone} panel open` : overlayOpen ? 'Panel closing' : 'All subsystems nominal'}
+        </div>
       </main>
 
       {ActivePanel && <ActivePanel isOpen={overlayOpen} onClose={closeOverlay} />}
