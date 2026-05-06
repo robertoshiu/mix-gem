@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import { ReactNode, Suspense } from 'react';
 import { ErrorBoundary } from '@/components/error-boundary';
+import { useWebGLSupport } from '@/hooks/use-webgl-support';
 import { WebGLFallback } from './WebGLFallback';
 
 const R3FCanvas = dynamic(
@@ -21,12 +22,11 @@ function CanvasLoadingFallback() {
       className="flex items-center justify-center h-full w-full"
       style={{ backgroundColor: 'var(--sf-bg-canvas, #0B0F19)' }}
     >
-      <p
-        className="animate-pulse text-sm"
-        style={{ color: 'var(--sf-text-muted, #475569)' }}
-      >
-          Loading 3D scene...
-      </p>
+      <div className="rounded-2xl border px-6 py-5 text-center" style={{ borderColor: 'var(--sf-border-default)', backgroundColor: 'var(--sf-surface-card)' }}>
+        <p className="animate-pulse text-sm motion-reduce:animate-none" style={{ color: 'var(--sf-text-secondary, #94A3B8)' }}>
+          Initializing 3D war room...
+        </p>
+      </div>
     </div>
   );
 }
@@ -36,19 +36,37 @@ function CanvasErrorFallback() {
 }
 
 export function FactoryCanvas({ children, className }: FactoryCanvasProps) {
+  const webgl = useWebGLSupport();
+  const rootClassName = ['factory-canvas-root', className].filter(Boolean).join(' ');
+
+  if (!webgl.supported) {
+    return (
+      <div className={rootClassName}>
+        <WebGLFallback />
+      </div>
+    );
+  }
+
   return (
-    <ErrorBoundary fallback={<CanvasErrorFallback />}>
-      <Suspense fallback={<CanvasLoadingFallback />}>
-        <R3FCanvas
-          className={className}
-          frameloop="demand"
-          dpr={[1, 2]}
-          gl={{ antialias: true, alpha: false }}
-          style={{ backgroundColor: 'var(--sf-bg-canvas, #0B0F19)' }}
-        >
-          {children}
-        </R3FCanvas>
-      </Suspense>
-    </ErrorBoundary>
+    <div className={rootClassName}>
+      <ErrorBoundary fallback={<CanvasErrorFallback />}>
+        <Suspense fallback={<CanvasLoadingFallback />}>
+          <R3FCanvas
+            camera={{ position: [17, 16, 18], fov: 45, near: 0.1, far: 140 }}
+            frameloop="always"
+            dpr={[1, 1.5]}
+            gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
+            style={{
+              width: '100%',
+              height: '100%',
+              minHeight: 'inherit',
+              backgroundColor: 'var(--sf-bg-canvas, #0B0F19)',
+            }}
+          >
+            {children}
+          </R3FCanvas>
+        </Suspense>
+      </ErrorBoundary>
+    </div>
   );
 }

@@ -1,95 +1,61 @@
 'use client';
 
-import { OrbitControls, Grid } from '@react-three/drei';
+import { OrbitControls, Grid, Line } from '@react-three/drei';
 
-const ZONE_COLORS = {
-  power: '#3b82f6',
-  buildingAutomation: '#10b981',
-  gas: '#f59e0b',
-  fire: '#ef4444',
-} as const;
-
-const ZONE_SIZE = 12;
-const CENTER_BUILDING: [number, number, number] = [4, 3, 4];
+const FLOOR_POINTS: [number, number, number][] = [
+  [-16, 0.08, -16],
+  [16, 0.08, -16],
+  [16, 0.08, 16],
+  [-16, 0.08, 16],
+  [-16, 0.08, -16],
+];
 
 /**
- * 3D factory war room scene: 2x2 zone grid with center building outline.
- * Rendered as a child of FactoryCanvas (which provides the R3F Canvas wrapper).
+ * Shared 3D factory shell. Interactive zone floor meshes live in SubsystemZone;
+ * this component only provides lighting, camera controls, grid, and landmarks to
+ * avoid duplicate co-planar geometry/z-fighting.
  */
 export function FactoryScene() {
   return (
     <>
-      {/* Lighting */}
-      <ambientLight intensity={0.4} />
-      <directionalLight position={[10, 15, 10]} intensity={0.8} castShadow />
+      <ambientLight intensity={0.65} />
+      <directionalLight position={[10, 18, 12]} intensity={1.1} castShadow />
+      <pointLight position={[0, 8, 0]} intensity={1.6} color="#22d3ee" />
 
-      {/* Camera Controls */}
       <OrbitControls
         enableRotate
         enableZoom
         enablePan
-        minDistance={5}
-        maxDistance={80}
+        target={[0, 0.3, 0]}
+        minDistance={10}
+        maxDistance={56}
+        maxPolarAngle={Math.PI / 2.15}
       />
 
-      {/* Floor reference grid */}
       <Grid
         position={[0, 0, 0]}
-        args={[60, 60]}
+        args={[42, 42]}
         cellSize={1}
-        cellThickness={0.5}
+        cellThickness={0.55}
         cellColor="#1E3A5F"
-        sectionSize={5}
-        sectionThickness={1}
-        sectionColor="#2563EB"
-        fadeDistance={50}
-        infiniteGrid
+        sectionSize={6}
+        sectionThickness={1.3}
+        sectionColor="#22D3EE"
+        fadeDistance={45}
+        fadeStrength={1.7}
+        infiniteGrid={false}
       />
 
-      {/* Zone 1: Power Monitoring (top-left) */}
-      <mesh position={[-7, 0.05, -7]}>
-        <boxGeometry args={[ZONE_SIZE, 0.1, ZONE_SIZE]} />
-        <meshStandardMaterial
-          color={ZONE_COLORS.power}
-          transparent
-          opacity={0.25}
-        />
+      <Line points={FLOOR_POINTS} color="#38bdf8" lineWidth={1.8} transparent opacity={0.58} />
+
+      <mesh position={[0, 1.1, 0]}>
+        <boxGeometry args={[4.8, 2.2, 4.8]} />
+        <meshStandardMaterial color="#94a3b8" wireframe transparent opacity={0.72} />
       </mesh>
 
-      {/* Zone 2: Building Automation (top-right) */}
-      <mesh position={[7, 0.05, -7]}>
-        <boxGeometry args={[ZONE_SIZE, 0.1, ZONE_SIZE]} />
-        <meshStandardMaterial
-          color={ZONE_COLORS.buildingAutomation}
-          transparent
-          opacity={0.25}
-        />
-      </mesh>
-
-      {/* Zone 3: Gas Detection (bottom-left) */}
-      <mesh position={[-7, 0.05, 7]}>
-        <boxGeometry args={[ZONE_SIZE, 0.1, ZONE_SIZE]} />
-        <meshStandardMaterial
-          color={ZONE_COLORS.gas}
-          transparent
-          opacity={0.25}
-        />
-      </mesh>
-
-      {/* Zone 4: Fire Alarm (bottom-right) */}
-      <mesh position={[7, 0.05, 7]}>
-        <boxGeometry args={[ZONE_SIZE, 0.1, ZONE_SIZE]} />
-        <meshStandardMaterial
-          color={ZONE_COLORS.fire}
-          transparent
-          opacity={0.25}
-        />
-      </mesh>
-
-      {/* Center building outline (wireframe box at origin) */}
-      <mesh position={[0, 1.5, 0]}>
-        <boxGeometry args={CENTER_BUILDING} />
-        <meshStandardMaterial color="#94a3b8" wireframe={true} />
+      <mesh position={[0, 0.16, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[3.2, 3.35, 64]} />
+        <meshBasicMaterial color="#22d3ee" transparent opacity={0.42} />
       </mesh>
     </>
   );

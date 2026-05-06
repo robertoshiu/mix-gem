@@ -15,7 +15,6 @@ import {
 import type {
   PowerSubsystemData,
   TransformerStatus,
-  AlarmEntry,
 } from "@/lib/war-room-types";
 import { generatePowerSubsystemData } from "@/lib/war-room-mock-data";
 import type { ProcessParameter } from "@/types/equipment";
@@ -115,20 +114,6 @@ function severityLabel(severity: SystemSeverity): string {
       return "Warning";
     case "alarm":
       return "Critical";
-  }
-}
-
-/** Format an AlarmEntry severity for badge display */
-function alarmBadgeVariant(
-  severity: AlarmEntry["severity"]
-): "destructive" | "default" | "secondary" {
-  switch (severity) {
-    case "critical":
-      return "destructive";
-    case "warning":
-      return "default";
-    case "info":
-      return "secondary";
   }
 }
 
@@ -276,8 +261,7 @@ export function PowerMonitoringPanel({
           isOpen ? "translate-x-0" : "translate-x-full"
         )}
         style={{
-          width: "min(40vw, 480px)",
-          minWidth: 360,
+          width: "min(100vw, 560px)",
           backgroundColor: "var(--sf-bg-base)",
           borderLeft: "1px solid var(--sf-border-default)",
         }}
@@ -324,7 +308,7 @@ export function PowerMonitoringPanel({
 
         <div className="flex flex-col gap-5 p-5">
           {/* ---- KPI Row ---- */}
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {(
               [
                 { label: "Active Power", value: data.activePower, unit: "kW" },
@@ -366,7 +350,7 @@ export function PowerMonitoringPanel({
           </div>
 
           {/* ---- Gauge Grid 2x2 ---- */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {gaugeParams.map((param) => (
               <GaugeCard key={param.name} parameter={param} />
             ))}

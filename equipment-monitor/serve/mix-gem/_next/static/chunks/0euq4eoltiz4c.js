@@ -1,0 +1,35 @@
+(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,42386,e=>{"use strict";let t={type:"spring",stiffness:300,damping:25,mass:.8};e.s(["fadeIn",0,{initial:{opacity:0},animate:{opacity:1,transition:{duration:.3}},exit:{opacity:0,transition:{duration:.2}}},"fadeInUp",0,{initial:{opacity:0,y:20},animate:{opacity:1,y:0,transition:t},exit:{opacity:0,y:-10,transition:{duration:.2}}},"scaleIn",0,{initial:{opacity:0,scale:.9},animate:{opacity:1,scale:1,transition:t},exit:{opacity:0,scale:.9,transition:{duration:.2}}},"staggerContainer",0,{initial:{},animate:{transition:{staggerChildren:.1,delayChildren:.1}}},"useReducedMotion",0,function(){return"function"==typeof window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches}])},61070,e=>{"use strict";var t=e.i(73973);e.s(["useFrame",()=>t.D])},33839,e=>{"use strict";function t(){return(t=Object.assign.bind()).apply(null,arguments)}e.s(["default",()=>t])},33902,e=>{"use strict";var t=e.i(73973);e.s(["useThree",()=>t.C])},83475,16598,e=>{"use strict";var t=e.i(73973);e.s(["extend",()=>t.e],83475);let r=parseInt(e.i(83879).REVISION.replace(/\D+/g,""));e.s(["version",0,r],16598)},32453,e=>{"use strict";var t=e.i(88227),r=e.i(48845),i=e.i(61070),o=e.i(23458),a=e.i(33839),n=e.i(83879);let s=r.forwardRef(function({children:e,follow:t=!0,lockX:o=!1,lockY:s=!1,lockZ:l=!1,...u},c){let m=r.useRef(null),f=r.useRef(null),d=new n.Quaternion;return(0,i.useFrame)(({camera:e})=>{if(!t||!f.current)return;let r=m.current.rotation.clone();f.current.updateMatrix(),f.current.updateWorldMatrix(!1,!1),f.current.getWorldQuaternion(d),e.getWorldQuaternion(m.current.quaternion).premultiply(d.invert()),o&&(m.current.rotation.x=r.x),s&&(m.current.rotation.y=r.y),l&&(m.current.rotation.z=r.z)}),r.useImperativeHandle(c,()=>f.current,[]),r.createElement("group",(0,a.default)({ref:f},u),r.createElement("group",{ref:m},e))});var l=n,u=e.i(83475),c=e.i(33902),m=e.i(16598);class f extends l.ShaderMaterial{constructor(){super({uniforms:{time:{value:0},pixelRatio:{value:1}},vertexShader:`
+        uniform float pixelRatio;
+        uniform float time;
+        attribute float size;  
+        attribute float speed;  
+        attribute float opacity;
+        attribute vec3 noise;
+        attribute vec3 color;
+        varying vec3 vColor;
+        varying float vOpacity;
+
+        void main() {
+          vec4 modelPosition = modelMatrix * vec4(position, 1.0);
+          modelPosition.y += sin(time * speed + modelPosition.x * noise.x * 100.0) * 0.2;
+          modelPosition.z += cos(time * speed + modelPosition.x * noise.y * 100.0) * 0.2;
+          modelPosition.x += cos(time * speed + modelPosition.x * noise.z * 100.0) * 0.2;
+          vec4 viewPosition = viewMatrix * modelPosition;
+          vec4 projectionPostion = projectionMatrix * viewPosition;
+          gl_Position = projectionPostion;
+          gl_PointSize = size * 25. * pixelRatio;
+          gl_PointSize *= (1.0 / - viewPosition.z);
+          vColor = color;
+          vOpacity = opacity;
+        }
+      `,fragmentShader:`
+        varying vec3 vColor;
+        varying float vOpacity;
+        void main() {
+          float distanceToCenter = distance(gl_PointCoord, vec2(0.5));
+          float strength = 0.05 / distanceToCenter - 0.1;
+          gl_FragColor = vec4(vColor, strength * vOpacity);
+          #include <tonemapping_fragment>
+          #include <${m.version>=154?"colorspace_fragment":"encodings_fragment"}>
+        }
+      `})}get time(){return this.uniforms.time.value}set time(e){this.uniforms.time.value=e}get pixelRatio(){return this.uniforms.pixelRatio.value}set pixelRatio(e){this.uniforms.pixelRatio.value=e}}let d=e=>e&&e.constructor===Float32Array,p=e=>e instanceof l.Vector2||e instanceof l.Vector3||e instanceof l.Vector4,y=e=>Array.isArray(e)?e:p(e)?e.toArray():[e,e,e];function g(e,t,i){return r.useMemo(()=>{if(void 0!==t)if(d(t))return t;else{if(t instanceof l.Color){let r=Array.from({length:3*e},()=>[t.r,t.g,t.b]).flat();return Float32Array.from(r)}if(p(t)||Array.isArray(t)){let r=Array.from({length:3*e},()=>y(t)).flat();return Float32Array.from(r)}return Float32Array.from({length:e},()=>t)}return Float32Array.from({length:e},i)},[t])}let v=r.forwardRef(({noise:e=1,count:t=100,speed:o=1,opacity:n=1,scale:s=1,size:m,color:p,children:v,...h},x)=>{r.useMemo(()=>(0,u.extend)({SparklesImplMaterial:f}),[]);let b=r.useRef(null),A=(0,c.useThree)(e=>e.viewport.dpr),P=y(s),R=r.useMemo(()=>Float32Array.from(Array.from({length:t},()=>P.map(l.MathUtils.randFloatSpread)).flat()),[t,...P]),C=g(t,m,Math.random),M=g(t,n),w=g(t,o),I=g(3*t,e),E=g(void 0===p?3*t:t,d(p)?p:new l.Color(p),()=>1);return(0,i.useFrame)(e=>{b.current&&b.current.material&&(b.current.material.time=e.clock.elapsedTime)}),r.useImperativeHandle(x,()=>b.current,[]),r.createElement("points",(0,a.default)({key:`particle-${t}-${JSON.stringify(s)}`},h,{ref:b}),r.createElement("bufferGeometry",null,r.createElement("bufferAttribute",{attach:"attributes-position",args:[R,3]}),r.createElement("bufferAttribute",{attach:"attributes-size",args:[C,1]}),r.createElement("bufferAttribute",{attach:"attributes-opacity",args:[M,1]}),r.createElement("bufferAttribute",{attach:"attributes-speed",args:[w,1]}),r.createElement("bufferAttribute",{attach:"attributes-color",args:[E,3]}),r.createElement("bufferAttribute",{attach:"attributes-noise",args:[I,3]})),v||r.createElement("sparklesImplMaterial",{transparent:!0,pixelRatio:A,depthWrite:!1}))});var h=e.i(42386);let x={power:"POWER MONITORING","building-auto":"BUILDING AUTO",gas:"GAS DETECTION",fire:"FIRE ALARM"},b={power:"#3b82f6","building-auto":"#10b981",gas:"#f59e0b",fire:"#ef4444"};e.s(["SubsystemZone",0,function({zoneType:e,position:a,onClick:l,hasAlert:u=!1}){let c=(0,r.useRef)(null),[m,f]=(0,r.useState)(!1),d=(0,h.useReducedMotion)(),p=b[e],y=x[e];return(0,i.useFrame)(e=>{if(c.current)if(u){let t=d?.55:.5*Math.sin(3*e.clock.elapsedTime)+.5,r=new n.Color(p);c.current.emissive=r.multiplyScalar(.15+.65*t)}else m?(c.current.emissive=new n.Color(p),c.current.emissiveIntensity=.3):(c.current.emissive=new n.Color(0),c.current.emissiveIntensity=0)}),(0,t.jsxs)("group",{children:[(0,t.jsxs)("mesh",{position:a,onClick:l,onPointerOver:()=>f(!0),onPointerOut:()=>f(!1),children:[(0,t.jsx)("boxGeometry",{args:[11.5,.16,11.5]}),(0,t.jsx)("meshStandardMaterial",{ref:c,color:p,transparent:!0,opacity:m?.48:.34,roughness:.38,metalness:.12})]}),(0,t.jsxs)("mesh",{position:[a[0],a[1]+.1,a[2]],rotation:[-Math.PI/2,0,0],children:[(0,t.jsx)("ringGeometry",{args:[4.83,5.175,56]}),(0,t.jsx)("meshBasicMaterial",{color:p,transparent:!0,opacity:u?.72:.34})]}),(0,t.jsx)(s,{position:[a[0],a[1]+2,a[2]],children:(0,t.jsx)(o.Text,{fontSize:.72,color:"#e2e8f0",anchorX:"center",anchorY:"middle",outlineWidth:.05,outlineColor:"#0B0F19",children:y})}),u&&!d&&(0,t.jsx)(v,{position:[a[0],a[1]+1.5,a[2]],count:30,scale:11.5,size:2,speed:.3,color:p})]})}],32453)},75292,e=>{e.n(e.i(32453))}]);

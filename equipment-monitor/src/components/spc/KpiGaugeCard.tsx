@@ -61,8 +61,9 @@ function describeArc(cx: number, cy: number, r: number, startAngle: number, endA
  * Formula: fontSize = clamp(0.75rem, availableWidth / (charCount * 0.6), 2.5rem)
  * Returns a CSS clamp() expression string usable in SVG fontSize attribute.
  */
-function computeValueFontSize(charCount: number, availableWidth: number): string {
-  return `clamp(0.75rem, ${availableWidth} / (${charCount} * 0.6) * 1px, 2.5rem)`;
+function computeValueFontSize(charCount: number, availableWidth: number): number {
+  const measured = availableWidth / Math.max(charCount * 0.58, 1);
+  return Math.max(16, Math.min(32, measured));
 }
 
 export function KpiGaugeCard({
@@ -79,12 +80,12 @@ export function KpiGaugeCard({
 
   if (!latest) {
     return (
-      <motion.div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2" {...containerAnimProps}>
+      <motion.div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5" {...containerAnimProps}>
         {SPC_PARAM_KEYS.map((param) => (
           <motion.div key={param} {...itemAnimProps}>
             <div
               data-testid={`kpi-gauge-${param}`}
-              className="h-40 bg-[var(--smartfactory-surface-card)] rounded border border-[var(--smartfactory-border-default)] animate-pulse"
+              className="min-h-44 rounded-xl border border-[var(--smartfactory-border-default)] bg-[var(--smartfactory-surface-card)] animate-pulse motion-reduce:animate-none"
             />
           </motion.div>
         ))}
@@ -98,7 +99,7 @@ export function KpiGaugeCard({
   const last10 = chartData.slice(-10);
 
   return (
-    <motion.div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2" {...containerAnimProps}>
+    <motion.div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5" {...containerAnimProps}>
       {SPC_PARAM_KEYS.map((param) => {
         const config = SPC_PARAMETERS[param];
         const value = latest[param as keyof SpcMeasurement] as number;
@@ -128,12 +129,15 @@ export function KpiGaugeCard({
             data-testid={`kpi-gauge-${param}`}
             role="button"
             tabIndex={0}
+            aria-pressed={isActive}
             aria-label={`Select ${config.label} parameter`}
             onClick={() => onParamSelect(param)}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onParamSelect(param); } }}
             className={cn(
-              'flex flex-col bg-[var(--smartfactory-surface-card)] rounded border p-3 cursor-pointer transition-all duration-200',
-              isActive
+              'flex min-w-0 flex-col rounded-xl border bg-[var(--smartfactory-surface-card)] p-3 cursor-pointer shadow-[0_14px_34px_rgba(0,0,0,0.22)] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--smartfactory-border-active)] motion-reduce:transition-none',
+              isViolating
+                ? 'border-l-2 border-l-[var(--smartfactory-status-red)] border-[var(--smartfactory-status-red)] shadow-md bg-[var(--smartfactory-surface-elevated)]'
+                : isActive
                 ? 'border-l-2 border-l-[var(--smartfactory-border-active)] border-[var(--smartfactory-border-active)] shadow-md bg-[var(--smartfactory-surface-elevated)]'
                 : 'border-[var(--smartfactory-border-default)] hover:bg-[var(--smartfactory-surface-elevated)] hover:shadow-sm'
             )}
@@ -156,11 +160,11 @@ export function KpiGaugeCard({
             </div>
 
             {/* Enlarged Semicircular Speedometer Gauge with integrated text */}
-            <div className="relative flex items-center justify-center w-[210px] h-[135px] mx-auto my-1">
+            <div className="relative mx-auto my-2 flex aspect-[210/135] w-full max-w-[240px] items-center justify-center px-1">
               <svg
                 viewBox={`0 0 ${GAUGE_WIDTH} ${GAUGE_HEIGHT}`}
-                className="w-full h-full"
-                overflow="hidden"
+                className="h-full w-full overflow-visible"
+                overflow="visible"
               >
                 {/* Green zone: 0-60% -> angles -180deg to -108deg */}
                 <path
@@ -226,7 +230,7 @@ export function KpiGaugeCard({
                     stroke={isOk ? 'var(--smartfactory-status-green)' : 'var(--smartfactory-status-red)'}
                     strokeWidth="2.5"
                     strokeLinecap="round"
-                    className="transition-transform duration-500 ease-in-out"
+                    className="transition-transform duration-500 ease-in-out motion-reduce:transition-none"
                   />
                   {/* Needle pivot circle */}
                   <circle
@@ -244,7 +248,6 @@ export function KpiGaugeCard({
                   textAnchor="middle"
                   textLength={VALUE_TEXT_WIDTH}
                   lengthAdjust="spacingAndGlyphs"
-                  overflow="hidden"
                   fontSize={valueFontSize}
                   fontWeight="600"
                   fontFamily="'Fira Code', monospace"
@@ -260,7 +263,6 @@ export function KpiGaugeCard({
                   textAnchor="middle"
                   textLength={100}
                   lengthAdjust="spacingAndGlyphs"
-                  overflow="hidden"
                   fontSize={10}
                   fill="var(--smartfactory-text-secondary)"
                 >
@@ -273,7 +275,6 @@ export function KpiGaugeCard({
                   y={GAUGE_CENTER_Y + GAUGE_RADIUS - 50}
                   textLength={LABEL_TEXT_WIDTH}
                   lengthAdjust="spacingAndGlyphs"
-                  overflow="hidden"
                   fontSize={9}
                   fill="var(--smartfactory-text-muted)"
                 >
@@ -287,7 +288,6 @@ export function KpiGaugeCard({
                   textAnchor="end"
                   textLength={LABEL_TEXT_WIDTH}
                   lengthAdjust="spacingAndGlyphs"
-                  overflow="hidden"
                   fontSize={9}
                   fill="var(--smartfactory-text-muted)"
                 >

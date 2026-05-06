@@ -204,6 +204,7 @@ body {
   --sf-text-muted: var(--smartfactory-text-muted);
   --sf-accent-orange: var(--smartfactory-accent-orange);
   --sf-accent-blue: var(--smartfactory-accent-blue);
+  --sf-accent-primary: var(--smartfactory-accent-blue);
   --sf-accent-teal: var(--smartfactory-accent-teal);
   --sf-accent-cyan: var(--smartfactory-accent-cyan);
   --sf-accent-violet: var(--smartfactory-accent-violet);
@@ -253,7 +254,7 @@ body {
   /* Shared overlay tokens */
   --gauge-value-color: var(--sf-text-primary);
   --kpi-value-color: var(--sf-text-primary);
-  --kpi-arc-color: var(--sf-accent-primary);
+  --kpi-arc-color: var(--sf-accent-cyan);
   --sf-overlay-backdrop: rgba(0,0,0,0.6);
   --sf-overlay-border-radius: 12px;
   --sf-overlay-padding: 24px;
@@ -269,6 +270,14 @@ body {
 }
 
 @layer utilities {
+  .factory-canvas-root > div,
+  .factory-canvas-root > div > div,
+  .factory-canvas-root canvas {
+    width: 100% !important;
+    height: max(640px, 100%) !important;
+    min-height: inherit;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .animate-pulse,
     .animate-pulse-slow {

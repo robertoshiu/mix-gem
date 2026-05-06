@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useSyncExternalStore } from 'react';
 import dynamic from 'next/dynamic';
+import { Activity, AlertTriangle } from 'lucide-react';
 import { useWarRoomStore } from '@/stores/war-room-store';
+import { cn } from '@/lib/utils';
 import { PowerMonitoringPanel } from '@/components/war-room/PowerMonitoringPanel';
 import { BuildingAutoPanel } from '@/components/war-room/BuildingAutoPanel';
 import { GasDetectionPanel } from '@/components/war-room/GasDetectionPanel';
@@ -23,21 +25,49 @@ const SubsystemZone = dynamic(
   { ssr: false },
 );
 
-const ZONES = ['power', 'building-auto', 'gas', 'fire'] as const;
+type ZoneType = 'power' | 'building-auto' | 'gas' | 'fire';
 
-const ZONE_POSITIONS: Record<string, [number, number, number]> = {
-  power: [-7, 0.05, -7],
-  'building-auto': [7, 0.05, -7],
-  gas: [-7, 0.05, 7],
-  fire: [7, 0.05, 7],
-};
-
-const ZONE_LABELS: Record<string, string> = {
-  power: 'POWER',
-  'building-auto': 'AUTO',
-  gas: 'GAS',
-  fire: 'FIRE',
-};
+const ZONE_META: Array<{
+  id: ZoneType;
+  label: string;
+  shortLabel: string;
+  description: string;
+  position: [number, number, number];
+  colorVar: string;
+}> = [
+  {
+    id: 'power',
+    label: 'Power Monitoring',
+    shortLabel: 'PWR',
+    description: 'Substation load, voltage quality, PF',
+    position: [-6.5, 0.12, -6.5],
+    colorVar: 'var(--sf-power-primary)',
+  },
+  {
+    id: 'building-auto',
+    label: 'Building Auto',
+    shortLabel: 'BAS',
+    description: 'HVAC, cleanroom pressure, lighting',
+    position: [6.5, 0.12, -6.5],
+    colorVar: 'var(--sf-ba-primary)',
+  },
+  {
+    id: 'gas',
+    label: 'Gas Detection',
+    shortLabel: 'GAS',
+    description: 'Toxic gas sensors and exhaust zones',
+    position: [-6.5, 0.12, 6.5],
+    colorVar: 'var(--sf-gas-primary)',
+  },
+  {
+    id: 'fire',
+    label: 'Fire Alarm',
+    shortLabel: 'FIRE',
+    description: 'Detector loops and suppression status',
+    position: [6.5, 0.12, 6.5],
+    colorVar: 'var(--sf-fire-primary)',
+  },
+];
 
 const PANEL_MAP = {
   power: PowerMonitoringPanel,
@@ -46,34 +76,12 @@ const PANEL_MAP = {
   fire: FireAlarmPanel,
 } as const;
 
-/** Resolve a CSS custom property to a colour string at mount time. */
-function useCssZoneColour(zoneType: string, fallback: string): string {
-  const [value, setValue] = useState(fallback);
-  useEffect(() => {
-    const varName =
-      zoneType === 'power'
-        ? '--sf-power-primary'
-        : zoneType === 'building-auto'
-          ? '--sf-ba-primary'
-          : zoneType === 'gas'
-            ? '--sf-gas-primary'
-            : '--sf-fire-primary';
-    const resolved = getComputedStyle(document.documentElement)
-      .getPropertyValue(varName)
-      .trim();
-    setValue(resolved || fallback);
-  }, [zoneType, fallback]);
-  return value;
-}
-
-const ZONE_FALLBACKS: Record<string, string> = {
-  power: '#3b82f6',
-  'building-auto': '#10b981',
-  gas: '#f59e0b',
-  fire: '#ef4444',
-};
-
 export default function WarRoomPage() {
+  const showLiveData = useSyncExternalStore(
+    () => () => undefined,
+    () => true,
+    () => false,
+  );
   const activeZone = useWarRoomStore((s) => s.activeZone);
   const overlayOpen = useWarRoomStore((s) => s.overlayOpen);
   const subsystemData = useWarRoomStore((s) => s.subsystemData);
@@ -81,22 +89,12 @@ export default function WarRoomPage() {
   const closeOverlay = useWarRoomStore((s) => s.closeOverlay);
   const refreshData = useWarRoomStore((s) => s.refreshData);
 
-  // Pre-resolve zone colours from CSS variables (one-time at mount)
-  const zoneColours = Object.fromEntries(
-    ZONES.map((zone) => [
-      zone,
-      useCssZoneColour(zone, ZONE_FALLBACKS[zone]),
-    ]),
-  ) as Record<string, string>;
-
-  // Refresh mock data every 5 seconds
   useEffect(() => {
     refreshData();
     const id = setInterval(refreshData, 5000);
     return () => clearInterval(id);
   }, [refreshData]);
 
-  // Escape key closes overlay
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape' && overlayOpen) closeOverlay();
@@ -109,95 +107,137 @@ export default function WarRoomPage() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  const hasAlerts: Record<string, boolean> = {
+  const hasAlerts: Record<ZoneType, boolean> = {
     power: subsystemData.power.alarms.length > 0,
     'building-auto': subsystemData['building-auto'].alarms.length > 0,
     gas: subsystemData.gas.alarms.length > 0,
     fire: subsystemData.fire.alarms.length > 0,
   };
+  const displayedAlerts: Record<ZoneType, boolean> = showLiveData
+    ? hasAlerts
+    : { power: false, 'building-auto': false, gas: false, fire: false };
 
   const ActivePanel = activeZone ? PANEL_MAP[activeZone] : null;
 
   return (
     <div
-      className="relative flex flex-col h-full overflow-hidden"
+      className="relative flex min-h-dvh flex-col overflow-hidden"
       style={{ backgroundColor: 'var(--sf-bg-canvas, #0B0F19)' }}
     >
-      {/* Top Bar */}
-      <div
-        className="flex items-center justify-between px-6 py-3 shrink-0 z-30"
+      <header
+        className="z-30 flex shrink-0 flex-col gap-3 border-b px-4 py-3 backdrop-blur-xl md:flex-row md:items-center md:justify-between md:px-6"
         style={{
-          backgroundColor: 'rgba(11, 15, 25, 0.85)',
-          backdropFilter: 'blur(12px)',
-          borderBottom: '1px solid rgba(59, 130, 246, 0.15)',
+          backgroundColor: 'rgba(11, 15, 25, 0.88)',
+          borderColor: 'rgba(59, 130, 246, 0.18)',
         }}
       >
-        <h1
-          className="text-lg font-semibold tracking-wide"
-          style={{ color: 'var(--sf-text-primary, #e2e8f0)' }}
-        >
-          WAR ROOM
-        </h1>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <Activity className="h-4 w-4" style={{ color: 'var(--sf-accent-cyan)' }} aria-hidden="true" />
+            <h1 className="text-lg font-semibold tracking-[0.22em]" style={{ color: 'var(--sf-text-primary)' }}>
+              WAR ROOM 3D
+            </h1>
+          </div>
+          <p className="mt-1 text-xs" style={{ color: 'var(--sf-text-secondary)' }}>
+            Live facility subsystems with resilient 3D and fallback controls
+          </p>
+        </div>
 
-        <div className="flex items-center gap-5">
-          {ZONES.map((zone) => {
-            const alert = hasAlerts[zone];
-            const zoneColor = zoneColours[zone];
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {ZONE_META.map((zone) => {
+            const alert = displayedAlerts[zone.id];
             return (
-              <div key={zone} className="flex items-center gap-1.5">
+              <button
+                key={zone.id}
+                type="button"
+                onClick={() => setActiveZone(zone.id)}
+                className={cn(
+                  'flex min-w-0 items-center gap-2 rounded-full border px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 motion-reduce:transition-none',
+                  activeZone === zone.id ? 'bg-white/10' : 'bg-white/[0.03] hover:bg-white/[0.07]',
+                )}
+                style={{
+                  borderColor: activeZone === zone.id ? zone.colorVar : 'var(--sf-border-default)',
+                  color: activeZone === zone.id ? 'var(--sf-text-primary)' : 'var(--sf-text-secondary)',
+                }}
+              >
                 <span
-                  className="inline-block w-2.5 h-2.5 rounded-full"
+                  className="h-2.5 w-2.5 shrink-0 rounded-full"
                   style={{
-                    backgroundColor: alert
-                      ? zoneColor
-                      : 'var(--sf-text-muted, #475569)',
-                    boxShadow: alert ? `0 0 8px ${zoneColor}` : 'none',
-                    animation: alert ? 'pulse 2s infinite' : 'none',
+                    backgroundColor: alert ? zone.colorVar : 'var(--sf-text-muted)',
+                    boxShadow: alert ? `0 0 14px ${zone.colorVar}` : 'none',
                   }}
                 />
-                <span
-                  className="text-[10px] uppercase tracking-widest font-medium"
-                  style={{ color: 'var(--sf-text-muted, #475569)' }}
-                >
-                  {ZONE_LABELS[zone]}
-                </span>
-              </div>
+                <span className="truncate">{zone.shortLabel}</span>
+                {alert && <AlertTriangle className="h-3 w-3 shrink-0" style={{ color: zone.colorVar }} aria-hidden="true" />}
+              </button>
             );
           })}
         </div>
-      </div>
+      </header>
 
-      {/* 3D Canvas */}
-      <div className="flex-1 relative">
-        <FactoryCanvas className="w-full h-full">
+      <main className="relative flex min-h-[640px] flex-1 overflow-hidden md:min-h-[720px]">
+        <FactoryCanvas className="h-full min-h-[640px] w-full md:min-h-[720px]">
           <FactoryScene />
-          {ZONES.map((zone) => (
+          {ZONE_META.map((zone) => (
             <SubsystemZone
-              key={zone}
-              zoneType={zone}
-              position={ZONE_POSITIONS[zone]}
-              onClick={() => setActiveZone(zone)}
-              hasAlert={hasAlerts[zone]}
+              key={zone.id}
+              zoneType={zone.id}
+              position={zone.position}
+              onClick={() => setActiveZone(zone.id)}
+              hasAlert={displayedAlerts[zone.id]}
             />
           ))}
         </FactoryCanvas>
 
-        {/* Click-outside backdrop to close overlay */}
+        <section
+          aria-label="War room subsystem controls"
+          className="pointer-events-none absolute inset-x-3 bottom-3 z-20 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
+        >
+          {ZONE_META.map((zone) => (
+            <button
+              key={zone.id}
+              type="button"
+              onClick={() => setActiveZone(zone.id)}
+              className={cn(
+                'pointer-events-auto min-w-0 rounded-2xl border p-4 text-left shadow-[0_18px_48px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-transform duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 motion-reduce:transition-none motion-reduce:hover:translate-y-0',
+                activeZone === zone.id ? 'bg-white/12' : 'bg-[rgba(17,29,46,0.78)]',
+              )}
+              style={{
+                borderColor: activeZone === zone.id ? zone.colorVar : 'var(--sf-border-default)',
+              }}
+            >
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <span className="truncate text-sm font-semibold" style={{ color: 'var(--sf-text-primary)' }}>
+                  {zone.label}
+                </span>
+                <span
+                  className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase"
+                  style={{
+                    color: displayedAlerts[zone.id] ? zone.colorVar : 'var(--sf-status-green)',
+                    backgroundColor: 'rgba(255,255,255,0.06)',
+                  }}
+                >
+                  {displayedAlerts[zone.id] ? 'Alert' : 'Nominal'}
+                </span>
+              </div>
+              <p className="text-xs leading-relaxed" style={{ color: 'var(--sf-text-secondary)' }}>
+                {zone.description}
+              </p>
+            </button>
+          ))}
+        </section>
+
         {overlayOpen && (
-          <div
+          <button
+            type="button"
             className="absolute inset-0 z-30 cursor-default"
             onClick={closeOverlay}
             aria-label="Close overlay"
-            role="button"
-            tabIndex={-1}
           />
         )}
-      </div>
+      </main>
 
-      {/* Overlay Panel */}
-      {ActivePanel && (
-        <ActivePanel isOpen={overlayOpen} onClose={closeOverlay} />
-      )}
+      {ActivePanel && <ActivePanel isOpen={overlayOpen} onClose={closeOverlay} />}
     </div>
   );
 }
