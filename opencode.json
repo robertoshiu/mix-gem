@@ -1,6 +1,6 @@
 {
   "plugin": [
-    "opencode-openai-codex-auth"
+    "oh-my-openagent@3.17.15"
   ],
   "provider": {
     "nvidia": {
