@@ -1,9 +1,26 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useMesSpcStore } from '@/stores/mes-spc-store';
 import { FabFloorMap } from '@/components/equipment/FabFloorMap';
 import { ProcessFlow } from '@/components/spc/ProcessFlow';
+import { useWebGLSupport } from '@/hooks/use-webgl-support';
 import { cn } from '@/lib/utils';
+
+const FabFloorMap3D = dynamic(
+  () =>
+    import('@/components/equipment/FabFloorMap3D').then((mod) => ({
+      default: mod.FabFloorMap3D,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full items-center justify-center text-sm text-[var(--smartfactory-text-muted)]">
+        Loading 3D view…
+      </div>
+    ),
+  },
+);
 
 const STATUS_BADGE: Record<string, string> = {
   running: 'bg-green-950/80 border border-[var(--smartfactory-status-green)] text-green-300',
@@ -13,6 +30,7 @@ const STATUS_BADGE: Record<string, string> = {
 
 export default function EquipmentPage() {
   const { selectedEquipmentId, equipments } = useMesSpcStore();
+  const { supported: webglSupported } = useWebGLSupport();
   const selectedEquipment = equipments.find((e) => e.id === selectedEquipmentId);
 
   return (
@@ -31,7 +49,7 @@ export default function EquipmentPage() {
         <div className="flex flex-col flex-1 gap-4 min-w-0">
           <ProcessFlow />
           <div className="flex-1 min-h-0">
-            <FabFloorMap />
+            {webglSupported ? <FabFloorMap3D /> : <FabFloorMap />}
           </div>
         </div>
 

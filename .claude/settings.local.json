@@ -75,7 +75,8 @@
       "Bash(sudo apt-get update:*)",
       "Bash(sudo apt-get install:*)",
       "Bash(~/.local/bin/docker-compose --version)",
-      "Bash(~/.local/bin/docker-compose -f docker-compose.dev.yml --env-file .env.dev up -d)"
+      "Bash(~/.local/bin/docker-compose -f docker-compose.dev.yml --env-file .env.dev up -d)",
+      "Bash(npx jest:*)"
     ]
   }
 }

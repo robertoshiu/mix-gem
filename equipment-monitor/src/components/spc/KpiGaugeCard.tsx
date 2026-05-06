@@ -18,11 +18,16 @@ interface KpiGaugeCardProps {
   violatedParam?: SpcParameter;
 }
 
-const GAUGE_WIDTH = 140;
-const GAUGE_HEIGHT = 80;
-const GAUGE_RADIUS = 56;
+const GAUGE_WIDTH = 210;
+const GAUGE_HEIGHT = 135;
+const GAUGE_RADIUS = 80;
 const GAUGE_CENTER_X = GAUGE_WIDTH / 2;
-const GAUGE_CENTER_Y = GAUGE_HEIGHT - 4;
+const GAUGE_CENTER_Y = GAUGE_HEIGHT - 30;
+
+/** Available width in SVG coords for the centered value text */
+const VALUE_TEXT_WIDTH = 160;
+/** Available width in SVG coords for min/max label text */
+const LABEL_TEXT_WIDTH = 72;
 
 /**
  * Calculate the percentage position on the gauge (0% = at target, 100% = at/beyond limits).
@@ -36,7 +41,7 @@ function calculateZonePercentage(value: number, config: SpcParamConfig): number 
 
 /**
  * Get the SVG arc path for a given angle range on a semicircle.
- * Angles: -180° (left) to 0° (top center).
+ * Angles: -180deg (left) to 0deg (top center).
  */
 function describeArc(cx: number, cy: number, r: number, startAngle: number, endAngle: number): string {
   const start = {
@@ -51,11 +56,13 @@ function describeArc(cx: number, cy: number, r: number, startAngle: number, endA
   return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArcFlag} 0 ${end.x} ${end.y}`;
 }
 
-/** Dynamic font size based on value string length */
-function getValueFontSize(valueStr: string): string {
-  if (valueStr.length <= 4) return 'text-xl';
-  if (valueStr.length <= 6) return 'text-base';
-  return 'text-sm';
+/**
+ * Continuous font-size scaling using CSS clamp() for overflow-proof display.
+ * Formula: fontSize = clamp(0.75rem, availableWidth / (charCount * 0.6), 2.5rem)
+ * Returns a CSS clamp() expression string usable in SVG fontSize attribute.
+ */
+function computeValueFontSize(charCount: number, availableWidth: number): string {
+  return `clamp(0.75rem, ${availableWidth} / (${charCount} * 0.6) * 1px, 2.5rem)`;
 }
 
 export function KpiGaugeCard({
@@ -98,7 +105,7 @@ export function KpiGaugeCard({
         const isOk = value >= config.lcl && value <= config.ucl;
 
         const pct = calculateZonePercentage(value, config);
-        // Needle angle: -180° (left/0%) → -90° (top/50%) → 0° (right/100%)
+        // Needle angle: -180deg (left/0%) -> -90deg (top/50%) -> 0deg (right/100%)
         const needleAngle = -180 + (pct / 100) * 180;
 
         let deltaValue = 0;
@@ -113,6 +120,7 @@ export function KpiGaugeCard({
         const chartColor = isOk ? 'var(--smartfactory-status-green)' : 'var(--smartfactory-status-red)';
 
         const valueStr = value.toFixed(1);
+        const valueFontSize = computeValueFontSize(valueStr.length, VALUE_TEXT_WIDTH);
 
         return (
           <motion.div key={param} {...itemAnimProps}>
@@ -147,33 +155,37 @@ export function KpiGaugeCard({
               </span>
             </div>
 
-            {/* Semicircular Speedometer Gauge */}
-            <div className="relative flex items-center justify-center w-[140px] h-[80px] mx-auto my-1">
-              <svg viewBox={`0 0 ${GAUGE_WIDTH} ${GAUGE_HEIGHT}`} className="w-full h-full">
-                {/* Green zone: 0-60% → angles -180° to -108° */}
+            {/* Enlarged Semicircular Speedometer Gauge with integrated text */}
+            <div className="relative flex items-center justify-center w-[210px] h-[135px] mx-auto my-1">
+              <svg
+                viewBox={`0 0 ${GAUGE_WIDTH} ${GAUGE_HEIGHT}`}
+                className="w-full h-full"
+                overflow="hidden"
+              >
+                {/* Green zone: 0-60% -> angles -180deg to -108deg */}
                 <path
                   d={describeArc(GAUGE_CENTER_X, GAUGE_CENTER_Y, GAUGE_RADIUS, -180, -108)}
                   fill="none"
                   stroke="var(--smartfactory-status-green)"
-                  strokeWidth="6"
+                  strokeWidth="7"
                   strokeLinecap="round"
                   className="opacity-80"
                 />
-                {/* Yellow zone: 60-80% → angles -108° to -72° */}
+                {/* Yellow zone: 60-80% -> angles -108deg to -72deg */}
                 <path
                   d={describeArc(GAUGE_CENTER_X, GAUGE_CENTER_Y, GAUGE_RADIUS, -108, -72)}
                   fill="none"
                   stroke="var(--smartfactory-status-amber)"
-                  strokeWidth="6"
+                  strokeWidth="7"
                   strokeLinecap="round"
                   className="opacity-80"
                 />
-                {/* Red zone: 80-100% → angles -72° to 0° */}
+                {/* Red zone: 80-100% -> angles -72deg to 0deg */}
                 <path
                   d={describeArc(GAUGE_CENTER_X, GAUGE_CENTER_Y, GAUGE_RADIUS, -72, 0)}
                   fill="none"
                   stroke="var(--smartfactory-status-red)"
-                  strokeWidth="6"
+                  strokeWidth="7"
                   strokeLinecap="round"
                   className="opacity-80"
                 />
@@ -182,26 +194,26 @@ export function KpiGaugeCard({
                 <line
                   x1={GAUGE_CENTER_X + (GAUGE_RADIUS - 8) * Math.cos((-180 * Math.PI) / 180)}
                   y1={GAUGE_CENTER_Y + (GAUGE_RADIUS - 8) * Math.sin((-180 * Math.PI) / 180)}
-                  x2={GAUGE_CENTER_X + (GAUGE_RADIUS + 2) * Math.cos((-180 * Math.PI) / 180)}
-                  y2={GAUGE_CENTER_Y + (GAUGE_RADIUS + 2) * Math.sin((-180 * Math.PI) / 180)}
-                  stroke="var(--smartfactory-text-muted)"
-                  strokeWidth="1"
+                  x2={GAUGE_CENTER_X + (GAUGE_RADIUS + 3) * Math.cos((-180 * Math.PI) / 180)}
+                  y2={GAUGE_CENTER_Y + (GAUGE_RADIUS + 3) * Math.sin((-180 * Math.PI) / 180)}
+                  stroke="var(--kpi-arc-color)"
+                  strokeWidth="1.5"
                 />
                 <line
                   x1={GAUGE_CENTER_X + (GAUGE_RADIUS - 8) * Math.cos((-90 * Math.PI) / 180)}
                   y1={GAUGE_CENTER_Y + (GAUGE_RADIUS - 8) * Math.sin((-90 * Math.PI) / 180)}
-                  x2={GAUGE_CENTER_X + (GAUGE_RADIUS + 2) * Math.cos((-90 * Math.PI) / 180)}
-                  y2={GAUGE_CENTER_Y + (GAUGE_RADIUS + 2) * Math.sin((-90 * Math.PI) / 180)}
-                  stroke="var(--smartfactory-text-muted)"
-                  strokeWidth="1"
+                  x2={GAUGE_CENTER_X + (GAUGE_RADIUS + 3) * Math.cos((-90 * Math.PI) / 180)}
+                  y2={GAUGE_CENTER_Y + (GAUGE_RADIUS + 3) * Math.sin((-90 * Math.PI) / 180)}
+                  stroke="var(--kpi-arc-color)"
+                  strokeWidth="1.5"
                 />
                 <line
                   x1={GAUGE_CENTER_X + (GAUGE_RADIUS - 8) * Math.cos((0 * Math.PI) / 180)}
                   y1={GAUGE_CENTER_Y + (GAUGE_RADIUS - 8) * Math.sin((0 * Math.PI) / 180)}
-                  x2={GAUGE_CENTER_X + (GAUGE_RADIUS + 2) * Math.cos((0 * Math.PI) / 180)}
-                  y2={GAUGE_CENTER_Y + (GAUGE_RADIUS + 2) * Math.sin((0 * Math.PI) / 180)}
-                  stroke="var(--smartfactory-text-muted)"
-                  strokeWidth="1"
+                  x2={GAUGE_CENTER_X + (GAUGE_RADIUS + 3) * Math.cos((0 * Math.PI) / 180)}
+                  y2={GAUGE_CENTER_Y + (GAUGE_RADIUS + 3) * Math.sin((0 * Math.PI) / 180)}
+                  stroke="var(--kpi-arc-color)"
+                  strokeWidth="1.5"
                 />
 
                 {/* Needle */}
@@ -210,9 +222,9 @@ export function KpiGaugeCard({
                     x1={GAUGE_CENTER_X}
                     y1={GAUGE_CENTER_Y}
                     x2={GAUGE_CENTER_X}
-                    y2={GAUGE_CENTER_Y - GAUGE_RADIUS + 4}
+                    y2={GAUGE_CENTER_Y - GAUGE_RADIUS + 6}
                     stroke={isOk ? 'var(--smartfactory-status-green)' : 'var(--smartfactory-status-red)'}
-                    strokeWidth="2"
+                    strokeWidth="2.5"
                     strokeLinecap="round"
                     className="transition-transform duration-500 ease-in-out"
                   />
@@ -220,28 +232,72 @@ export function KpiGaugeCard({
                   <circle
                     cx={GAUGE_CENTER_X}
                     cy={GAUGE_CENTER_Y}
-                    r="3"
+                    r="4"
                     fill={isOk ? 'var(--smartfactory-status-green)' : 'var(--smartfactory-status-red)'}
                   />
                 </g>
+
+                {/* Value text — centered, with textLength for overflow-proof display */}
+                <text
+                  x={GAUGE_CENTER_X}
+                  y={GAUGE_CENTER_Y - GAUGE_RADIUS - 12}
+                  textAnchor="middle"
+                  textLength={VALUE_TEXT_WIDTH}
+                  lengthAdjust="spacingAndGlyphs"
+                  overflow="hidden"
+                  fontSize={valueFontSize}
+                  fontWeight="600"
+                  fontFamily="'Fira Code', monospace"
+                  fill="var(--kpi-value-color)"
+                >
+                  {valueStr}
+                </text>
+
+                {/* Unit text */}
+                <text
+                  x={GAUGE_CENTER_X}
+                  y={GAUGE_CENTER_Y - GAUGE_RADIUS + 2}
+                  textAnchor="middle"
+                  textLength={100}
+                  lengthAdjust="spacingAndGlyphs"
+                  overflow="hidden"
+                  fontSize={10}
+                  fill="var(--smartfactory-text-secondary)"
+                >
+                  {config.unit}
+                </text>
+
+                {/* Min label (LCL) — left side */}
+                <text
+                  x={12}
+                  y={GAUGE_CENTER_Y + GAUGE_RADIUS - 50}
+                  textLength={LABEL_TEXT_WIDTH}
+                  lengthAdjust="spacingAndGlyphs"
+                  overflow="hidden"
+                  fontSize={9}
+                  fill="var(--smartfactory-text-muted)"
+                >
+                  {config.lcl.toFixed(1)}
+                </text>
+
+                {/* Max label (UCL) — right side */}
+                <text
+                  x={GAUGE_WIDTH - 12}
+                  y={GAUGE_CENTER_Y + GAUGE_RADIUS - 50}
+                  textAnchor="end"
+                  textLength={LABEL_TEXT_WIDTH}
+                  lengthAdjust="spacingAndGlyphs"
+                  overflow="hidden"
+                  fontSize={9}
+                  fill="var(--smartfactory-text-muted)"
+                >
+                  {config.ucl.toFixed(1)}
+                </text>
               </svg>
             </div>
 
-            {/* Value Display */}
-            <div className="flex flex-col items-center justify-center -mt-2 mb-2">
-              <span className={cn(
-                'font-["Fira_Code",monospace] font-semibold text-[var(--smartfactory-text-primary)] leading-none',
-                getValueFontSize(valueStr)
-              )}>
-                {valueStr}
-              </span>
-              <span className="text-[10px] text-[var(--smartfactory-text-secondary)] leading-none mt-0.5">
-                {config.unit}
-              </span>
-            </div>
-
             {/* Sparkline and Trend */}
-            <div className="flex flex-col flex-1 min-w-0">
+            <div className="flex flex-col flex-1 min-w-0 -mt-2">
               <div className="h-[24px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={last10}>
