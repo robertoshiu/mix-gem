@@ -14,9 +14,7 @@ jest.mock('next/link', () => {
   }: {
     href: string;
     children: React.ReactNode;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    [key: string]: any;
-  }) {
+  } & React.AnchorHTMLAttributes<HTMLAnchorElement>) {
     return (
       <a href={href} {...props}>
         {children}
@@ -31,9 +29,8 @@ describe('MES Navigation Flow', () => {
   it('renders all four MES nav links with correct hrefs', () => {
     render(<MesNavBar />);
 
-    // Two "Equipment" links exist (/ and /mes/equipment) — pick the MES one
-    const equipmentLinks = screen.getAllByRole('link', { name: 'Equipment' });
-    expect(equipmentLinks[1]).toHaveAttribute('href', '/mes/equipment');
+    const equipmentLink = screen.getByRole('link', { name: 'Equipment' });
+    expect(equipmentLink).toHaveAttribute('href', '/mes/equipment');
 
     const lotsLink = screen.getByRole('link', { name: 'Lot Tracker' });
     expect(lotsLink).toHaveAttribute('href', '/mes/lots');

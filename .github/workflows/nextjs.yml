@@ -80,13 +80,13 @@ jobs:
       - name: Build with Next.js
         run: ${{ steps.detect-package-manager.outputs.runner }} next build
       - name: Run lint
-        run: ${{ steps.detect-package-manager.outputs.manager }} lint
+        run: ${{ steps.detect-package-manager.outputs.manager }} run lint
       - name: Run tests
         run: ${{ steps.detect-package-manager.outputs.manager }} test -- --passWithNoTests
       - name: Install Playwright
         run: npx playwright install --with-deps chromium
       - name: Run Playwright tests
-        run: ${{ steps.detect-package-manager.outputs.manager }} test:e2e
+        run: ${{ steps.detect-package-manager.outputs.manager }} run test:e2e
       - name: Add 404.html for SPA fallback
         run: cp out/index.html out/404.html
       - name: Upload artifact

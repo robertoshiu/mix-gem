@@ -8,7 +8,6 @@ declare module 'lucide-react' {
     className?: string;
     style?: React.CSSProperties;
     children?: React.ReactNode;
-    [key: string]: any;
   }
   type LucideIcon = React.FC<LucideProps>;
   const Upload: LucideIcon;

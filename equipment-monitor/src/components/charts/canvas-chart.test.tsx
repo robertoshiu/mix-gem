@@ -18,7 +18,7 @@ describe('CanvasChart', () => {
       fill: jest.fn(),
       closePath: jest.fn(),
       setLineDash: jest.fn(),
-    })) as any;
+    })) as unknown as HTMLCanvasElement['getContext'];
   });
 
   it('should render a canvas element', () => {
@@ -92,7 +92,9 @@ describe('CanvasChart', () => {
       lineWidth: 0,
     };
 
-    HTMLCanvasElement.prototype.getContext = jest.fn(() => mockContext) as any;
+    HTMLCanvasElement.prototype.getContext = jest.fn(
+      () => mockContext
+    ) as unknown as HTMLCanvasElement['getContext'];
 
     render(<CanvasChart data={mockData} width={600} height={300} />);
 

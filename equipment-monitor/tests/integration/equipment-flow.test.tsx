@@ -6,7 +6,11 @@ jest.mock('@/components/charts/trend-chart', () => ({
   TrendChart: () => <div data-testid="trend-chart">Trend Chart</div>
 }));
 jest.mock('@/components/charts/gauge-card', () => ({
-  GaugeCard: ({ parameter }: { parameter: any }) => (
+  GaugeCard: ({
+    parameter,
+  }: {
+    parameter: { name: string; value: number | string; unit: string };
+  }) => (
     <div data-testid="gauge-card">
       {parameter.name}: {parameter.value} {parameter.unit}
     </div>
@@ -34,7 +38,7 @@ describe('Equipment Selection Flow', () => {
     render(<Page />);
 
     // Need to wait for initial render
-    await screen.findByText('Equipment');
+    await screen.findByRole('heading', { name: 'Equipment' });
 
     // Advance time to trigger setInterval
     jest.advanceTimersByTime(2000);

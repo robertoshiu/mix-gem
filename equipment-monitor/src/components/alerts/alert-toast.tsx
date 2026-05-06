@@ -75,7 +75,7 @@ export function AlertToast({
             {equipmentId}
           </span>
           <span className="text-xs text-slate-500">
-            {timestamp.toLocaleTimeString()}
+            {timestamp.toLocaleTimeString('en-US')}
           </span>
         </div>
         <p className="mt-1 text-sm text-slate-200">{message}</p>

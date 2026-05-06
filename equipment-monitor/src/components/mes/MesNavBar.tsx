@@ -15,7 +15,7 @@ const NAV_ITEMS = [
 ];
 
 export function MesNavBar() {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? '/';
 
   return (
     <nav
