@@ -6,7 +6,6 @@ import type { ProcessParameter } from "@/types/equipment";
 import {
   GAUGE_VIEWBOX,
   GAUGE_ARC,
-  GAUGE_TEXT,
   polarToCartesian,
   describeGaugeArc,
   safeRange,
@@ -164,8 +163,6 @@ export function GaugeCard({ parameter, className }: GaugeCardProps) {
           fontFamily="var(--font-family-mono), 'Fira Code', monospace"
           fontWeight="700"
           fill="var(--sf-gauge-value-color)"
-          textLength={GAUGE_TEXT.valueWidth}
-          lengthAdjust="spacingAndGlyphs"
         >
           {formatted}
         </text>
@@ -177,15 +174,13 @@ export function GaugeCard({ parameter, className }: GaugeCardProps) {
           fontWeight="600"
           letterSpacing="0.14em"
           fill="var(--sf-gauge-unit-color)"
-          textLength={GAUGE_TEXT.unitWidth}
-          lengthAdjust="spacingAndGlyphs"
         >
           {unit || "RATIO"}
         </text>
-        <text x="18" y="146" fontSize="11" fill="var(--sf-gauge-label-color)" textLength={GAUGE_TEXT.labelWidth} lengthAdjust="spacingAndGlyphs">
+        <text x="18" y="146" fontSize="11" fill="var(--sf-gauge-label-color)">
           {lsl}
         </text>
-        <text x={GAUGE_VIEWBOX.width - 18} y="146" textAnchor="end" fontSize="11" fill="var(--sf-gauge-label-color)" textLength={GAUGE_TEXT.labelWidth} lengthAdjust="spacingAndGlyphs">
+        <text x={GAUGE_VIEWBOX.width - 18} y="146" textAnchor="end" fontSize="11" fill="var(--sf-gauge-label-color)">
           {usl}
         </text>
       </svg>

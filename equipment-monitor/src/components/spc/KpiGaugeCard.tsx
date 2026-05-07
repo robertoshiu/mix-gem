@@ -210,13 +210,11 @@ export function KpiGaugeCard({
                   />
                 </g>
 
-                {/* Value text — centered, with textLength for overflow-proof display */}
+                {/* Value text — centered with bounded font sizing; avoid glyph scaling distortion. */}
                 <text
                   x={GAUGE_ARC.centerX}
                   y={GAUGE_ARC.centerY - GAUGE_ARC.radius - 12}
                   textAnchor="middle"
-                  textLength={GAUGE_TEXT.valueWidth}
-                  lengthAdjust="spacingAndGlyphs"
                   fontSize={valueFontSize}
                   fontWeight="600"
                   fontFamily="'Fira Code', monospace"
@@ -230,8 +228,6 @@ export function KpiGaugeCard({
                   x={GAUGE_ARC.centerX}
                   y={GAUGE_ARC.centerY - GAUGE_ARC.radius + 2}
                   textAnchor="middle"
-                  textLength={GAUGE_TEXT.unitWidth}
-                  lengthAdjust="spacingAndGlyphs"
                   fontSize={10}
                   fill="var(--sf-gauge-unit-color)"
                 >
@@ -242,8 +238,6 @@ export function KpiGaugeCard({
                 <text
                   x={12}
                   y={GAUGE_ARC.centerY + GAUGE_ARC.radius - 50}
-                  textLength={GAUGE_TEXT.labelWidth}
-                  lengthAdjust="spacingAndGlyphs"
                   fontSize={9}
                   fill="var(--sf-gauge-label-color)"
                 >
@@ -255,8 +249,6 @@ export function KpiGaugeCard({
                   x={GAUGE_VIEWBOX.width - 12}
                   y={GAUGE_ARC.centerY + GAUGE_ARC.radius - 50}
                   textAnchor="end"
-                  textLength={GAUGE_TEXT.labelWidth}
-                  lengthAdjust="spacingAndGlyphs"
                   fontSize={9}
                   fill="var(--sf-gauge-label-color)"
                 >
