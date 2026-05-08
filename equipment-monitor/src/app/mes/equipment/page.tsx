@@ -1,6 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { useEffect, useState } from 'react';
 import { useMesSpcStore } from '@/stores/mes-spc-store';
 import { FabFloorMap } from '@/components/equipment/FabFloorMap';
 import { ProcessFlow } from '@/components/spc/ProcessFlow';
@@ -31,7 +32,12 @@ const STATUS_BADGE: Record<string, string> = {
 export default function EquipmentPage() {
   const { selectedEquipmentId, equipments } = useMesSpcStore();
   const { supported: webglSupported } = useWebGLSupport();
+  const [mounted, setMounted] = useState(false);
   const selectedEquipment = equipments.find((e) => e.id === selectedEquipmentId);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <div data-testid="equipment-page" className="flex flex-col h-full">
@@ -49,7 +55,7 @@ export default function EquipmentPage() {
         <div className="flex flex-col flex-1 gap-4 min-w-0">
           <ProcessFlow />
           <div className="flex-1 min-h-0">
-            {webglSupported ? <FabFloorMap3D /> : <FabFloorMap />}
+            {mounted && webglSupported ? <FabFloorMap3D /> : <FabFloorMap />}
           </div>
         </div>
 
