@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 const NAV_ITEMS = [
   { href: '/', label: 'Dashboard' },
   { href: '/mes/war-room', label: 'War Room', icon: Activity },
+  { href: '/mes/fab-floor', label: 'Fab Floor', icon: Activity },
   { href: '/mes/equipment', label: 'Equipment' },
   { href: '/mes/lots', label: 'Lot Tracker' },
   { href: '/mes/recipes', label: 'Recipe Manager' },
