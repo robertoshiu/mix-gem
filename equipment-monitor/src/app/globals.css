@@ -300,6 +300,10 @@ body {
   /* Overlay layout */
   --sf-overlay-width: min(45vw, 520px);
   --sf-overlay-min-width: min(100vw, 360px);
+  --sf-neon-glow-spread: 0 0 12px;
+  --sf-scanline-opacity: 0.04;
+  --sf-hex-border-width: 1.5px;
+  --sf-hud-font: 'Fira Code', monospace;
 }
 
 @layer base {
