@@ -6,7 +6,7 @@ import { Text, Billboard, Sparkles, Line } from '@react-three/drei';
 import * as THREE from 'three';
 import { useReducedMotion } from '@/lib/animation';
 
-const ZONE_SIZE = 11.5;
+const ZONE_SIZE = 7.9;
 const L_MARKER_LEN = 1.5;
 
 const ZONE_LABELS: Record<ZoneType, string> = {
@@ -117,33 +117,44 @@ export function SubsystemZone({
 
   return (
     <group>
-      {/* Floor slab */}
+      {/* Low-profile clickable service bay. Keep geometry subtle so the real plant model stays visible. */}
       <mesh
         position={position}
         onClick={onClick}
         onPointerOver={() => setHovered(true)}
         onPointerOut={() => setHovered(false)}
       >
-        <boxGeometry args={[ZONE_SIZE, 0.16, ZONE_SIZE]} />
+        <boxGeometry args={[ZONE_SIZE, 0.08, ZONE_SIZE]} />
         <meshStandardMaterial
           ref={materialRef}
           color={color}
           transparent
-          opacity={hovered ? 0.48 : 0.34}
+          opacity={hovered ? 0.22 : 0.12}
           roughness={0.38}
           metalness={0.12}
         />
       </mesh>
 
-      <mesh position={[position[0], position[1] + 0.1, position[2]]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[ZONE_SIZE * 0.42, ZONE_SIZE * 0.45, 56]} />
-        <meshBasicMaterial color={color} transparent opacity={isAlerting ? 0.72 : 0.34} />
+      <mesh position={[position[0], position[1] + 0.08, position[2]]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[ZONE_SIZE * 0.43, ZONE_SIZE * 0.45, 56]} />
+        <meshBasicMaterial color={color} transparent opacity={isAlerting ? 0.56 : 0.18} />
       </mesh>
 
+      {[-2.4, -1.2, 0, 1.2, 2.4].map((offset) => (
+        <Line
+          key={`bay-rib-${offset}`}
+          points={[[px - half + 0.8, py + 0.1, pz + offset], [px + half - 0.8, py + 0.1, pz + offset]]}
+          color={color}
+          lineWidth={0.45}
+          transparent
+          opacity={0.16}
+        />
+      ))}
+
       {/* Billboarded zone label */}
-      <Billboard position={[position[0], position[1] + 2, position[2]]}>
+      <Billboard position={[position[0], position[1] + 3.7, position[2]]}>
         <Text
-          fontSize={0.72}
+          fontSize={0.46}
           color={textColor}
           anchorX="center"
           anchorY="middle"
@@ -155,9 +166,9 @@ export function SubsystemZone({
       </Billboard>
 
       {/* Alert status label */}
-      <Billboard position={[position[0], position[1] + 1.3, position[2]]}>
+      <Billboard position={[position[0], position[1] + 3.18, position[2]]}>
         <Text
-          fontSize={0.4}
+          fontSize={0.28}
           color={isAlerting ? color : '#94a3b8'}
           anchorX="center"
           anchorY="middle"
@@ -173,7 +184,7 @@ export function SubsystemZone({
         <Sparkles
           position={[position[0], position[1] + 1.5, position[2]]}
           count={sparkleCount}
-          scale={ZONE_SIZE}
+          scale={ZONE_SIZE * 0.72}
           size={2}
           speed={sparkleSpeed}
           color={color}
