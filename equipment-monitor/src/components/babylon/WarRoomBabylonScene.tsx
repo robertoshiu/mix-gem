@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from 'react';
 import * as BABYLON from '@babylonjs/core';
+import { WebGLFallback } from '@/components/three/WebGLFallback';
+import { useWebGLSupport } from '@/hooks/use-webgl-support';
 import type { FabTwinFaultId, FabTwinMode, FabTwinView, Subsystem, WarRoomLayer } from '@/lib/fab-twin-data';
 import {
   FAB_TWIN_SENSORS,
@@ -466,11 +468,16 @@ function createScene(canvas: HTMLCanvasElement, props: WarRoomBabylonSceneProps)
 
 export function WarRoomBabylonScene(props: WarRoomBabylonSceneProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const webgl = useWebGLSupport();
 
   useEffect(() => {
-    if (!canvasRef.current) return undefined;
+    if (!canvasRef.current || !webgl.supported) return undefined;
     return createScene(canvasRef.current, props);
-  }, [props]);
+  }, [props, webgl.supported]);
+
+  if (!webgl.supported) {
+    return <WebGLFallback />;
+  }
 
   return (
     <canvas
