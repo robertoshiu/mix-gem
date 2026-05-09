@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('War Room 3D', () => {
+  test.afterEach(async ({ page }) => {
+    await page.goto('about:blank');
+  });
+
   test('header and zone controls render', async ({ page }) => {
     await page.goto('/mes/war-room/');
     // Use the WAR ROOM 3D heading as anchor and find sibling buttons
