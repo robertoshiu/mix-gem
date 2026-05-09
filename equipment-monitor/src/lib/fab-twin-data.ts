@@ -11,6 +11,10 @@ export type FabTwinFaultId =
 
 export type FabTwinMode = 'normal' | 'maintenance' | 'lot-transfer' | 'alarm';
 
+export type Subsystem = 'power' | 'bas' | 'gas' | 'fire';
+
+export type WarRoomLayer = Subsystem | 'process' | 'environment' | 'transport';
+
 export interface FabTwinZone {
   id: string;
   path: string;
@@ -98,6 +102,28 @@ export interface FabTwinKpiSchema {
   energyIntensity: { unit: 'kWh/wafer'; value: number };
   particleTrend: { unit: '0.1um count/ft3'; value: number };
   hvacLoad: { unit: '%'; value: number };
+}
+
+export interface SubsystemGauge {
+  label: string;
+  value: number;
+  unit: string;
+  status: 'nominal' | 'warning' | 'alarm';
+}
+
+export interface SubsystemEquipment {
+  id: string;
+  subsystem: Subsystem;
+  label: string;
+  type: string;
+  path: string;
+  positionM: [number, number, number];
+  sizeM: [number, number, number];
+  color: string;
+  status: 'nominal' | 'warning' | 'alarm';
+  metric: string;
+  value: string;
+  gauges: SubsystemGauge[];
 }
 
 export const FAB_TWIN_UNITS = {
@@ -358,6 +384,178 @@ export const FAB_TWIN_BASE_KPIS: FabTwinKpiSchema = {
   energyIntensity: { unit: 'kWh/wafer', value: 42.5 },
   particleTrend: { unit: '0.1um count/ft3', value: 18 },
   hvacLoad: { unit: '%', value: 72 },
+};
+
+export const SUBSYSTEM_META: Record<Subsystem, { label: string; shortLabel: string; color: string; accent: string; viewpoint: FabTwinView }> = {
+  power: { label: 'Power Monitoring', shortLabel: 'PWR', color: '#3b82f6', accent: 'var(--sf-power-primary)', viewpoint: 'control-room' },
+  bas: { label: 'Building Automation', shortLabel: 'BAS', color: '#10b981', accent: 'var(--sf-ba-primary)', viewpoint: 'pipe-rack' },
+  gas: { label: 'Gas Detection', shortLabel: 'GAS', color: '#f59e0b', accent: 'var(--sf-gas-primary)', viewpoint: 'pipe-rack' },
+  fire: { label: 'Fire Alarm', shortLabel: 'FIRE', color: '#ef4444', accent: 'var(--sf-fire-primary)', viewpoint: 'control-room' },
+};
+
+export const SUBSYSTEM_EQUIPMENT: SubsystemEquipment[] = [
+  {
+    id: 'PDU-A-01',
+    subsystem: 'power',
+    label: 'PDU A Main',
+    type: 'power-distribution-panel',
+    path: '/FAB1/L1/UTILITY_ROOM/POWER/PDU-A-01',
+    positionM: [11, 1.25, -8.1],
+    sizeM: [2.2, 2.4, 0.5],
+    color: '#3b82f6',
+    status: 'nominal',
+    metric: 'Load',
+    value: '68%',
+    gauges: [
+      { label: 'Load', value: 68, unit: '%', status: 'nominal' },
+      { label: 'Voltage THD', value: 2.1, unit: '%', status: 'nominal' },
+      { label: 'UPS Autonomy', value: 42, unit: 'min', status: 'nominal' },
+    ],
+  },
+  {
+    id: 'UPS-A',
+    subsystem: 'power',
+    label: 'UPS A Redundant Feed',
+    type: 'ups-bank',
+    path: '/FAB1/L1/UTILITY_ROOM/POWER/UPS-A',
+    positionM: [13.2, 1.05, -8.2],
+    sizeM: [1.4, 1.8, 0.8],
+    color: '#60a5fa',
+    status: 'nominal',
+    metric: 'Battery',
+    value: '92%',
+    gauges: [
+      { label: 'Battery', value: 92, unit: '%', status: 'nominal' },
+      { label: 'Bypass Ready', value: 100, unit: '%', status: 'nominal' },
+      { label: 'Temp', value: 27, unit: 'degC', status: 'nominal' },
+    ],
+  },
+  {
+    id: 'AHU-SUPPLY-01',
+    subsystem: 'bas',
+    label: 'AHU Supply Loop',
+    type: 'air-handling-unit',
+    path: '/FAB1/L1/UTILITY_ROOM/BAS/AHU-SUPPLY-01',
+    positionM: [8.2, 3.9, -8.7],
+    sizeM: [2.8, 0.7, 1.1],
+    color: '#10b981',
+    status: 'nominal',
+    metric: 'Flow',
+    value: '94k CMH',
+    gauges: [
+      { label: 'Airflow', value: 94, unit: 'kCMH', status: 'nominal' },
+      { label: 'Delta P', value: 18, unit: 'Pa', status: 'nominal' },
+      { label: 'HVAC Load', value: 72, unit: '%', status: 'nominal' },
+    ],
+  },
+  {
+    id: 'CHILLED-WATER-LOOP',
+    subsystem: 'bas',
+    label: 'Chilled Water Loop',
+    type: 'utility-loop',
+    path: '/FAB1/L1/CHASE/BAS/CHILLED-WATER-LOOP',
+    positionM: [-3.8, 2.55, 6.4],
+    sizeM: [5.6, 0.22, 0.22],
+    color: '#34d399',
+    status: 'nominal',
+    metric: 'Supply',
+    value: '7.1 degC',
+    gauges: [
+      { label: 'Supply', value: 7.1, unit: 'degC', status: 'nominal' },
+      { label: 'Return', value: 12.4, unit: 'degC', status: 'nominal' },
+      { label: 'Valve', value: 61, unit: '%', status: 'nominal' },
+    ],
+  },
+  {
+    id: 'GAS-CABINET-01',
+    subsystem: 'gas',
+    label: 'Specialty Gas Cabinet',
+    type: 'gas-cabinet',
+    path: '/FAB1/L1/CHASE/GAS/GAS-CABINET-01',
+    positionM: [-10.8, 1.15, 7.6],
+    sizeM: [1.2, 2.1, 0.8],
+    color: '#f59e0b',
+    status: 'nominal',
+    metric: 'Cabinet ppm',
+    value: '0.0',
+    gauges: [
+      { label: 'Cabinet ppm', value: 0, unit: 'ppm', status: 'nominal' },
+      { label: 'Exhaust', value: 112, unit: '%', status: 'nominal' },
+      { label: 'VMB Flow', value: 78, unit: '%', status: 'nominal' },
+    ],
+  },
+  {
+    id: 'SCRUBBER-SUBFAB-01',
+    subsystem: 'gas',
+    label: 'Subfab Scrubber',
+    type: 'scrubber',
+    path: '/FAB1/B1/SUBFAB/SCRUBBER/SCRUBBER-SUBFAB-01',
+    positionM: [8, -1.05, 2.8],
+    sizeM: [1.2, 3.2, 1.2],
+    color: '#f97316',
+    status: 'nominal',
+    metric: 'Inlet flow',
+    value: '18k m3/h',
+    gauges: [
+      { label: 'Inlet', value: 18, unit: 'kCMH', status: 'nominal' },
+      { label: 'pH', value: 7.2, unit: '', status: 'nominal' },
+      { label: 'Fan', value: 84, unit: '%', status: 'nominal' },
+    ],
+  },
+  {
+    id: 'FIRE-PANEL-MCC',
+    subsystem: 'fire',
+    label: 'MCC Fire Panel',
+    type: 'fire-control-panel',
+    path: '/FAB1/L1/CONTROL_ROOM/FIRE/FIRE-PANEL-MCC',
+    positionM: [-12.8, 1.25, -8.7],
+    sizeM: [1.4, 2.0, 0.36],
+    color: '#ef4444',
+    status: 'nominal',
+    metric: 'Loops',
+    value: '4 armed',
+    gauges: [
+      { label: 'Loops Armed', value: 4, unit: '/4', status: 'nominal' },
+      { label: 'Panel Health', value: 99, unit: '%', status: 'nominal' },
+      { label: 'Suppression', value: 100, unit: '%', status: 'nominal' },
+    ],
+  },
+  {
+    id: 'DETECTOR-LOOP-A',
+    subsystem: 'fire',
+    label: 'Ceiling Detector Loop A',
+    type: 'detector-loop',
+    path: '/FAB1/L1/CEILING/FIRE/DETECTOR-LOOP-A',
+    positionM: [-5.5, 4.2, -5.6],
+    sizeM: [7.6, 0.12, 0.12],
+    color: '#f87171',
+    status: 'nominal',
+    metric: 'Detectors',
+    value: '12 OK',
+    gauges: [
+      { label: 'Detectors', value: 12, unit: 'ok', status: 'nominal' },
+      { label: 'Loop mA', value: 18, unit: 'mA', status: 'nominal' },
+      { label: 'Water PSI', value: 132, unit: 'psi', status: 'nominal' },
+    ],
+  },
+];
+
+export const SUBSYSTEM_LAYERS: Record<string, WarRoomLayer[]> = {
+  ...Object.fromEntries(FAB_TWIN_TOOLS.map((tool) => [tool.tool_id, ['process'] as WarRoomLayer[]])),
+  ...Object.fromEntries(FAB_TWIN_SENSORS.map((sensor) => [sensor.sensor_id, [sensor.sensor_type === 'power' ? 'power' : sensor.sensor_type === 'gas_detection' ? 'gas' : sensor.sensor_type === 'differential_pressure' || sensor.sensor_type === 'temperature' || sensor.sensor_type === 'RH' || sensor.sensor_type === 'particle_count' ? 'bas' : 'environment'] as WarRoomLayer[]])),
+  ...Object.fromEntries(SUBSYSTEM_EQUIPMENT.map((equipment) => [equipment.id, [equipment.subsystem] as WarRoomLayer[]])),
+  'FFU-MASTER-LOD0': ['environment', 'bas'],
+  'AMHS-RAIL-LOOP-01': ['transport'],
+  'FOUP-CARRIER-A17': ['transport'],
+  'PIPE-CW-SUPPLY-L2': ['bas'],
+  'PIPE-CW-RETURN-L2': ['bas'],
+  'PIPE-EXHAUST-L3': ['gas'],
+  'PIPE-GAS-N2-L1': ['gas'],
+  'PIPE-FIRE-L1': ['fire'],
+  'REDUNDANT-POWER-PATH-A': ['power'],
+  'SUPPLY-AIR-DOWNFLOW': ['bas'],
+  'RETURN-AIR-CHASE': ['bas'],
+  'FIRE-SUPPRESSION-RING': ['fire'],
 };
 
 export const FAB_TWIN_FAULT_SCENES: FabTwinFaultScene[] = [
