@@ -8,9 +8,7 @@ import { cn } from "@/lib/utils";
 import { useMesSpcStore } from "@/stores/mes-spc-store";
 
 export function Header({ className }: { className?: string }) {
-  const [clock, setClock] = useState(() =>
-    new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
-  );
+  const [clock, setClock] = useState("--:--:--");
   const iconAreaRef = useRef<HTMLDivElement>(null);
 
   const notifications = useMesSpcStore((s) => s.notifications);
@@ -26,12 +24,19 @@ export function Header({ className }: { className?: string }) {
 
   // Live clock
   useEffect(() => {
-    const id = setInterval(() => {
+    const updateClock = () => {
       setClock(
         new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
       );
+    };
+    const initialId = window.setTimeout(updateClock, 0);
+    const id = setInterval(() => {
+      updateClock();
     }, 1000);
-    return () => clearInterval(id);
+    return () => {
+      window.clearTimeout(initialId);
+      clearInterval(id);
+    };
   }, []);
 
   // Click-outside handler
