@@ -1,24 +1,26 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import {
   Activity,
   AlertTriangle,
-  CheckCircle,
+  BookOpen,
   ChevronRight,
-  Circle,
   Database,
   Pause,
   Play,
   RefreshCw,
   Shield,
 } from 'lucide-react';
-import {
-  getSecsGemDemoData,
-  resolveDemoEquipment,
-  type DemoScenarioStatus,
-  type DemoSecsMessage,
-} from '@/lib/secs-gem-demo-data';
+import { getSecsGemDemoData, resolveDemoEquipment } from '@/lib/secs-gem-demo-data';
+import { FeedPacketCard } from '@/components/secs-simulator/FeedPacketCard';
+import { RecipeDetailCard } from '@/components/secs-simulator/RecipeDetailCard';
+import { ScenarioStepCard } from '@/components/secs-simulator/ScenarioStepCard';
+import TraceRow from '@/components/secs-simulator/TraceRow';
+import { MOCK_RECIPES } from '@/lib/mes-mock-data';
+import type { Recipe } from '@/lib/mes-types';
+import { MAX_VISIBLE_PACKETS, USER_OVERRIDE_DURATION, useReducedMotion } from '@/lib/secs-simulator-animation';
 import { cn } from '@/lib/utils';
 
 const speedIntervals: Record<string, number> = {
@@ -27,22 +29,6 @@ const speedIntervals: Record<string, number> = {
   '5x': 700,
   '10x': 350,
 };
-
-const statusStyles: Record<DemoScenarioStatus, string> = {
-  complete: 'border-[var(--sf-status-green)] text-[var(--sf-status-green)]',
-  active: 'border-[var(--sf-status-amber)] text-[var(--sf-status-amber)]',
-  pending: 'border-[var(--sf-border-default)] text-[var(--sf-text-muted)]',
-};
-
-function formatTime(iso: string): string {
-  return new Intl.DateTimeFormat('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-    timeZone: 'UTC',
-  }).format(new Date(iso));
-}
 
 function scenarioIndexForFeed(messageCount: number, scenarioCount: number): number {
   if (scenarioCount === 0) return 0;
@@ -57,41 +43,16 @@ function nextFeedCount(current: number, max: number): number {
   return Math.min(current + 1, max);
 }
 
-function FeedPacket({ message, active }: { message: DemoSecsMessage; active: boolean }) {
-  return (
-    <div
-      className={cn(
-        'rounded-md border px-3 py-2 transition-all duration-300 motion-reduce:transition-none',
-        active
-          ? 'border-[var(--sf-accent-cyan)] bg-[rgba(34,211,238,0.12)] shadow-[0_0_18px_rgba(34,211,238,0.18)]'
-          : 'border-[var(--sf-border-default)] bg-[var(--sf-surface-panel)]'
-      )}
-    >
-      <div className="flex items-center justify-between gap-2">
-        <span className="font-mono text-xs text-[var(--sf-text-primary)]">{message.sf}</span>
-        <span
-          className={cn(
-            'rounded px-2 py-0.5 font-mono text-[10px]',
-            message.direction === 'H2E'
-              ? 'bg-[rgba(59,130,246,0.16)] text-[var(--sf-accent-blue)]'
-              : 'bg-[rgba(20,184,166,0.16)] text-[var(--sf-accent-teal)]'
-          )}
-        >
-          {message.direction}
-        </span>
-      </div>
-      <p className="mt-1 truncate text-xs text-[var(--sf-text-secondary)]">{message.summary}</p>
-    </div>
-  );
-}
-
 export default function SecsGemPage() {
   const data = useMemo(() => getSecsGemDemoData(), []);
+  const reducedMotion = useReducedMotion();
   const [selectedEquipmentId, setSelectedEquipmentId] = useState<string | null>(data.equipment[0]?.id ?? null);
   const [selectedSnapshotId, setSelectedSnapshotId] = useState<string>(data.snapshots[0]?.id ?? '');
   const [isRunning, setIsRunning] = useState(true);
   const [speed, setSpeed] = useState('1x');
   const [visibleMessageCount, setVisibleMessageCount] = useState(Math.min(3, data.messages.length));
+  const [overrideStepId, setOverrideStepId] = useState<string | null>(null);
+  const overrideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const selectedEquipment = resolveDemoEquipment(data, selectedEquipmentId);
   const activeScenarioIndex = scenarioIndexForFeed(visibleMessageCount, data.scenarios.length);
@@ -105,6 +66,9 @@ export default function SecsGemPage() {
           : ('pending' as const),
   }));
   const visibleMessages = data.messages.slice(0, visibleMessageCount);
+  const visibleFeedMessages = visibleMessages.slice(Math.max(0, visibleMessageCount - 3));
+  const traceMessages =
+    visibleMessages.length > MAX_VISIBLE_PACKETS ? visibleMessages.slice(-MAX_VISIBLE_PACKETS) : visibleMessages;
   const latestMessage = visibleMessages[visibleMessages.length - 1];
   const activeSnapshot = data.snapshots[activeScenarioIndex] ?? data.snapshots[0];
   const selectedSnapshot =
@@ -114,6 +78,13 @@ export default function SecsGemPage() {
   const activeAlarm = data.alarms[0];
   const feedProgress = data.messages.length === 0 ? 0 : Math.round((visibleMessageCount / data.messages.length) * 100);
   const feedInterval = speedIntervals[speed] ?? speedIntervals['1x'];
+  const hasS2F49 = visibleMessages.some((message) => message.stream === 2 && message.function === 49);
+  const s2f49Message = visibleMessages.find((message) => message.stream === 2 && message.function === 49);
+  const s2f50Message = visibleMessages.find((message) => message.stream === 2 && message.function === 50);
+  const s2f49Payload = s2f49Message?.payload as { params?: Array<{ cpval?: unknown }> } | undefined;
+  const recipeId = s2f49Payload?.params?.[0]?.cpval;
+  const matchedRecipe: Recipe | undefined =
+    typeof recipeId === 'string' ? MOCK_RECIPES.find((candidate) => candidate.id === recipeId) : undefined;
 
   useEffect(() => {
     if (!isRunning || data.messages.length === 0) return undefined;
@@ -131,6 +102,29 @@ export default function SecsGemPage() {
     return () => window.clearInterval(interval);
   }, [data.messages.length, feedInterval, isRunning]);
 
+  useEffect(() => {
+    return () => {
+      if (overrideTimerRef.current) {
+        clearTimeout(overrideTimerRef.current);
+      }
+    };
+  }, []);
+
+  const handleUserExpand = (index: number) => {
+    const step = scenarioSteps[index];
+    if (!step) return;
+
+    if (overrideTimerRef.current) {
+      clearTimeout(overrideTimerRef.current);
+    }
+
+    setOverrideStepId(step.id);
+    overrideTimerRef.current = setTimeout(() => {
+      setOverrideStepId(null);
+      overrideTimerRef.current = null;
+    }, USER_OVERRIDE_DURATION);
+  };
+
   const advanceFeed = () => {
     setVisibleMessageCount((current) => nextFeedCount(current, data.messages.length));
     setIsRunning(false);
@@ -141,6 +135,24 @@ export default function SecsGemPage() {
     setSelectedSnapshotId(data.snapshots[0]?.id ?? '');
     setIsRunning(false);
   };
+
+  const scenarioStepCards = scenarioSteps.map((step, index) => {
+    const isComplete = index < activeScenarioIndex;
+    const isActive = index === activeScenarioIndex || (isComplete && overrideStepId === step.id);
+    const message = data.messages.find((candidate) => candidate.sf === step.primary);
+
+    return (
+      <ScenarioStepCard
+        key={step.id}
+        step={step}
+        isActive={isActive}
+        isComplete={isComplete}
+        message={message}
+        snapshot={data.snapshots[index]}
+        onUserExpand={() => handleUserExpand(index)}
+      />
+    );
+  });
 
   return (
     <div className="min-h-screen bg-[var(--sf-bg-base)] p-4 text-[var(--sf-text-primary)]">
@@ -270,36 +282,14 @@ export default function SecsGemPage() {
                 </div>
               </div>
 
-              <div className="grid gap-3 p-4 md:grid-cols-4">
-                {scenarioSteps.map((step, index) => (
-                  <article
-                    key={step.id}
-                    className={cn(
-                      'relative overflow-hidden rounded-md border bg-[var(--sf-surface-panel)] p-3 transition-all duration-300 motion-reduce:transition-none',
-                      index === activeScenarioIndex && 'shadow-[0_0_20px_rgba(245,158,11,0.14)]',
-                      statusStyles[step.status]
-                    )}
-                  >
-                    {index === activeScenarioIndex && (
-                      <span className="absolute inset-x-0 top-0 h-0.5 bg-[var(--sf-status-amber)] animate-pulse motion-reduce:animate-none" />
-                    )}
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-semibold uppercase">{step.status}</span>
-                      {step.status === 'complete' ? (
-                        <CheckCircle className="h-4 w-4" />
-                      ) : (
-                        <Circle className="h-4 w-4" />
-                      )}
-                    </div>
-                    <h3 className="mt-3 text-sm font-semibold text-[var(--sf-text-primary)]">
-                      {step.label}
-                    </h3>
-                    <p className="mt-2 text-xs text-[var(--sf-text-secondary)]">{step.action}</p>
-                    <p className="mt-3 font-mono text-xs text-[var(--sf-text-muted)]">
-                      {step.actor}: {step.primary}/{step.expected}
-                    </p>
-                  </article>
-                ))}
+              <div className="grid gap-3 p-4 md:grid-cols-2">
+                {reducedMotion ? (
+                  scenarioStepCards
+                ) : (
+                  <AnimatePresence mode="wait" initial={false}>
+                    {scenarioStepCards}
+                  </AnimatePresence>
+                )}
               </div>
             </section>
 
@@ -321,10 +311,36 @@ export default function SecsGemPage() {
                   />
                 </div>
                 <div className="mt-3 grid gap-2 md:grid-cols-3">
-                  {data.messages.slice(Math.max(0, visibleMessageCount - 3), visibleMessageCount).map((message) => (
-                    <FeedPacket key={message.id} message={message} active={message.id === latestMessage?.id} />
-                  ))}
+                  {reducedMotion ? (
+                    visibleFeedMessages.map((message, index) => (
+                      <FeedPacketCard
+                        key={message.id}
+                        message={message}
+                        isActive={message.id === latestMessage?.id}
+                        index={index}
+                        enableTypewriter={message.id === latestMessage?.id}
+                      />
+                    ))
+                  ) : (
+                    <AnimatePresence initial={false} mode="popLayout">
+                      {visibleFeedMessages.map((message, index) => (
+                        <FeedPacketCard
+                          key={message.id}
+                          message={message}
+                          isActive={message.id === latestMessage?.id}
+                          index={index}
+                          enableTypewriter={message.id === latestMessage?.id}
+                        />
+                      ))}
+                    </AnimatePresence>
+                  )}
                 </div>
+                {visibleMessageCount > 3 && (
+                  <div className="mt-2 text-xs text-[var(--sf-text-muted)]">
+                    Showing {Math.min(visibleMessageCount, 3)} of {data.messages.length} packets in feed ·{' '}
+                    {traceMessages.length} rows in trace
+                  </div>
+                )}
               </div>
             </section>
 
@@ -338,6 +354,11 @@ export default function SecsGemPage() {
                   {isRunning ? 'streaming' : 'hold'} · {speed}
                 </span>
               </div>
+              {data.messages.length > MAX_VISIBLE_PACKETS && (
+                <div className="mb-2 px-4 pt-3 text-xs text-[var(--sf-text-muted)]">
+                  Trace buffer: showing latest {MAX_VISIBLE_PACKETS} of {data.messages.length} messages
+                </div>
+              )}
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[760px] text-left text-sm">
                   <thead className="text-xs uppercase text-[var(--sf-text-muted)]">
@@ -352,39 +373,17 @@ export default function SecsGemPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {visibleMessages.map((message) => (
-                      <tr
-                        key={message.id}
-                        className={cn(
-                          'border-b border-[var(--sf-border-default)] transition-colors duration-300 last:border-b-0 motion-reduce:transition-none',
-                          message.id === latestMessage?.id &&
-                            'bg-[rgba(34,211,238,0.08)] shadow-[inset_3px_0_0_var(--sf-accent-cyan)]'
-                        )}
-                      >
-                        <td className="px-4 py-3 font-mono text-xs">{formatTime(message.timestamp)}</td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={cn(
-                              'rounded px-2 py-1 font-mono text-xs',
-                              message.direction === 'H2E'
-                                ? 'bg-[rgba(59,130,246,0.16)] text-[var(--sf-accent-blue)]'
-                                : 'bg-[rgba(20,184,166,0.16)] text-[var(--sf-accent-teal)]'
-                            )}
-                          >
-                            {message.direction}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 font-mono text-[var(--sf-text-primary)]">
-                          {message.sf}
-                        </td>
-                        <td className="px-4 py-3">{message.wbit ? 'Yes' : 'No'}</td>
-                        <td className="px-4 py-3 font-mono">{message.latencyMs} ms</td>
-                        <td className="px-4 py-3 font-mono">{message.systemBytes}</td>
-                        <td className="px-4 py-3 text-[var(--sf-text-secondary)]">
-                          {message.summary}
-                        </td>
-                      </tr>
-                    ))}
+                    {reducedMotion ? (
+                      traceMessages.map((msg, i) => (
+                        <TraceRow key={msg.id} message={msg} isLatest={msg.id === latestMessage?.id} index={i} />
+                      ))
+                    ) : (
+                      <AnimatePresence initial={false}>
+                        {traceMessages.map((msg, i) => (
+                          <TraceRow key={msg.id} message={msg} isLatest={msg.id === latestMessage?.id} index={i} />
+                        ))}
+                      </AnimatePresence>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -452,6 +451,21 @@ export default function SecsGemPage() {
                     </div>
                   </dl>
                 )}
+              </div>
+            </section>
+
+            <section className="rounded-lg border border-[var(--sf-accent-violet)] bg-[rgba(139,92,246,0.08)] p-4">
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-[var(--sf-accent-violet)]" />
+                <h2 className="text-sm font-semibold">Recipe Detail</h2>
+              </div>
+              <div className="mt-3">
+                <RecipeDetailCard
+                  recipe={matchedRecipe || null}
+                  isVisible={hasS2F49 && !!matchedRecipe}
+                  messageS2F49={s2f49Message}
+                  messageS2F50={s2f50Message}
+                />
               </div>
             </section>
 
