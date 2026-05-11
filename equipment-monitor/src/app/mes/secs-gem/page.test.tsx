@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import SecsGemPage from './page';
 
 describe('SecsGemPage', () => {
@@ -10,7 +10,20 @@ describe('SecsGemPage', () => {
     expect(screen.getByText(/Scenario Console/i)).toBeInTheDocument();
     expect(screen.getByText(/Live SECS Trace/i)).toBeInTheDocument();
     expect(screen.getByText(/Replay State/i)).toBeInTheDocument();
-    expect(screen.getByText('S1F13')).toBeInTheDocument();
-    expect(screen.getByText('S6F11')).toBeInTheDocument();
+    expect(screen.getByText(/Dynamic Data Feed/i)).toBeInTheDocument();
+    expect(screen.getAllByText('S1F13').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('S6F11').length).toBeGreaterThan(0);
+  });
+
+  it('lets operators step and reset the frontend message feed', () => {
+    render(<SecsGemPage />);
+
+    expect(screen.getByText(/3\/7 packets ingested/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /step/i }));
+    expect(screen.getByText(/4\/7 packets ingested/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /reset/i }));
+    expect(screen.getByText(/1\/7 packets ingested/i)).toBeInTheDocument();
   });
 });
