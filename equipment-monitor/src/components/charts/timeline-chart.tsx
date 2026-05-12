@@ -28,7 +28,7 @@ export function TimelineChart({ alarms, title = 'Alarm History', height = 400 }:
       <div className="relative" style={{ height, overflowY: 'auto' }}>
         <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-slate-700" />
         <div className="space-y-4 pl-4">
-          {sortedAlarms.map((alarm, index) => {
+          {sortedAlarms.map((alarm) => {
             const config = severityConfig[alarm.severity];
             const Icon = config.icon;
 

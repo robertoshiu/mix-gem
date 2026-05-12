@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { Search, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+
 import type { AlarmSeverity } from '@/types/equipment';
 
 interface AlertFilterProps {

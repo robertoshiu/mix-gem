@@ -4,7 +4,6 @@ import { useEffect, useRef } from 'react';
 import * as BABYLON from '@babylonjs/core';
 import type { FabTwinFaultId, FabTwinMode, FabTwinView } from '@/lib/fab-twin-data';
 import {
-  FAB_TWIN_FAULT_SCENES,
   FAB_TWIN_SENSORS,
   FAB_TWIN_TOOLS,
   FAB_TWIN_UNITS,

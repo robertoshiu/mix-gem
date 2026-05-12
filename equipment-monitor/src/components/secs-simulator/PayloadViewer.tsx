@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion, type TargetAndTransition } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { payloadCollapse, payloadExpand, useReducedMotion } from '@/lib/secs-simulator-animation';
 import { cn } from '@/lib/utils';
@@ -78,25 +78,42 @@ function formatValue(value: unknown): ReactNode {
 export function PayloadViewer({ payload, defaultExpanded = false, maxLines = 500 }: PayloadViewerProps) {
   const reducedMotion = useReducedMotion();
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
-  const [showFull, setShowFull] = useState(false);
+
+  // Track which payload the user has chosen to show full; when payload prop changes
+  // to a different object reference, showFull automatically becomes false.
+  const [showFullForPayload, setShowFullForPayload] = useState<Record<string, unknown> | null>(null);
+  const showFull = showFullForPayload === payload;
+  const handleShowFull = () => setShowFullForPayload(payload);
+
   const [contentHeight, setContentHeight] = useState(0);
   const contentRef = useRef<HTMLDivElement | null>(null);
 
   const maxHeightPx = maxLines * LINE_HEIGHT_PX;
   const shouldShowFullButton = isExpanded && !showFull && contentHeight > maxHeightPx;
 
+  // Use ResizeObserver + rAF to avoid synchronous setState in effect
   useEffect(() => {
-    setShowFull(false);
-  }, [payload]);
-
-  useLayoutEffect(() => {
     if (!isExpanded) {
-      setContentHeight(0);
-      return;
+      const rafId = requestAnimationFrame(() => setContentHeight(0));
+      return () => cancelAnimationFrame(rafId);
     }
 
-    const measuredHeight = contentRef.current?.scrollHeight ?? 0;
-    setContentHeight(measuredHeight);
+    const el = contentRef.current;
+    if (!el) return undefined;
+
+    const observer = new ResizeObserver(() => {
+      setContentHeight(el.scrollHeight);
+    });
+    observer.observe(el);
+
+    const rafId = requestAnimationFrame(() => {
+      setContentHeight(el.scrollHeight);
+    });
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      observer.disconnect();
+    };
   }, [isExpanded, payload, showFull, maxHeightPx]);
 
   const contentStyle = showFull
@@ -137,7 +154,7 @@ export function PayloadViewer({ payload, defaultExpanded = false, maxLines = 500
         <div className="pt-2">
           <button
             type="button"
-            onClick={() => setShowFull(true)}
+            onClick={handleShowFull}
             className={cn(
               'inline-flex min-h-[36px] items-center rounded-md px-3 py-2 text-xs font-medium transition-colors',
               'bg-[var(--sf-surface-elevated)] text-[var(--sf-accent-cyan)] hover:bg-[var(--sf-surface-hover)]'
