@@ -17,8 +17,6 @@ import {
   TrendDataPoint,
   Alarm,
   AlarmSeverity,
-  ContextParameter,
-  RootCauseHypothesis,
 } from "@/types/equipment";
 
 // ============================================================================

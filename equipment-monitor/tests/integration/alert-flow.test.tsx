@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import Page from '@/app/page';
 
 // Mock charts to avoid canvas issues in JSDOM

@@ -13,7 +13,6 @@ import {
 import { cn } from "@/lib/utils";
 import type {
   BuildingAutoSubsystemData,
-  AlarmEntry,
 } from "@/lib/war-room-types";
 import { generateBuildingAutoSubsystemData } from "@/lib/war-room-mock-data";
 import { useDialogFocusTrap } from "@/hooks/use-dialog-focus-trap";

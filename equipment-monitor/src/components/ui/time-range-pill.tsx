@@ -17,6 +17,8 @@ export function TimeRangePill({
   onClick,
   className,
 }: TimeRangePillProps) {
+  // value is part of the public API for consumers; not rendered directly
+  void value;
   return (
     <button
       onClick={onClick}

@@ -17,7 +17,6 @@ import type {
   Detector,
   SuppressionSystem,
   EvacuationZone,
-  AlarmEntry,
 } from "@/lib/war-room-types";
 import { generateFireAlarmSubsystemData } from "@/lib/war-room-mock-data";
 import { useDialogFocusTrap } from "@/hooks/use-dialog-focus-trap";

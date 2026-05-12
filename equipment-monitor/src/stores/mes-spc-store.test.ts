@@ -1,5 +1,5 @@
 import { useMesSpcStore, INITIAL_MES_SPC_STATE } from '@/stores/mes-spc-store';
-import { MOCK_LOTS, MOCK_RECIPES, generateSeedMeasurements } from '@/lib/mes-mock-data';
+import { generateSeedMeasurements } from '@/lib/mes-mock-data';
 import type { SpcViolation, SecsEvent } from '@/lib/mes-types';
 
 beforeEach(() => {

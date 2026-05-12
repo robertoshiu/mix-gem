@@ -195,7 +195,10 @@ export function EdaPipelineScene(props: EdaPipelineSceneProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const propsRef = useRef(props);
   const webgl = useWebGLSupport();
-  propsRef.current = props;
+
+  useEffect(() => {
+    propsRef.current = props;
+  });
 
   useEffect(() => {
     if (!canvasRef.current || !webgl.supported) return undefined;

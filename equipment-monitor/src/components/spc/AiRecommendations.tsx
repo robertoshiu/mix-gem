@@ -6,8 +6,6 @@ import {
   Activity,
   Zap,
   Settings,
-  TrendingUp,
-  Shield,
   Clock,
   CheckCircle,
   AlertTriangle,
@@ -24,14 +22,7 @@ import {
 import type { AiRecommendationType } from '@/lib/mes-types';
 import { fadeInUp, useReducedMotion } from '@/lib/animation';
 
-const ICON_MAP: Record<AiRecommendationType, React.FC<React.SVGProps<SVGSVGElement>>> = {
-  energy: Zap,
-  'predictive-maintenance': Settings,
-  'production-optimization': TrendingUp,
-  'carbon-reduction': Activity,
-  quality: Shield,
-  scheduling: Clock,
-};
+
 
 const TYPE_LABELS: Record<AiRecommendationType, string> = {
   energy: 'Energy Optimization',
@@ -157,7 +148,6 @@ export function AiRecommendations() {
       ) : (
         <div>
           {recommendations.map((rec) => {
-            const TypeIcon = ICON_MAP[rec.type] || Zap;
             const StatusIcon = rec.status === 'applied' ? CheckCircle : AlertTriangle;
             const statusColor =
               rec.status === 'applied'

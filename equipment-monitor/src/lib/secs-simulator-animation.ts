@@ -101,11 +101,11 @@ export function useTypewriter(text: string, speed = TYPEWRITER_SPEED): string {
 
   useEffect(() => {
     if (reducedMotion) {
-      setDisplayedText(text);
-      return;
+      const rafId = requestAnimationFrame(() => setDisplayedText(text));
+      return () => cancelAnimationFrame(rafId);
     }
 
-    setDisplayedText('');
+    const rafId = requestAnimationFrame(() => setDisplayedText(''));
     let index = 0;
 
     const intervalId = window.setInterval(() => {
@@ -118,6 +118,7 @@ export function useTypewriter(text: string, speed = TYPEWRITER_SPEED): string {
     }, speed);
 
     return () => {
+      cancelAnimationFrame(rafId);
       window.clearInterval(intervalId);
     };
   }, [reducedMotion, speed, text]);

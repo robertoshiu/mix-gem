@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 import type {
   GasDetectionSubsystemData,
   GasSensor,
-  AlarmEntry,
 } from "@/lib/war-room-types";
 import { generateGasDetectionSubsystemData } from "@/lib/war-room-mock-data";
 import { useDialogFocusTrap } from "@/hooks/use-dialog-focus-trap";
