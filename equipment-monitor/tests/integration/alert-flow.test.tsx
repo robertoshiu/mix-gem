@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import Page from '@/app/page';
 
 // Mock charts to avoid canvas issues in JSDOM
@@ -42,7 +42,9 @@ describe('Alert Flow', () => {
     expect(toasts.length).toBeGreaterThan(0);
 
     // Fast forward 5 seconds
-    jest.advanceTimersByTime(5000);
+    act(() => {
+      jest.advanceTimersByTime(5000);
+    });
 
     // Ideally we'd check they are gone, but AlertToast calls onDismiss passed from parent.
     // In Page, onDismiss calls acknowledgeAlarm which updates state.
