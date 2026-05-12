@@ -1,0 +1,24 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'E:\\repo\\mix-gem\\.codex\\hooks\\chat-history-logger.sh'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'E:\\repo\\mix-gem\\.codex\\hooks\\chat-history-logger.sh'"
+          }
+        ]
+      }
+    ]
+  }
+}

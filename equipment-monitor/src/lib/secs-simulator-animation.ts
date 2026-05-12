@@ -120,7 +120,6 @@ export function useTypewriter(text: string, speed = TYPEWRITER_SPEED): string {
     return () => {
       window.clearInterval(intervalId);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reducedMotion, speed, text]);
 
   return displayedText;

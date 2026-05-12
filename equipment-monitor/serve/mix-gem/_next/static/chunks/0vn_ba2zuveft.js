@@ -1,0 +1,2 @@
+(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,199235,o=>{"use strict";var r=o.i(263537);let e="oitFinalSimpleBlendPixelShader",l=`precision highp float;uniform sampler2D uFrontColor;void main() {ivec2 fragCoord=ivec2(gl_FragCoord.xy);vec4 frontColor=texelFetch(uFrontColor,fragCoord,0);glFragColor=frontColor;}
+`;r.ShaderStore.ShadersStore[e]||(r.ShaderStore.ShadersStore[e]=l),o.s(["oitFinalSimpleBlendPixelShader",0,{name:e,shader:l}])}]);
