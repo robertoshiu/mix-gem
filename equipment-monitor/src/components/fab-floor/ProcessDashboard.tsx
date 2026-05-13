@@ -1,11 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
 import { ArrowLeft, ArrowRight, ChevronLeft } from 'lucide-react';
-import { Area, AreaChart, CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Area, CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { CyberpunkGaugeCard } from '@/components/charts/cyberpunk-gauge-card';
 import { ProcessPipelineBar } from '@/components/fab-floor/ProcessPipelineBar';
+import { useClientReady } from '@/hooks/use-client-ready';
 import {
   createInitialProcesses,
   generateProcessTrend,
@@ -82,17 +82,13 @@ function WaferHeatMap({ process }: { process: FabProcess }) {
 }
 
 export function ProcessDashboard({ processId }: ProcessDashboardProps) {
-  const [mounted, setMounted] = useState(false);
+  const clientReady = useClientReady();
   const processes = createInitialProcesses();
   const process = processes.find((candidate) => candidate.id === processId) ?? processes[0];
   const prev = getAdjacentProcess(process.id, -1);
   const next = getAdjacentProcess(process.id, 1);
   const trend = generateProcessTrend(process);
   const events = generateSecsGemEvents(process);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   return (
     <div className="min-h-dvh bg-[radial-gradient(circle_at_18%_0%,rgba(34,211,238,0.12),transparent_30%),radial-gradient(circle_at_82%_8%,rgba(168,85,247,0.12),transparent_32%),var(--sf-bg-canvas)] p-4 text-[var(--sf-text-primary)] md:p-6">
@@ -146,7 +142,7 @@ export function ProcessDashboard({ processId }: ProcessDashboardProps) {
             <section className="rounded-3xl border bg-[rgba(2,6,23,0.72)] p-4" style={{ borderColor: colorWithAlpha(process.color, 0.36) }}>
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-[0.18em]">Process Trend</h2>
               <div className="h-[330px]">
-                {mounted ? <ResponsiveContainer width="100%" height="100%">
+                {clientReady ? <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={trend} margin={{ top: 12, right: 14, left: 0, bottom: 0 }}>
                     <CartesianGrid stroke="rgba(148,163,184,0.12)" vertical={false} />
                     <XAxis dataKey="time" stroke="rgba(148,163,184,0.72)" fontSize={10} tickLine={false} axisLine={false} />

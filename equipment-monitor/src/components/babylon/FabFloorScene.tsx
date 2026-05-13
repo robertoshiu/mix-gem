@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 import * as BABYLON from '@babylonjs/core';
 import { WebGLFallback } from '@/components/three/WebGLFallback';
+import { useClientReady } from '@/hooks/use-client-ready';
 import { useWebGLSupport } from '@/hooks/use-webgl-support';
 import type { FabProcess, ProcessId } from '@/lib/fab-process-data';
 
@@ -305,22 +306,21 @@ function createScene(canvas: HTMLCanvasElement, propsRef: MutableRefObject<FabFl
 }
 
 export function FabFloorScene(props: FabFloorSceneProps) {
-  const [mounted, setMounted] = useState(false);
+  const clientReady = useClientReady();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const propsRef = useRef(props);
   const webgl = useWebGLSupport();
 
   useEffect(() => {
-    setMounted(true);
     propsRef.current = props;
-  });
+  }, [props]);
 
   useEffect(() => {
-    if (!canvasRef.current || !webgl.supported) return undefined;
+    if (!clientReady || !canvasRef.current || !webgl.supported) return undefined;
     return createScene(canvasRef.current, propsRef);
-  }, [webgl.supported]);
+  }, [clientReady, webgl.supported]);
 
-  if (!mounted) {
+  if (!clientReady) {
     return <div className="flex h-full min-h-[720px] w-full items-center justify-center bg-[var(--sf-bg-canvas)] text-sm text-[var(--sf-text-secondary)]">Initializing Babylon.js fab floor...</div>;
   }
 

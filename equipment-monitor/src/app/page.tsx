@@ -1,24 +1,24 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Header } from '@/components/layout/header';
 import { MesNavBar } from '@/components/mes/MesNavBar';
 import { CyberpunkGaugeCard } from '@/components/charts/cyberpunk-gauge-card';
 import { ProcessCard } from '@/components/fab-floor/ProcessCard';
 import { ProcessPipelineBar } from '@/components/fab-floor/ProcessPipelineBar';
+import { useClientReady } from '@/hooks/use-client-ready';
 import { generateFabThroughputTrend, PROCESS_ORDER } from '@/lib/fab-process-data';
 import { useProcessStore } from '@/stores/process-store';
 
 export default function DashboardPage() {
-  const [mounted, setMounted] = useState(false);
+  const clientReady = useClientReady();
   const processes = useProcessStore((state) => state.processes);
   const fabKpis = useProcessStore((state) => state.fabKpis);
   const tick = useProcessStore((state) => state.tick);
   const trend = generateFabThroughputTrend(processes);
 
   useEffect(() => {
-    setMounted(true);
     const id = window.setInterval(tick, 2000);
     return () => window.clearInterval(id);
   }, [tick]);
@@ -64,7 +64,7 @@ export default function DashboardPage() {
             <p className="text-xs text-[var(--sf-text-secondary)]">Stacked throughput contribution by process</p>
           </div>
           <div className="h-[360px]">
-            {mounted ? <ResponsiveContainer width="100%" height="100%">
+            {clientReady ? <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={trend} margin={{ top: 12, right: 18, left: 0, bottom: 0 }}>
                 <CartesianGrid stroke="rgba(148,163,184,0.12)" vertical={false} />
                 <XAxis dataKey="time" stroke="rgba(148,163,184,0.72)" fontSize={11} tickLine={false} axisLine={false} />
