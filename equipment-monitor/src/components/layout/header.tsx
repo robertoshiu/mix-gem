@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import Image from "next/image";
 import { Bell, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -69,7 +70,14 @@ export function Header({ className }: { className?: string }) {
       >
         {/* Left: Logo + Title */}
         <div className="flex items-center gap-3">
-          <img src="/mix-gem/better-logo.png" className="h-12 w-auto shrink-0" alt="Better SmartFactory Logo" />
+          <Image
+            src="/mix-gem/better-logo.png"
+            width={192}
+            height={48}
+            className="h-12 w-auto shrink-0"
+            alt="Better SmartFactory Logo"
+            priority
+          />
           <div className="flex flex-col leading-tight">
             <h1 className="text-sm font-semibold text-[var(--smartfactory-text-primary)]">
               Equipment Monitor

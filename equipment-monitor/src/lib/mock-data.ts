@@ -19,6 +19,8 @@ import {
   AlarmSeverity,
 } from "@/types/equipment";
 
+const MOCK_NOW = new Date("2026-05-13T04:00:00.000Z").getTime();
+
 // ============================================================================
 // EQUIPMENT DEFINITIONS
 // ============================================================================
@@ -322,7 +324,7 @@ export const mockAlarms: Alarm[] = [
     module: "chamber_A",
     severity: "CRITICAL",
     message: "Chamber pressure out of spec (847 mTorr > USL 850 mTorr)",
-    timestamp: new Date(Date.now() - 2 * 60 * 1000),
+    timestamp: new Date(MOCK_NOW - 2 * 60 * 1000),
     acknowledged: false,
     contextParams: [
       { name: "chamber_pressure", value: 847, unit: "mTorr", nominal: 800, tolerance: 50 },
@@ -345,7 +347,7 @@ export const mockAlarms: Alarm[] = [
     module: "wafer_stage",
     severity: "MAJOR",
     message: "Focus offset approaching limit (+8.2 nm, tolerance ±10 nm)",
-    timestamp: new Date(Date.now() - 15 * 60 * 1000),
+    timestamp: new Date(MOCK_NOW - 15 * 60 * 1000),
     acknowledged: false,
     contextParams: [
       { name: "focus_offset", value: 8.2, unit: "nm", nominal: 0, tolerance: 10 },
@@ -368,7 +370,7 @@ export const mockAlarms: Alarm[] = [
     module: "wafer_stage",
     severity: "MINOR",
     message: "CDU 3σ trending upward (1.2 nm → 1.4 nm over last 50 wafers)",
-    timestamp: new Date(Date.now() - 45 * 60 * 1000),
+    timestamp: new Date(MOCK_NOW - 45 * 60 * 1000),
     acknowledged: true,
     contextParams: [
       { name: "cdu_3sigma", value: 1.4, unit: "nm", nominal: 1.0, tolerance: 0.4 },
@@ -391,7 +393,7 @@ export const mockAlarms: Alarm[] = [
     module: "PEB_module_1",
     severity: "MINOR",
     message: "PEB temperature uniformity degraded (±0.4°C vs ±0.15°C spec)",
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
+    timestamp: new Date(MOCK_NOW - 2 * 60 * 60 * 1000),
     acknowledged: true,
     contextParams: [
       { name: "peb_temp_uniformity", value: 0.4, unit: "°C", nominal: 0.1, tolerance: 0.15 },
@@ -414,7 +416,7 @@ export const mockAlarms: Alarm[] = [
     module: "reticle_handler",
     severity: "MAJOR",
     message: "Reticle contamination detected (particle count: 3, spec: 0)",
-    timestamp: new Date(Date.now() - 30 * 60 * 1000),
+    timestamp: new Date(MOCK_NOW - 30 * 60 * 1000),
     acknowledged: false,
     contextParams: [
       { name: "particle_count", value: 3, unit: "count", nominal: 0, tolerance: 0 },
@@ -437,7 +439,7 @@ export const mockAlarms: Alarm[] = [
     module: "wafer_stage",
     severity: "INFO",
     message: "Lot SYN_LOT_A2847 completed (25/25 wafers processed)",
-    timestamp: new Date(Date.now() - 10 * 60 * 1000),
+    timestamp: new Date(MOCK_NOW - 10 * 60 * 1000),
     acknowledged: true,
     contextParams: [
       { name: "wafers_processed", value: 25, unit: "wafers", nominal: 25, tolerance: 0 },
@@ -450,6 +452,13 @@ export const mockAlarms: Alarm[] = [
 // ============================================================================
 // TREND DATA GENERATION
 // ============================================================================
+
+const TREND_DATA_ANCHOR = MOCK_NOW;
+
+function seededUnit(seed: number): number {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
 
 /**
  * Generate realistic trend data with physics-based patterns
@@ -468,16 +477,22 @@ export function generateTrendData(
   excursionProbability: number = 0.02
 ): TrendDataPoint[] {
   const points: TrendDataPoint[] = [];
-  const now = Date.now();
+  const now = TREND_DATA_ANCHOR;
   const pointsCount = Math.max(60, hours * 12); // At least 60 points, 12 per hour
   const interval = (hours * 60 * 60 * 1000) / pointsCount;
+  const seedBase = hours * 1000 + baseValue * 100 + variance * 10 + driftRate;
 
   for (let i = pointsCount; i >= 0; i--) {
     const timestamp = now - i * interval;
     const hoursAgo = i / 12;
 
     // Random noise (normal distribution approximation)
-    const noise = (Math.random() + Math.random() + Math.random() - 1.5) * variance;
+    const noise = (
+      seededUnit(seedBase + i * 3) +
+      seededUnit(seedBase + i * 3 + 1) +
+      seededUnit(seedBase + i * 3 + 2) -
+      1.5
+    ) * variance;
 
     // Slow sinusoidal drift (simulates thermal/environmental cycles)
     const cyclicDrift = Math.sin(hoursAgo / 4 * Math.PI) * variance * 0.3;
@@ -486,8 +501,8 @@ export function generateTrendData(
     const systematicDrift = driftRate * (hours - hoursAgo);
 
     // Occasional excursion
-    const excursion = Math.random() < excursionProbability
-      ? (Math.random() > 0.5 ? 1 : -1) * variance * 3
+    const excursion = seededUnit(seedBase + i * 7) < excursionProbability
+      ? (seededUnit(seedBase + i * 7 + 1) > 0.5 ? 1 : -1) * variance * 3
       : 0;
 
     points.push({
@@ -509,13 +524,13 @@ export function generateCorrelatedTrends(
 ): Map<string, TrendDataPoint[]> {
   const result = new Map<string, TrendDataPoint[]>();
   const pointsCount = Math.max(60, hours * 12);
-  const now = Date.now();
+  const now = TREND_DATA_ANCHOR;
   const interval = (hours * 60 * 60 * 1000) / pointsCount;
 
   // Generate common noise component
   const commonNoise: number[] = [];
   for (let i = 0; i <= pointsCount; i++) {
-    commonNoise.push((Math.random() - 0.5) * 2);
+    commonNoise.push((seededUnit(hours * 1000 + i) - 0.5) * 2);
   }
 
   for (const param of params) {
@@ -526,7 +541,10 @@ export function generateCorrelatedTrends(
       const idx = pointsCount - i;
 
       // Independent noise
-      const independentNoise = (Math.random() - 0.5) * param.variance * (1 - correlationStrength);
+      const independentNoise =
+        (seededUnit(hours * 2000 + idx + param.base * 100) - 0.5) *
+        param.variance *
+        (1 - correlationStrength);
 
       // Correlated noise
       const correlatedNoise = commonNoise[idx] * param.variance * correlationStrength;
