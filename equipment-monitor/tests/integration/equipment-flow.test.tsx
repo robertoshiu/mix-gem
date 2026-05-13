@@ -1,52 +1,35 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import Page from '@/app/page';
 
-// Mock everything needed for integration test
-jest.mock('@/components/charts/trend-chart', () => ({
-  TrendChart: () => <div data-testid="trend-chart">Trend Chart</div>
-}));
-jest.mock('@/components/charts/gauge-card', () => ({
-  GaugeCard: ({
-    parameter,
-  }: {
-    parameter: { name: string; value: number | string; unit: string };
-  }) => (
-    <div data-testid="gauge-card">
-      {parameter.name}: {parameter.value} {parameter.unit}
-    </div>
-  )
+jest.mock('recharts', () => ({
+  AreaChart: ({ children }: { children?: React.ReactNode }) => <div data-testid="area-chart">{children}</div>,
+  Area: () => <div data-testid="area" />,
+  CartesianGrid: () => null,
+  ResponsiveContainer: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+  Tooltip: () => null,
+  XAxis: () => null,
+  YAxis: () => null,
 }));
 
-describe('Equipment Selection Flow', () => {
-  it('should select equipment and display gauge cards', async () => {
-    // Need to use async findBy because of Suspense/lazy loading
+describe('Fab Command Center Flow', () => {
+  it('shows the fab-wide process command center', async () => {
     render(<Page />);
 
-    // Wait for equipment list to load and click - use correct ID from mock data
-    // SCANNER-01 may appear in multiple places (sidebar + main content), use first match
-    const equipmentCards = await screen.findAllByText('SCANNER-01');
-    fireEvent.click(equipmentCards[0]);
-
-    // Verify gauge cards appear (might need waitFor due to state updates)
-    await waitFor(() => {
-      expect(screen.getAllByTestId('gauge-card').length).toBeGreaterThan(0);
-    });
+    expect(await screen.findByText('8-Process Fab Flow')).toBeInTheDocument();
+    expect(screen.getByText('Process Pipeline')).toBeInTheDocument();
+    expect(screen.getByText('Live Trend · Fab WPH Last 24h')).toBeInTheDocument();
   });
 
-  it('should update real-time data every 2 seconds', async () => {
+  it('updates live fab KPI state without crashing', async () => {
     jest.useFakeTimers();
     render(<Page />);
 
-    // Need to wait for initial render
-    await screen.findByRole('heading', { name: 'Equipment' });
-
-    // Advance time to trigger setInterval
+    await screen.findByText('Fab KPI Command Center');
     jest.advanceTimersByTime(2000);
 
-    // This is hard to assert on specific values since they are random in mock,
-    // but we can verify the component re-renders or state updates if we spy on it.
-    // For integration test, just checking no crash on update is good.
-
+    await waitFor(() => {
+      expect(screen.getByText('Fab OEE')).toBeInTheDocument();
+    });
     jest.useRealTimers();
   });
 });
