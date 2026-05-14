@@ -22,9 +22,10 @@ describe('MesNavBar', () => {
     expect(screen.getByText('Lot Tracker')).toBeInTheDocument();
     expect(screen.getByText('Recipe Manager')).toBeInTheDocument();
     expect(screen.getByText('SPC Dashboard')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'EDA Simulator' })).toHaveAttribute(
+    expect(screen.queryByRole('link', { name: 'EDA Simulator' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'AR Tracking' })).toHaveAttribute(
       'href',
-      '/mes/eda'
+      '/mes/ar-tracking'
     );
     expect(screen.getByRole('link', { name: 'SECS/GEM Sim' })).toHaveAttribute(
       'href',

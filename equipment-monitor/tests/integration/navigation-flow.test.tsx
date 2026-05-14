@@ -40,6 +40,10 @@ describe('MES Navigation Flow', () => {
 
     const spcLink = screen.getByRole('link', { name: 'SPC Dashboard' });
     expect(spcLink).toHaveAttribute('href', '/mes/spc');
+
+    const arTrackingLink = screen.getByRole('link', { name: 'AR Tracking' });
+    expect(arTrackingLink).toHaveAttribute('href', '/mes/ar-tracking');
+    expect(screen.queryByRole('link', { name: 'EDA Simulator' })).not.toBeInTheDocument();
   });
 
   it('marks the active route with aria-current=page', () => {
