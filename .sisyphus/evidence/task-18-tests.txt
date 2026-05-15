@@ -1,0 +1,23 @@
+Task 18 store test evidence
+Date: 2026-05-15
+
+Command: cd equipment-monitor && npx jest src/stores/ar-tracking-store.test.ts --no-cache
+Result: PASS
+
+Captured test count:
+- Test Suites: 1 passed, 1 total
+- Tests: 29 passed, 29 total
+- Snapshots: 0 total
+- Time: 2.57 s
+
+Suites covered:
+- initial state
+- PiP actions
+- triggerAlert auto-opens PiP
+- personnel behavior state
+- equipment state
+- recipe states
+- zone collision with dynamic zones
+- existing actions still work
+
+Full command output showed all 29 tests passing.

@@ -1,0 +1,26 @@
+Task 18 build evidence
+Date: 2026-05-15
+
+Command: cd equipment-monitor && npx tsc --noEmit
+Result: PASS - 0 TypeScript errors.
+Output: <no output>
+
+Command: cd equipment-monitor && npx next build
+Result: PASS - production build completed successfully.
+
+Captured output summary:
+- Next.js 16.2.4 (Turbopack)
+- Creating an optimized production build ...
+- Compiled successfully in 57s
+- Running TypeScript ...
+- Finished TypeScript in 17.2s ...
+- Collecting page data using 15 workers ...
+- Generating static pages using 15 workers (22/22) in 9.4s
+- Finalizing page optimization ...
+- Route /mes/ar-tracking prerendered as static content.
+
+Non-fatal warnings observed during build:
+- Next.js inferred workspace root as E:\repo\mix-gem because both root and equipment-monitor package-lock.json files exist.
+- Recharts emitted repeated static-render warnings: "The width(-1) and height(-1) of chart should be greater than 0".
+
+Build status: SUCCESS.

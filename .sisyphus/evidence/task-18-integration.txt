@@ -1,0 +1,57 @@
+Task 18 integration QA evidence
+Date: 2026-05-15
+
+LSP diagnostics checked:
+- src/components/babylon/ArTrackingScene.tsx: No diagnostics found
+- src/app/mes/ar-tracking/page.tsx: No diagnostics found
+- src/stores/ar-tracking-store.ts: No diagnostics found
+- src/lib/babylon-pipeline.ts: No diagnostics found
+- src/components/babylon/ar-tracking/pip-scanline-shader.ts: No diagnostics found
+
+Cross-feature integration checklist:
+
+[PASS] ArTrackingScene imports task integrations
+- Imports createCinematicPipeline from src/lib/babylon-pipeline.ts.
+- Imports createPipScanlinePostProcess from ar-tracking/pip-scanline-shader.ts.
+- Imports ALL_ZONES, DYNAMIC_ZONES, PATROL_ROUTES, RESTRICTED_ZONES, Personnel, PersonnelState, EquipmentState, and useArTrackingStore from the store.
+- Uses WebGLFallback/useWebGLSupport for runtime fallback and @babylonjs/loaders/glTF plus GridMaterial for the scene.
+
+[PASS] Store exports and actions are integrated
+- Exports PersonnelState, EquipmentState, RecipeState, AlertSeverity, Personnel, EquipmentInfo, RestrictedZone, DynamicZone, ArAlert.
+- ArAlert includes severity.
+- Store actions include openPip, closePip, switchPipTarget, setRecipeState, triggerAlert, acknowledgeAlert, updatePersonnelPosition, setPersonnelZoneStatus, setPersonnelState, tickPersonnelTimers, setEquipmentState, tickEquipmentTimers, focusPersonnel, clearFocusPersonnel.
+- tickPersonnelTimers escalates active-zone alert severity by elapsed zone time: info < 5s, warning >= 5s, critical >= 15s, and is wired into the scene render loop.
+
+[PASS] Personnel behavior + zone effects
+- nearestActiveDynamicZone only considers dynamic zones whose recipe state is running.
+- Personnel transitions to avoiding when near active dynamic zones, moves away via directionAwayFromZone, and returns to patrolling after clearing active zones.
+- Personnel can enter operating near running equipment bays and observing after waypoint arrival.
+- updateDynamicZones fades running recipe zones in/out and applies force-field wall visibility, alpha pulse, red borders, and amber recipe labels.
+- zoneForPosition checks only visible dynamic zones for collision, then setPersonnelZoneStatus and triggerAlert update store state.
+
+[PASS] PiP + alerts
+- triggerAlert auto-opens PiP only when no current pipTarget exists.
+- Scene enables PiP by adding overviewCamera + arCamera to activeCameras when pipTarget exists, updates first-person camera to the target head position, and shows Babylon GUI AR HUD.
+- Scene closes PiP by hiding the PiP HUD and restoring overview-only rendering when pipTarget is absent.
+- PipOverlay uses active unacknowledged alert severity to pulse and color the surveillance frame.
+- AlertToastStack sorts by severity then timestamp, renders info/warning/critical styles, supports View PiP via switchPipTarget, and Ack via acknowledgeAlert.
+
+[PASS] Equipment state + lighting/effects
+- DYNAMIC_ZONES map to equipment through RECIPE_EQUIPMENT_MAP: IMPLANT-BEAM -> Implant, LITHO-EUV -> Litho Bay.
+- syncRecipeDrivenEquipmentState drives idle -> warmup -> running -> cooldown -> idle lifecycle, using equipment timers, EQUIPMENT_WARMUP_SECONDS, and EQUIPMENT_COOLDOWN_SECONDS.
+- updateEquipmentBays applies state-specific albedo/emissive colors to bay materials, wireframes, and data panel status labels.
+- Scene bay PointLights, GlowLayer emissive selector, SSR/SSAO overview pipeline, and reduced-FPS post-effect fallback are wired and disposed.
+
+[PASS] Edge cases covered by tests or code inspection
+- Dynamic-zone IDs work with setPersonnelZoneStatus.
+- Existing focus/clear focus actions still work.
+- triggerAlert preserves an existing pipTarget.
+- closePip clears PiP target; Escape handler closes PiP on the page.
+- Missing PiP target runtime person hides the PiP HUD instead of crashing.
+- Missing equipment lookup in recipe sync is safely ignored.
+
+Verification summary:
+- npx tsc --noEmit: PASS, 0 errors.
+- npx jest src/stores/ar-tracking-store.test.ts --no-cache: PASS, 29 tests.
+- npx next build: PASS.
+- Playwright manual QA: PASS; canvas rendered, PiP/HUD present, FPS >= 30, no browser warnings/errors, equipment warmup -> running cycle verified.
