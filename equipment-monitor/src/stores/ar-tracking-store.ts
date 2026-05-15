@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 
+export type RecipeState = 'idle' | 'running';
+
 export interface Personnel {
   id: string;
   name: string;
@@ -16,6 +18,10 @@ export interface RestrictedZone {
   size: [number, number];
 }
 
+export interface DynamicZone extends RestrictedZone {
+  anchoredTo: string;
+}
+
 export interface ArAlert {
   id: string;
   personnelId: string;
@@ -25,17 +31,21 @@ export interface ArAlert {
   acknowledged: boolean;
 }
 
-export type ActiveView = 'overview' | { type: 'ar'; personnelId: string };
-
 interface ArTrackingState {
   personnel: Personnel[];
   alerts: ArAlert[];
-  activeView: ActiveView;
+
+  pipTarget: string | null;
+  openPip: (personnelId: string) => void;
+  closePip: () => void;
+  switchPipTarget: (personnelId: string) => void;
+
+  recipeStates: Record<string, RecipeState>;
+  setRecipeState: (zoneId: string, state: RecipeState) => void;
+
   focusPersonnelId: string | null;
   triggerAlert: (personnelId: string, zoneId: string) => void;
   acknowledgeAlert: (alertId: string) => void;
-  switchToArView: (personnelId: string) => void;
-  switchToOverview: () => void;
   updatePersonnelPosition: (id: string, x: number, z: number, waypointIndex?: number) => void;
   setPersonnelZoneStatus: (id: string, zoneId: string | null) => void;
   focusPersonnel: (id: string) => void;
@@ -45,8 +55,26 @@ interface ArTrackingState {
 export const RESTRICTED_ZONES: RestrictedZone[] = [
   { id: 'HV-ZONE', name: 'High Voltage Area', center: [20, 12], size: [12, 8] },
   { id: 'CHEM-STORE', name: 'Chemical Storage', center: [-22, -8], size: [10, 12] },
-  { id: 'MAINT-BAY', name: 'Maintenance Bay', center: [2, 13], size: [13, 8] },
 ];
+
+export const DYNAMIC_ZONES: DynamicZone[] = [
+  {
+    id: 'IMPLANT-BEAM',
+    name: 'Implant Beam Active',
+    center: [-2, 5],
+    size: [10, 6],
+    anchoredTo: 'Implant',
+  },
+  {
+    id: 'LITHO-EUV',
+    name: 'EUV Exposure Active',
+    center: [-18, 10],
+    size: [11, 7],
+    anchoredTo: 'Litho Bay',
+  },
+];
+
+export const ALL_ZONES: RestrictedZone[] = [...RESTRICTED_ZONES, ...DYNAMIC_ZONES];
 
 export const PATROL_ROUTES: Record<string, [number, number][]> = {
   'OP-01': [[-24, -14], [-8, -14], [4, -6], [17, 9], [24, 14], [4, 15], [-16, 8], [-24, -14]],
@@ -62,13 +90,26 @@ export const INITIAL_PERSONNEL: Personnel[] = [
   { id: 'OP-04', name: 'Aiko Tanaka', waypointIndex: 0, position: PATROL_ROUTES['OP-04'][0], inZone: null, status: 'normal' },
 ];
 
-const zoneNameById = new Map(RESTRICTED_ZONES.map((zone) => [zone.id, zone.name]));
+const initialRecipeStates = () => Object.fromEntries(
+  DYNAMIC_ZONES.map((zone) => [zone.id, 'idle' as const]),
+);
+
+const zoneNameById = new Map(ALL_ZONES.map((zone) => [zone.id, zone.name]));
 
 export const useArTrackingStore = create<ArTrackingState>((set) => ({
   personnel: INITIAL_PERSONNEL,
   alerts: [],
-  activeView: 'overview',
+  pipTarget: null,
   focusPersonnelId: null,
+  recipeStates: initialRecipeStates(),
+
+  openPip: (personnelId) => set({ pipTarget: personnelId }),
+  closePip: () => set({ pipTarget: null }),
+  switchPipTarget: (personnelId) => set({ pipTarget: personnelId }),
+
+  setRecipeState: (zoneId, state) => set((current) => ({
+    recipeStates: { ...current.recipeStates, [zoneId]: state },
+  })),
 
   triggerAlert: (personnelId, zoneId) => set((state) => {
     const alert: ArAlert = {
@@ -79,7 +120,11 @@ export const useArTrackingStore = create<ArTrackingState>((set) => ({
       timestamp: Date.now(),
       acknowledged: false,
     };
-    return { alerts: [alert, ...state.alerts].slice(0, 20) };
+
+    return {
+      alerts: [alert, ...state.alerts].slice(0, 20),
+      pipTarget: state.pipTarget ?? personnelId,
+    };
   }),
 
   acknowledgeAlert: (alertId) => set((state) => ({
@@ -87,9 +132,6 @@ export const useArTrackingStore = create<ArTrackingState>((set) => ({
       alert.id === alertId ? { ...alert, acknowledged: true } : alert
     )),
   })),
-
-  switchToArView: (personnelId) => set({ activeView: { type: 'ar', personnelId } }),
-  switchToOverview: () => set({ activeView: 'overview' }),
 
   updatePersonnelPosition: (id, x, z, waypointIndex) => set((state) => ({
     personnel: state.personnel.map((person) => (
