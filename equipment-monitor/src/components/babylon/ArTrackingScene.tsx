@@ -2,9 +2,12 @@
 
 import { useEffect, useRef } from 'react';
 import * as BABYLON from '@babylonjs/core';
+import '@babylonjs/loaders/glTF';
 import { WebGLFallback } from '@/components/three/WebGLFallback';
 import { useWebGLSupport } from '@/hooks/use-webgl-support';
 import {
+  ALL_ZONES,
+  DYNAMIC_ZONES,
   PATROL_ROUTES,
   RESTRICTED_ZONES,
   useArTrackingStore,
@@ -12,12 +15,38 @@ import {
 
 const PERSONNEL_SPEED = 2;
 const HEAD_HEIGHT = 1.72;
+const MODEL_BASE_PATH = '/mix-gem/models/ar-tracking/';
+const MODEL_MANIFEST = 'models.json';
+const MODEL_VARIANTS: Record<string, string> = {
+  'OP-01': 'cleanroom-a.glb',
+  'OP-02': 'cleanroom-b.glb',
+  'OP-03': 'cleanroom-a.glb',
+  'OP-04': 'cleanroom-c.glb',
+};
+
+type AnimState = 'walk' | 'idle' | 'look-around';
 
 type PersonRuntime = {
   node: BABYLON.TransformNode;
   bodyMaterial: BABYLON.PBRMaterial;
   direction: BABYLON.Vector3;
   waypointIndex: number;
+  isGltf: boolean;
+  animGroups: Partial<Record<AnimState, BABYLON.AnimationGroup>> | null;
+  currentAnim: AnimState;
+  idleTimer: number;
+  idleLookDelay: number;
+};
+
+type DynamicZoneRuntime = {
+  zoneId: string;
+  material: BABYLON.PBRMaterial;
+  border: BABYLON.LinesMesh;
+  marker: BABYLON.Mesh;
+  label: BABYLON.Mesh;
+  recipeLabel: BABYLON.Mesh;
+  currentAlpha: number;
+  visible: boolean;
 };
 
 function createPbr(scene: BABYLON.Scene, name: string, color: string, emissive = 0.08, alpha = 1) {
@@ -94,6 +123,23 @@ function createFabLayout(scene: BABYLON.Scene) {
   });
 }
 
+function createZoneBorder(scene: BABYLON.Scene, zoneId: string, center: [number, number], size: [number, number]) {
+  const halfX = size[0] / 2;
+  const halfZ = size[1] / 2;
+  const y = 0.08;
+  const corners = [
+    new BABYLON.Vector3(center[0] - halfX, y, center[1] - halfZ),
+    new BABYLON.Vector3(center[0] + halfX, y, center[1] - halfZ),
+    new BABYLON.Vector3(center[0] + halfX, y, center[1] + halfZ),
+    new BABYLON.Vector3(center[0] - halfX, y, center[1] + halfZ),
+    new BABYLON.Vector3(center[0] - halfX, y, center[1] - halfZ),
+  ];
+  const border = BABYLON.MeshBuilder.CreateLines(`${zoneId}-border`, { points: corners }, scene);
+  border.color = BABYLON.Color3.FromHexString('#ef4444');
+  border.isPickable = false;
+  return border;
+}
+
 function createRestrictedZones(scene: BABYLON.Scene) {
   return RESTRICTED_ZONES.map((zone) => {
     const material = createPbr(scene, `${zone.id}-material`, '#ef4444', 0.6, 0.12);
@@ -102,19 +148,7 @@ function createRestrictedZones(scene: BABYLON.Scene) {
     marker.material = material;
     marker.isPickable = false;
 
-    const halfX = zone.size[0] / 2;
-    const halfZ = zone.size[1] / 2;
-    const y = 0.08;
-    const corners = [
-      new BABYLON.Vector3(zone.center[0] - halfX, y, zone.center[1] - halfZ),
-      new BABYLON.Vector3(zone.center[0] + halfX, y, zone.center[1] - halfZ),
-      new BABYLON.Vector3(zone.center[0] + halfX, y, zone.center[1] + halfZ),
-      new BABYLON.Vector3(zone.center[0] - halfX, y, zone.center[1] + halfZ),
-      new BABYLON.Vector3(zone.center[0] - halfX, y, zone.center[1] - halfZ),
-    ];
-    const border = BABYLON.MeshBuilder.CreateLines(`${zone.id}-border`, { points: corners }, scene);
-    border.color = BABYLON.Color3.FromHexString('#ef4444');
-    border.isPickable = false;
+    const border = createZoneBorder(scene, zone.id, zone.center, zone.size);
 
     const label = createLabel(scene, `${zone.id}-label`, `WARNING ${zone.name}`, '#f59e0b');
     label.position = new BABYLON.Vector3(zone.center[0], 2.8, zone.center[1]);
@@ -122,7 +156,32 @@ function createRestrictedZones(scene: BABYLON.Scene) {
   });
 }
 
-function createPerson(scene: BABYLON.Scene, id: string, start: [number, number]) {
+function createDynamicZones(scene: BABYLON.Scene): DynamicZoneRuntime[] {
+  return DYNAMIC_ZONES.map((zone) => {
+    const material = createPbr(scene, `${zone.id}-material`, '#ef4444', 0.6, 0);
+    const marker = BABYLON.MeshBuilder.CreateGround(zone.id, { width: zone.size[0], height: zone.size[1] }, scene);
+    marker.position = new BABYLON.Vector3(zone.center[0], 0.035, zone.center[1]);
+    marker.material = material;
+    marker.isPickable = false;
+    marker.isVisible = false;
+
+    const border = createZoneBorder(scene, zone.id, zone.center, zone.size);
+    border.isVisible = false;
+
+    const label = createLabel(scene, `${zone.id}-label`, `WARNING ${zone.name}`, '#f59e0b');
+    label.position = new BABYLON.Vector3(zone.center[0], 2.8, zone.center[1]);
+    label.isVisible = false;
+
+    const recipeLabel = createLabel(scene, `${zone.id}-recipe-label`, 'RECIPE ACTIVE', '#f59e0b');
+    recipeLabel.position = new BABYLON.Vector3(zone.center[0], 2.2, zone.center[1]);
+    recipeLabel.scaling = new BABYLON.Vector3(0.5, 0.5, 0.5);
+    recipeLabel.isVisible = false;
+
+    return { zoneId: zone.id, material, border, marker, label, recipeLabel, currentAlpha: 0, visible: false };
+  });
+}
+
+function createPerson(scene: BABYLON.Scene, id: string, start: [number, number]): PersonRuntime {
   const node = new BABYLON.TransformNode(`${id}-node`, scene);
   node.position = new BABYLON.Vector3(start[0], 0, start[1]);
 
@@ -150,11 +209,128 @@ function createPerson(scene: BABYLON.Scene, id: string, start: [number, number])
   tag.position.y = 2.55;
   tag.scaling = new BABYLON.Vector3(0.62, 0.62, 0.62);
 
-  return { node, bodyMaterial, direction: new BABYLON.Vector3(0, 0, 1), waypointIndex: 0 };
+  return {
+    node,
+    bodyMaterial,
+    direction: new BABYLON.Vector3(0, 0, 1),
+    waypointIndex: 0,
+    isGltf: false,
+    animGroups: null,
+    currentAnim: 'idle',
+    idleTimer: 0,
+    idleLookDelay: 2 + Math.random(),
+  };
 }
 
-function zoneForPosition(x: number, z: number) {
-  return RESTRICTED_ZONES.find((zone) => {
+async function createGltfPerson(
+  scene: BABYLON.Scene,
+  id: string,
+  start: BABYLON.Vector3,
+  waypointIndex: number,
+  modelFile: string,
+  availableModels: Set<string>,
+): Promise<PersonRuntime | null> {
+  try {
+    if (!availableModels.has(modelFile)) {
+      return null;
+    }
+
+    const result = await BABYLON.SceneLoader.ImportMeshAsync('', MODEL_BASE_PATH, modelFile, scene);
+    const root = result.meshes[0];
+    const node = new BABYLON.TransformNode(`${id}-node`, scene);
+    root.parent = node;
+    node.position.copyFrom(start);
+
+    result.meshes.forEach((mesh) => {
+      mesh.isPickable = false;
+    });
+
+    const animGroups: Partial<Record<AnimState, BABYLON.AnimationGroup>> = {};
+    result.animationGroups.forEach((group) => {
+      const name = group.name.toLowerCase();
+      if (name.includes('walk')) animGroups.walk = group;
+      else if (name.includes('look')) animGroups['look-around'] = group;
+      else if (name.includes('idle')) animGroups.idle = group;
+      group.stop();
+      group.setWeightForAllAnimatables(0);
+    });
+
+    if (animGroups.idle) {
+      animGroups.idle.start(true, 1, animGroups.idle.from, animGroups.idle.to, false);
+      animGroups.idle.setWeightForAllAnimatables(1);
+    }
+
+    const skeleton = result.skeletons[0];
+    const headBone = skeleton?.bones.find((bone) => bone.name.toLowerCase().includes('head'));
+    const headNode = headBone?.getTransformNode() ?? null;
+
+    const bodyMaterial = createPbr(scene, `${id}-body-material`, '#f8fafc', 0.04);
+    const glasses = BABYLON.MeshBuilder.CreateBox(`${id}-ar-glasses`, { width: 0.42, height: 0.08, depth: 0.16 }, scene);
+    glasses.material = createPbr(scene, `${id}-glasses-material`, '#22d3ee', 1.2);
+    glasses.isPickable = false;
+
+    const tag = createLabel(scene, `${id}-tag`, id, '#22d3ee');
+    tag.scaling = new BABYLON.Vector3(0.62, 0.62, 0.62);
+
+    if (headNode) {
+      glasses.parent = headNode;
+      glasses.position = new BABYLON.Vector3(0, 0.08, -0.14);
+      tag.parent = headNode;
+      tag.position = new BABYLON.Vector3(0, 0.45, 0);
+    } else {
+      glasses.parent = node;
+      glasses.position = new BABYLON.Vector3(0, 1.93, -0.24);
+      tag.parent = node;
+      tag.position.y = 2.55;
+    }
+
+    return {
+      node,
+      bodyMaterial,
+      direction: new BABYLON.Vector3(0, 0, 1),
+      waypointIndex,
+      isGltf: true,
+      animGroups,
+      currentAnim: animGroups.idle ? 'idle' : 'walk',
+      idleTimer: 0,
+      idleLookDelay: 2 + Math.random(),
+    };
+  } catch (error) {
+    console.warn(`[AR-Tracking] Failed to load GLTF model ${modelFile} for ${id}, falling back to capsule:`, error);
+    return null;
+  }
+}
+
+async function loadAvailableModels() {
+  try {
+    const response = await fetch(`${MODEL_BASE_PATH}${MODEL_MANIFEST}`);
+    if (!response.ok) return new Set<string>();
+    const manifest = await response.json() as { models?: string[] };
+    return new Set(manifest.models ?? []);
+  } catch {
+    return new Set<string>();
+  }
+}
+
+function transitionAnim(person: PersonRuntime, target: AnimState) {
+  if (!person.animGroups || person.currentAnim === target) return;
+  const current = person.animGroups[person.currentAnim];
+  const next = person.animGroups[target];
+  if (!next) return;
+
+  current?.setWeightForAllAnimatables(0);
+  current?.stop();
+  next.start(target !== 'look-around', target === 'walk' ? 1.15 : 1, next.from, next.to, false);
+  next.setWeightForAllAnimatables(1);
+  person.currentAnim = target;
+  person.idleTimer = 0;
+  person.idleLookDelay = 2 + Math.random();
+}
+
+function zoneForPosition(x: number, z: number, visibleDynamicZones: Set<string>) {
+  return ALL_ZONES.find((zone) => {
+    const isDynamic = DYNAMIC_ZONES.some((dynamicZone) => dynamicZone.id === zone.id);
+    if (isDynamic && !visibleDynamicZones.has(zone.id)) return false;
     const halfX = zone.size[0] / 2;
     const halfZ = zone.size[1] / 2;
     return x >= zone.center[0] - halfX && x <= zone.center[0] + halfX
@@ -171,6 +347,7 @@ function updatePersonMovement(person: PersonRuntime, id: string, deltaSeconds: n
 
   if (distance < 0.16) {
     person.waypointIndex = nextIndex;
+    if (person.isGltf) transitionAnim(person, 'idle');
     return;
   }
 
@@ -178,6 +355,57 @@ function updatePersonMovement(person: PersonRuntime, id: string, deltaSeconds: n
   person.direction = direction;
   person.node.position.addInPlace(direction.scale(Math.min(distance, PERSONNEL_SPEED * deltaSeconds)));
   person.node.rotation.y = Math.atan2(direction.x, direction.z);
+  if (person.isGltf) transitionAnim(person, 'walk');
+}
+
+function updateIdleAnimation(person: PersonRuntime, deltaSeconds: number) {
+  if (!person.isGltf || person.currentAnim !== 'idle') return;
+  person.idleTimer += deltaSeconds;
+  if (person.idleTimer < person.idleLookDelay) return;
+
+  if (Math.random() <= 0.5 && person.animGroups?.['look-around']) {
+    transitionAnim(person, 'look-around');
+    person.animGroups['look-around']?.onAnimationGroupEndObservable.addOnce(() => {
+      transitionAnim(person, 'idle');
+    });
+  } else {
+    person.idleTimer = 0;
+    person.idleLookDelay = 2 + Math.random();
+  }
+}
+
+function updateDynamicZones(dynamicZones: DynamicZoneRuntime[], deltaSeconds: number) {
+  const store = useArTrackingStore.getState();
+  dynamicZones.forEach((zone) => {
+    const isRunning = store.recipeStates[zone.zoneId] === 'running';
+    const targetAlpha = isRunning ? 0.12 : 0;
+    const fadeDuration = isRunning ? 1.5 : 2;
+    zone.currentAlpha += (targetAlpha - zone.currentAlpha) * Math.min((deltaSeconds / fadeDuration) * 4, 1);
+
+    if (zone.currentAlpha > 0.005) {
+      zone.marker.isVisible = true;
+      zone.border.isVisible = true;
+      zone.label.isVisible = true;
+      zone.recipeLabel.isVisible = true;
+      zone.visible = true;
+
+      const pulse = Math.abs(Math.sin(performance.now() / 520));
+      zone.material.alpha = zone.currentAlpha + pulse * 0.08;
+      zone.border.color = BABYLON.Color3.FromHexString('#ef4444');
+
+      const recipePulse = Math.abs(Math.sin(performance.now() / 300));
+      if (zone.recipeLabel.material instanceof BABYLON.StandardMaterial) {
+        zone.recipeLabel.material.emissiveColor = BABYLON.Color3.FromHexString('#f59e0b').scale(0.6 + recipePulse * 0.4);
+      }
+    } else {
+      zone.marker.isVisible = false;
+      zone.border.isVisible = false;
+      zone.label.isVisible = false;
+      zone.recipeLabel.isVisible = false;
+      zone.visible = false;
+      zone.material.alpha = 0;
+    }
+  });
 }
 
 function createScene(canvas: HTMLCanvasElement) {
@@ -193,11 +421,13 @@ function createScene(canvas: HTMLCanvasElement) {
   overviewCamera.lowerBetaLimit = 0.54;
   overviewCamera.upperBetaLimit = 1.18;
   overviewCamera.wheelPrecision = 42;
+  overviewCamera.viewport = new BABYLON.Viewport(0, 0, 1, 1);
 
   const arCamera = new BABYLON.UniversalCamera('AR-FIRST-PERSON-CAMERA', new BABYLON.Vector3(0, HEAD_HEIGHT, 0), scene);
   arCamera.fov = 1.05;
   arCamera.minZ = 0.04;
   arCamera.speed = 0;
+  arCamera.viewport = new BABYLON.Viewport(0.72, 0.02, 0.26, 0.28);
   scene.activeCamera = overviewCamera;
 
   const ambient = new BABYLON.HemisphericLight('AR-AMBIENT', new BABYLON.Vector3(0, 1, 0), scene);
@@ -208,8 +438,17 @@ function createScene(canvas: HTMLCanvasElement) {
 
   createFabLayout(scene);
   const zones = createRestrictedZones(scene);
-  const persons = new Map(Object.entries(PATROL_ROUTES).map(([id, route]) => [id, createPerson(scene, id, route[0])]));
-  let lastActiveView = useArTrackingStore.getState().activeView;
+  const dynamicZones = createDynamicZones(scene);
+  const persons = new Map<string, PersonRuntime>();
+  Object.entries(PATROL_ROUTES).forEach(([id, route]) => {
+    persons.set(id, createPerson(scene, id, route[0]));
+  });
+
+  const recipeTimers = Object.fromEntries(DYNAMIC_ZONES.map((zone, index) => [
+    zone.id,
+    { nextToggle: 5000 + index * 15000 },
+  ]));
+  let elapsedMs = 0;
 
   const resize = () => engine.resize();
   let disposed = false;
@@ -226,14 +465,53 @@ function createScene(canvas: HTMLCanvasElement) {
   window.addEventListener('resize', resize);
   window.addEventListener('pagehide', dispose);
 
+  void (async () => {
+    const availableModels = await loadAvailableModels();
+    for (const [id] of Object.entries(PATROL_ROUTES)) {
+      const modelFile = MODEL_VARIANTS[id];
+      const current = persons.get(id);
+      if (!modelFile || !current) continue;
+      const gltfPerson = await createGltfPerson(
+        scene,
+        id,
+        current.node.position,
+        current.waypointIndex,
+        modelFile,
+        availableModels,
+      );
+      if (gltfPerson && !disposed) {
+        gltfPerson.direction.copyFrom(current.direction);
+        current.node.dispose(false, true);
+        persons.set(id, gltfPerson);
+      }
+    }
+  })();
+
   engine.runRenderLoop(() => {
     if (disposed || scene.isDisposed) return;
     const deltaSeconds = Math.min(engine.getDeltaTime() / 1000, 0.05);
     const store = useArTrackingStore.getState();
 
+    elapsedMs += deltaSeconds * 1000;
+    DYNAMIC_ZONES.forEach((zone) => {
+      const timer = recipeTimers[zone.id];
+      if (elapsedMs < timer.nextToggle) return;
+
+      const currentState = useArTrackingStore.getState().recipeStates[zone.id];
+      const nextState = currentState === 'idle' ? 'running' : 'idle';
+      store.setRecipeState(zone.id, nextState);
+      timer.nextToggle = elapsedMs + (nextState === 'running'
+        ? 45000 + Math.random() * 15000
+        : 30000 + Math.random() * 15000);
+    });
+
+    updateDynamicZones(dynamicZones, deltaSeconds);
+    const visibleDynamicZones = new Set(dynamicZones.filter((zone) => zone.visible).map((zone) => zone.zoneId));
+
     persons.forEach((person, id) => {
       updatePersonMovement(person, id, deltaSeconds);
-      const zone = zoneForPosition(person.node.position.x, person.node.position.z);
+      updateIdleAnimation(person, deltaSeconds);
+      const zone = zoneForPosition(person.node.position.x, person.node.position.z, visibleDynamicZones);
       const current = store.personnel.find((item) => item.id === id);
       const zoneId = zone?.id ?? null;
       if (current?.inZone !== zoneId) {
@@ -266,31 +544,21 @@ function createScene(canvas: HTMLCanvasElement) {
       store.clearFocusPersonnel();
     }
 
-    if (store.activeView !== lastActiveView) {
-      if (store.activeView === 'overview') {
-        scene.activeCamera = overviewCamera;
-        overviewCamera.attachControl(canvas, true);
-      } else {
-        const person = persons.get(store.activeView.personnelId);
-        if (person) {
-          const targetPosition = person.node.position.add(new BABYLON.Vector3(0, HEAD_HEIGHT, 0));
-          arCamera.position.copyFrom(overviewCamera.globalPosition);
-          scene.activeCamera = arCamera;
-          const easing = new BABYLON.CubicEase();
-          easing.setEasingMode(BABYLON.EasingFunction.EASINGMODE_EASEINOUT);
-          BABYLON.Animation.CreateAndStartAnimation('ar-camera-position', arCamera, 'position', 60, 30, arCamera.position.clone(), targetPosition, 0, easing);
-        }
-      }
-      lastActiveView = store.activeView;
-    }
-
-    if (store.activeView !== 'overview') {
-      const person = persons.get(store.activeView.personnelId);
+    const pipTarget = store.pipTarget;
+    if (pipTarget) {
+      const person = persons.get(pipTarget);
       if (person) {
-        const position = person.node.position.add(new BABYLON.Vector3(0, HEAD_HEIGHT, 0));
-        arCamera.position.copyFrom(BABYLON.Vector3.Lerp(arCamera.position, position, 0.16));
-        arCamera.setTarget(position.add(person.direction.scale(4)));
+        const headPosition = person.node.position.add(new BABYLON.Vector3(0, HEAD_HEIGHT, 0));
+        arCamera.position.copyFrom(BABYLON.Vector3.Lerp(arCamera.position, headPosition, 0.16));
+        arCamera.setTarget(headPosition.add(person.direction.scale(4)));
       }
+      if (!scene.activeCameras || scene.activeCameras.length < 2) {
+        scene.activeCameras = [overviewCamera, arCamera];
+      }
+    } else if (scene.activeCameras && scene.activeCameras.length > 1) {
+      scene.activeCameras = [];
+      scene.activeCamera = overviewCamera;
+      overviewCamera.viewport = new BABYLON.Viewport(0, 0, 1, 1);
     }
 
     scene.render();
