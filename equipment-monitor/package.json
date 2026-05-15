@@ -20,6 +20,7 @@
     "@babylonjs/core": "^9.6.2",
     "@babylonjs/gui": "^9.6.2",
     "@babylonjs/loaders": "^9.6.2",
+    "@babylonjs/materials": "^9.6.2",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-slot": "^1.2.4",
     "@react-three/drei": "^10.7.7",
