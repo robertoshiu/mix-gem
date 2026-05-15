@@ -2,8 +2,8 @@
 
 import dynamic from 'next/dynamic';
 import { useEffect } from 'react';
-import { Activity, AlertTriangle, Eye, Shield, Users } from 'lucide-react';
-import { RESTRICTED_ZONES, useArTrackingStore } from '@/stores/ar-tracking-store';
+import { AlertTriangle, Eye, Shield, Users } from 'lucide-react';
+import { ALL_ZONES, useArTrackingStore } from '@/stores/ar-tracking-store';
 
 const ArTrackingScene = dynamic(
   () => import('@/components/babylon/ArTrackingScene').then((mod) => ({ default: mod.ArTrackingScene })),
@@ -20,7 +20,7 @@ const ArTrackingScene = dynamic(
 );
 
 function areaNameForPosition(position: [number, number], inZone: string | null) {
-  if (inZone) return RESTRICTED_ZONES.find((zone) => zone.id === inZone)?.name ?? inZone;
+  if (inZone) return ALL_ZONES.find((zone) => zone.id === inZone)?.name ?? inZone;
   const [x, z] = position;
   if (x < -12 && z > 5) return 'Litho walkway';
   if (x < -12 && z < -4) return 'Chemical aisle';
@@ -32,7 +32,7 @@ function areaNameForPosition(position: [number, number], inZone: string | null) 
 function PersonnelStatusPanel() {
   const personnel = useArTrackingStore((state) => state.personnel);
   const focusPersonnel = useArTrackingStore((state) => state.focusPersonnel);
-  const switchToArView = useArTrackingStore((state) => state.switchToArView);
+  const switchPipTarget = useArTrackingStore((state) => state.switchPipTarget);
 
   return (
     <section className="pointer-events-auto w-[320px] rounded-2xl border border-cyan-400/20 bg-black/60 p-4 text-slate-100 shadow-2xl shadow-cyan-950/30 backdrop-blur-xl" aria-label="Personnel status panel">
@@ -50,7 +50,7 @@ function PersonnelStatusPanel() {
             key={person.id}
             type="button"
             onClick={() => focusPersonnel(person.id)}
-            onDoubleClick={() => switchToArView(person.id)}
+            onDoubleClick={() => switchPipTarget(person.id)}
             className="flex min-h-[52px] w-full cursor-pointer items-center justify-between gap-3 rounded-xl border border-white/10 bg-slate-950/55 px-3 py-2 text-left transition-colors hover:border-cyan-300/45 hover:bg-cyan-400/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300"
           >
             <span className="flex min-w-0 items-center gap-3">
@@ -66,7 +66,7 @@ function PersonnelStatusPanel() {
           </button>
         ))}
       </div>
-      <p className="mt-3 text-xs text-slate-500">Click a row to center the overview camera. Double-click for AR POV.</p>
+      <p className="mt-3 text-xs text-slate-500">Click a row to center the overview camera. Double-click for PiP view.</p>
     </section>
   );
 }
@@ -74,7 +74,7 @@ function PersonnelStatusPanel() {
 function AlertToastStack() {
   const allAlerts = useArTrackingStore((state) => state.alerts);
   const acknowledgeAlert = useArTrackingStore((state) => state.acknowledgeAlert);
-  const switchToArView = useArTrackingStore((state) => state.switchToArView);
+  const switchPipTarget = useArTrackingStore((state) => state.switchPipTarget);
   const alerts = allAlerts.slice(0, 3);
 
   if (alerts.length === 0) {
@@ -106,10 +106,10 @@ function AlertToastStack() {
               <div className="mt-3 flex gap-2">
                 <button
                   type="button"
-                  onClick={() => switchToArView(alert.personnelId)}
+                  onClick={() => switchPipTarget(alert.personnelId)}
                   className="inline-flex min-h-[36px] cursor-pointer items-center gap-2 rounded-full border border-cyan-300/35 bg-cyan-300/10 px-3 py-1.5 text-xs font-semibold text-cyan-100 transition-colors hover:bg-cyan-300/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300"
                 >
-                  <Eye className="h-3.5 w-3.5" /> View AR
+                  <Eye className="h-3.5 w-3.5" /> View PiP
                 </button>
                 <button
                   type="button"
@@ -127,53 +127,43 @@ function AlertToastStack() {
   );
 }
 
-function ArViewHud() {
-  const activeView = useArTrackingStore((state) => state.activeView);
-  const personnel = useArTrackingStore((state) => state.personnel);
-  const switchToOverview = useArTrackingStore((state) => state.switchToOverview);
-  if (activeView === 'overview') return null;
-
-  const person = personnel.find((item) => item.id === activeView.personnelId);
-  const now = new Date();
-  const heartRate = 72 + (person ? Number(person.id.slice(-1)) * 3 : 0);
-  const gps = person ? `${(24.78 + person.position[0] / 10000).toFixed(5)}, ${(121.01 + person.position[1] / 10000).toFixed(5)}` : 'acquiring';
+function PipOverlay() {
+  const pipTarget = useArTrackingStore((state) => state.pipTarget);
+  const closePip = useArTrackingStore((state) => state.closePip);
+  if (!pipTarget) return null;
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-40 border-2 border-emerald-400/40 bg-emerald-400/[0.025] text-emerald-100">
-      <div className="absolute left-5 top-5 h-12 w-12 border-l-2 border-t-2 border-emerald-300/80" />
-      <div className="absolute right-5 top-5 h-12 w-12 border-r-2 border-t-2 border-emerald-300/80" />
-      <div className="absolute bottom-5 left-5 h-12 w-12 border-b-2 border-l-2 border-emerald-300/80" />
-      <div className="absolute bottom-5 right-5 h-12 w-12 border-b-2 border-r-2 border-emerald-300/80" />
-
-      <div className="pointer-events-auto absolute left-1/2 top-5 flex -translate-x-1/2 items-center gap-4 rounded-full border border-emerald-400/35 bg-black/55 px-5 py-3 font-mono text-xs shadow-2xl backdrop-blur-xl">
-        <Activity className="h-4 w-4 text-emerald-300" />
-        <span>{person?.id ?? activeView.personnelId}</span>
-        <span>GPS {gps}</span>
-        <span>HR {heartRate} BPM</span>
-        <span>{now.toLocaleTimeString('en-US')}</span>
+    <div className="pointer-events-auto absolute bottom-3 right-4 z-40">
+      <div className="relative rounded-lg border border-cyan-400/40 bg-black/70 p-1 shadow-2xl shadow-cyan-950/40 backdrop-blur-sm">
+        <div className="flex h-[180px] w-[240px] items-end justify-between rounded px-2 pb-2">
+          <span className="flex items-center gap-1.5 font-mono text-[10px] text-cyan-200">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-400 shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
+            {pipTarget} LIVE
+          </span>
+          <button
+            type="button"
+            onClick={closePip}
+            className="min-h-[28px] min-w-[28px] cursor-pointer rounded-full bg-black/50 px-1.5 py-0.5 font-mono text-[10px] text-slate-400 transition-colors hover:bg-white/10 hover:text-slate-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300"
+            aria-label="Close picture-in-picture"
+          >
+            &times;
+          </button>
+        </div>
       </div>
-
-      <button
-        type="button"
-        onClick={switchToOverview}
-        className="pointer-events-auto absolute bottom-8 left-1/2 min-h-[44px] -translate-x-1/2 cursor-pointer rounded-full border border-emerald-300/45 bg-emerald-300/12 px-5 py-2 text-sm font-semibold text-emerald-50 shadow-2xl shadow-emerald-950/30 backdrop-blur-xl transition-colors hover:bg-emerald-300/22 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-200"
-      >
-        Back to Overview
-      </button>
     </div>
   );
 }
 
 export default function ArTrackingPage() {
-  const switchToOverview = useArTrackingStore((state) => state.switchToOverview);
+  const closePip = useArTrackingStore((state) => state.closePip);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') switchToOverview();
+      if (event.key === 'Escape') closePip();
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [switchToOverview]);
+  }, [closePip]);
 
   return (
     <div className="relative min-h-[calc(100dvh-104px)] overflow-hidden bg-[#0A1628] text-slate-100">
@@ -185,8 +175,8 @@ export default function ArTrackingPage() {
         <div className="absolute right-4 top-[116px]">
           <AlertToastStack />
         </div>
+        <PipOverlay />
       </div>
-      <ArViewHud />
     </div>
   );
 }
