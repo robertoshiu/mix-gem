@@ -22,8 +22,6 @@ export const EQUIPMENT_BAY_LAYOUT = [
   ['Photo Track', 8, 15, 9, 3.6],
 ] as const;
 
-const CLEARANCE = 1.5;
-
 export function bayToAABB(
   center: readonly [number, number],
   size: readonly [number, number],

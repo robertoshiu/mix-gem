@@ -18,7 +18,7 @@ import {
   RESTRICTED_ZONES,
   useArTrackingStore,
 } from '@/stores/ar-tracking-store';
-import { nearestNavNode, NAV_NODES } from '@/lib/ar-tracking-nav-graph';
+import { nearestNavNode, NAV_NODES, EQUIPMENT_BAY_LAYOUT } from '@/lib/ar-tracking-nav-graph';
 
 const PERSONNEL_SPEED = 2;
 const HEAD_HEIGHT = 1.72;
@@ -30,16 +30,6 @@ const MODEL_VARIANTS: Record<string, string> = {
   'OP-03': 'cleanroom-a.glb',
   'OP-04': 'cleanroom-c.glb',
 };
-const EQUIPMENT_BAY_LAYOUT = [
-  ['Litho Bay', -18, 10, 9, 5],
-  ['Etch Bay', -17, -14, 10, 4],
-  ['Diffusion Bay', 0, -13, 9, 4],
-  ['Metrology', 17, -12, 8, 5],
-  ['CMP Bay', 18, 3, 8, 4],
-  ['Implant', -2, 5, 8, 4],
-  ['Stocker', -25, 0, 5, 8],
-  ['Photo Track', 8, 15, 9, 3.6],
-] as const;
 const RECIPE_EQUIPMENT_MAP = {
   'IMPLANT-BEAM': 'Implant',
   'LITHO-EUV': 'Litho Bay',
@@ -1160,8 +1150,6 @@ function createScene(canvas: HTMLCanvasElement, pipCanvasRef: React.RefObject<HT
         if (zoneId) store.triggerAlert(id, zoneId);
       }
       store.updatePersonnelPosition(id, person.node.position.x, person.node.position.z, person.waypointIndex);
-
-      const visualState = useArTrackingStore.getState().personnel.find((item) => item.id === id);
 
       const personnelData = useArTrackingStore.getState().personnel.find((p) => p.id === id);
       const stateColor = getPersonnelStateColor(personnelData);
