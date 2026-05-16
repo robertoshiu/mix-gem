@@ -12,6 +12,7 @@ import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight';
 import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight';
 import { ShadowGenerator } from '@babylonjs/core/Lights/Shadows/shadowGenerator';
+import '@babylonjs/core/Lights/Shadows/shadowGeneratorSceneComponent';
 import { restrictedZones } from '../config/zones';
 import { equipmentLayout } from '../config/assets';
 
