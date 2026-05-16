@@ -8,11 +8,11 @@ import { WebGLFallback } from '@/components/three/WebGLFallback';
 import { useWebGLSupport } from '@/hooks/use-webgl-support';
 import { createCinematicPipeline } from '@/lib/babylon-pipeline';
 import { createPersonnelHolographicMaterial, updateHolographicTime, updateHolographicColor } from '@/lib/holographic-material';
+import { createEquipmentModel, type EquipmentModel } from './ar-tracking/equipment-models';
 import {
   ALL_ZONES,
   DYNAMIC_ZONES,
   PATROL_ROUTES,
-  type Personnel,
   type EquipmentState,
   type PersonnelState,
   RESTRICTED_ZONES,
@@ -30,12 +30,6 @@ const MODEL_VARIANTS: Record<string, string> = {
   'OP-03': 'cleanroom-a.glb',
   'OP-04': 'cleanroom-c.glb',
 };
-const PERSONNEL_AUGMENTATION_COLORS = {
-  normal: '#22d3ee',
-  operating: '#f59e0b',
-  avoiding: '#ef4444',
-  observing: '#3b82f6',
-} as const;
 const EQUIPMENT_BAY_LAYOUT = [
   ['Litho Bay', -18, 10, 9, 5],
   ['Etch Bay', -17, -14, 10, 4],
@@ -52,8 +46,6 @@ const RECIPE_EQUIPMENT_MAP = {
 } as const;
 const EQUIPMENT_WARMUP_SECONDS = 6;
 const EQUIPMENT_COOLDOWN_SECONDS = 10;
-const EQUIPMENT_WIREFRAME_MESHES: BABYLON.LinesMesh[][] = [];
-const EQUIPMENT_DATA_PANEL_LABELS: BABYLON.Mesh[] = [];
 const AR_TRACKING_TARGET_FPS = 30;
 const AR_TRACKING_LOW_FPS_SAMPLE_MS = 2000;
 const AR_TRACKING_REDUCED_GLOW_TEXTURE_SIZE = 512;
@@ -75,19 +67,8 @@ declare global {
 
 type AnimState = 'walk' | 'idle' | 'look-around';
 
-type PersonnelAugmentations = {
-  scanRing: BABYLON.Mesh;
-  halo: BABYLON.Mesh;
-  indicator: BABYLON.Mesh;
-  indicatorTrail: BABYLON.LinesMesh;
-  meshes: BABYLON.Mesh[];
-  materials: BABYLON.PBRMaterial[];
-  currentColor: BABYLON.Color3;
-};
-
 type PersonRuntime = {
   node: BABYLON.TransformNode;
-  bodyMaterial: BABYLON.PBRMaterial;
   holographicMaterial: BABYLON.ShaderMaterial | null;
   trackingDisc: BABYLON.Mesh | null;
   armParts: BABYLON.Mesh[];
@@ -100,7 +81,6 @@ type PersonRuntime = {
   idleTimer: number;
   idleLookDelay: number;
   behaviorUntilMs: number;
-  augmentations: PersonnelAugmentations | null;
 };
 
 type DynamicZoneRuntime = {
@@ -121,21 +101,6 @@ type EquipmentStateVisual = {
   emissive: number;
 };
 
-type EquipmentStatusText = 'STANDBY' | 'WARMING UP' | 'PROCESSING' | 'COOLING DOWN';
-
-type EquipmentBayRuntime = {
-  label: string;
-  wireframes: BABYLON.LinesMesh[];
-  material: BABYLON.PBRMaterial;
-  dataPanel: BABYLON.Mesh;
-  displayedStatus: EquipmentStatusText;
-};
-
-type ZoneBoundaryDistance = {
-  zone: (typeof ALL_ZONES)[number];
-  distance: number;
-};
-
 const EQUIPMENT_STATE_VISUALS = {
   idle: { color: '#22d3ee', emissive: 0.06 },
   warmup: { color: '#f59e0b', emissive: 0.1 },
@@ -152,27 +117,6 @@ function createPbr(scene: BABYLON.Scene, name: string, color: string, emissive =
   material.alpha = alpha;
   material.transparencyMode = alpha < 1 ? BABYLON.PBRMaterial.PBRMATERIAL_ALPHABLEND : null;
   return material;
-}
-
-function createAugmentationMaterial(scene: BABYLON.Scene, name: string, color: string) {
-  const material = new BABYLON.PBRMaterial(name, scene);
-  const baseColor = BABYLON.Color3.FromHexString(color);
-  material.albedoColor = baseColor.scale(0.45);
-  material.emissiveColor = baseColor.scale(1.35);
-  material.metallic = 0.9;
-  material.roughness = 0.3;
-  material.alpha = 0.82;
-  material.transparencyMode = BABYLON.PBRMaterial.PBRMATERIAL_ALPHABLEND;
-  return material;
-}
-
-function getPersonnelAugmentationColor(personnel: Personnel | undefined) {
-  if (personnel?.status === 'violation' || personnel?.state === 'avoiding') {
-    return PERSONNEL_AUGMENTATION_COLORS.avoiding;
-  }
-  if (personnel?.state === 'operating') return PERSONNEL_AUGMENTATION_COLORS.operating;
-  if (personnel?.state === 'observing') return PERSONNEL_AUGMENTATION_COLORS.observing;
-  return PERSONNEL_AUGMENTATION_COLORS.normal;
 }
 
 function getPersonnelStateColor(personnel: { status?: string; state?: string } | undefined): string {
@@ -205,98 +149,6 @@ function animateProceduralWalk(
   }
 }
 
-function createPersonnelAugmentations(
-  person: PersonRuntime,
-  scene: BABYLON.Scene,
-  id: string,
-): PersonnelAugmentations {
-  const baseColor = PERSONNEL_AUGMENTATION_COLORS.normal;
-  const scanMaterial = createAugmentationMaterial(scene, `${id}-scan-ring-material`, baseColor);
-  const haloMaterial = createAugmentationMaterial(scene, `${id}-digital-halo-material`, baseColor);
-  const indicatorMaterial = createAugmentationMaterial(scene, `${id}-directional-indicator-material`, baseColor);
-
-  const scanRing = BABYLON.MeshBuilder.CreateTorus(
-    `${id}-scan-ring`,
-    { diameter: 0.9, thickness: 0.03, tessellation: 32 },
-    scene,
-  );
-  scanRing.parent = person.node;
-  scanRing.position.y = 0.9;
-  scanRing.rotation.x = Math.PI / 2;
-  scanRing.material = scanMaterial;
-  scanRing.isPickable = false;
-
-  const halo = BABYLON.MeshBuilder.CreateTorus(
-    `${id}-digital-halo`,
-    { diameter: 0.7, thickness: 0.02, tessellation: 48 },
-    scene,
-  );
-  halo.parent = person.node;
-  halo.position.y = person.isGltf ? 2.0 : 2.3;
-  halo.rotation.x = Math.PI / 2;
-  halo.material = haloMaterial;
-  halo.isPickable = false;
-
-  const indicatorTrail = BABYLON.MeshBuilder.CreateLines(
-    `${id}-directional-indicator-trail`,
-    {
-      points: [
-        new BABYLON.Vector3(0, 1.6, 0.08),
-        new BABYLON.Vector3(0, 1.6, 0.44),
-      ],
-    },
-    scene,
-  );
-  indicatorTrail.parent = person.node;
-  indicatorTrail.color = BABYLON.Color3.FromHexString(baseColor);
-  indicatorTrail.isPickable = false;
-
-  const indicator = BABYLON.MeshBuilder.CreateCylinder(
-    `${id}-directional-indicator`,
-    { diameterTop: 0, diameterBottom: 0.16, height: 0.38, tessellation: 24 },
-    scene,
-  );
-  indicator.parent = person.node;
-  indicator.position = new BABYLON.Vector3(0, 1.6, 0.3);
-  indicator.rotation.x = Math.PI / 2;
-  indicator.material = indicatorMaterial;
-  indicator.isPickable = false;
-
-  return {
-    scanRing,
-    halo,
-    indicator,
-    indicatorTrail,
-    meshes: [scanRing, halo, indicator, indicatorTrail],
-    materials: [scanMaterial, haloMaterial, indicatorMaterial],
-    currentColor: BABYLON.Color3.FromHexString(baseColor),
-  };
-}
-
-function updatePersonnelAugmentations(
-  person: PersonRuntime,
-  personnel: Personnel | undefined,
-  deltaSeconds: number,
-) {
-  const augmentations = person.augmentations;
-  if (!augmentations) return;
-
-  const targetColor = BABYLON.Color3.FromHexString(getPersonnelAugmentationColor(personnel));
-  const blend = Math.min(deltaSeconds * 5, 1);
-  augmentations.currentColor = BABYLON.Color3.Lerp(augmentations.currentColor, targetColor, blend);
-
-  const scanPulse = 1 + Math.sin((performance.now() / 1000) * Math.PI) * 0.1;
-  augmentations.scanRing.scaling.set(scanPulse, scanPulse, scanPulse);
-  augmentations.scanRing.visibility = 0.64 + Math.abs(Math.sin(performance.now() / 1000)) * 0.28;
-  augmentations.halo.rotation.y += deltaSeconds * 0.72;
-
-  augmentations.indicatorTrail.color.copyFrom(augmentations.currentColor);
-  augmentations.materials.forEach((material) => {
-    material.albedoColor.copyFrom(augmentations.currentColor.scale(0.45));
-    material.emissiveColor.copyFrom(augmentations.currentColor.scale(1.18 + Math.abs(scanPulse - 1) * 2));
-  });
-}
-
 function createLabel(scene: BABYLON.Scene, name: string, text: string, color = '#22d3ee') {
   const texture = new BABYLON.DynamicTexture(`${name}-texture`, { width: 768, height: 192 }, scene, false);
   texture.hasAlpha = true;
@@ -316,43 +168,7 @@ function createLabel(scene: BABYLON.Scene, name: string, text: string, color = '
   return plane;
 }
 
-function updateLabelText(label: BABYLON.Mesh, text: string, color: string) {
-  if (!(label.material instanceof BABYLON.StandardMaterial)) return;
-  const texture = label.material.diffuseTexture;
-  if (!(texture instanceof BABYLON.DynamicTexture)) return;
-
-  texture.drawText(text, 28, 100, '700 38px Fira Code, monospace', '#e2e8f0', 'transparent', true);
-  label.material.emissiveColor = BABYLON.Color3.FromHexString(color);
-}
-
-function createWireframeBoxEdges(centerX: number, centerZ: number, width: number, depth: number) {
-  const halfWidth = width / 2;
-  const halfDepth = depth / 2;
-  const bottomY = 0.05;
-  const topY = 2.05;
-  const corners = [
-    new BABYLON.Vector3(centerX - halfWidth, bottomY, centerZ - halfDepth),
-    new BABYLON.Vector3(centerX + halfWidth, bottomY, centerZ - halfDepth),
-    new BABYLON.Vector3(centerX + halfWidth, bottomY, centerZ + halfDepth),
-    new BABYLON.Vector3(centerX - halfWidth, bottomY, centerZ + halfDepth),
-    new BABYLON.Vector3(centerX - halfWidth, topY, centerZ - halfDepth),
-    new BABYLON.Vector3(centerX + halfWidth, topY, centerZ - halfDepth),
-    new BABYLON.Vector3(centerX + halfWidth, topY, centerZ + halfDepth),
-    new BABYLON.Vector3(centerX - halfWidth, topY, centerZ + halfDepth),
-  ];
-  const edgeIndexes = [
-    [0, 1], [1, 2], [2, 3], [3, 0],
-    [4, 5], [5, 6], [6, 7], [7, 4],
-    [0, 4], [1, 5], [2, 6], [3, 7],
-  ] as const;
-
-  return edgeIndexes.map(([start, end]) => [corners[start], corners[end]]);
-}
-
-function createFabLayout(scene: BABYLON.Scene, glow: BABYLON.GlowLayer): EquipmentBayRuntime[] {
-  EQUIPMENT_WIREFRAME_MESHES.length = 0;
-  EQUIPMENT_DATA_PANEL_LABELS.length = 0;
-
+function createFabLayout(scene: BABYLON.Scene, glow: BABYLON.GlowLayer): EquipmentModel[] {
   const ground = BABYLON.MeshBuilder.CreateGround('AR-FAB-FLOOR', { width: 60, height: 40, subdivisions: 48 }, scene);
   const gridMaterial = new GridMaterial('ar-ground-grid-material', scene);
   gridMaterial.mainColor = BABYLON.Color3.FromHexString('#0A1628');
@@ -364,39 +180,9 @@ function createFabLayout(scene: BABYLON.Scene, glow: BABYLON.GlowLayer): Equipme
   ground.material = gridMaterial;
   ground.isPickable = false;
 
-  return EQUIPMENT_BAY_LAYOUT.map(([label, x, z, width, depth], index) => {
-    const idleVisual = EQUIPMENT_STATE_VISUALS.idle;
-    const material = createPbr(
-      scene,
-      `ar-equipment-${index}-wireframe-material`,
-      idleVisual.color,
-      idleVisual.emissive,
-    );
-    material.disableLighting = true;
-
-    const wireframes = createWireframeBoxEdges(x, z, width, depth).map((points, edgeIndex) => {
-      const edge = BABYLON.MeshBuilder.CreateLines(
-        `ar-equipment-${index}-wireframe-${edgeIndex}`,
-        { points },
-        scene,
-      );
-      edge.color = BABYLON.Color3.FromHexString(idleVisual.color);
-      edge.alpha = 0.94;
-      edge.material = material;
-      edge.isPickable = false;
-      glow.addIncludedOnlyMesh(edge);
-      return edge;
-    });
-
-    const dataPanel = createLabel(scene, `ar-equipment-${index}-panel`, `${label} STANDBY`, idleVisual.color);
-    dataPanel.position = new BABYLON.Vector3(x, 3, z);
-    dataPanel.scaling = new BABYLON.Vector3(0.72, 0.72, 0.72);
-
-    EQUIPMENT_WIREFRAME_MESHES[index] = wireframes;
-    EQUIPMENT_DATA_PANEL_LABELS[index] = dataPanel;
-
-    return { label, wireframes, material, dataPanel, displayedStatus: 'STANDBY' };
-  });
+  return EQUIPMENT_BAY_LAYOUT.map(([label, x, z]) =>
+    createEquipmentModel(scene, label, x, z, '#22d3ee', glow),
+  );
 }
 
 function createZoneBorder(scene: BABYLON.Scene, zoneId: string, center: [number, number], size: [number, number]) {
@@ -614,7 +400,6 @@ function createPerson(scene: BABYLON.Scene, id: string, start: [number, number])
 
   return {
     node,
-    bodyMaterial: createPbr(scene, `${id}-body-material`, '#f8fafc', 0.04),
     holographicMaterial: holoMat,
     trackingDisc,
     armParts,
@@ -627,7 +412,6 @@ function createPerson(scene: BABYLON.Scene, id: string, start: [number, number])
     idleTimer: 0,
     idleLookDelay: 2 + Math.random(),
     behaviorUntilMs: 0,
-    augmentations: null,
   };
 }
 
@@ -678,7 +462,6 @@ async function createGltfPerson(
     const headBone = skeleton?.bones.find((bone) => bone.name.toLowerCase().includes('head'));
     const headNode = headBone?.getTransformNode() ?? null;
 
-    const bodyMaterial = createPbr(scene, `${id}-body-material`, '#f8fafc', 0.04);
     const glasses = BABYLON.MeshBuilder.CreateBox(`${id}-ar-glasses`, { width: 0.42, height: 0.08, depth: 0.16 }, scene);
     glasses.material = createPbr(scene, `${id}-glasses-material`, '#22d3ee', 1.2);
     glasses.isPickable = false;
@@ -700,7 +483,6 @@ async function createGltfPerson(
 
     const person: PersonRuntime = {
       node,
-      bodyMaterial,
       holographicMaterial: holoMat,
       trackingDisc: null,
       armParts: [],
@@ -713,9 +495,7 @@ async function createGltfPerson(
       idleTimer: 0,
       idleLookDelay: 2 + Math.random(),
       behaviorUntilMs: 0,
-      augmentations: null,
     };
-    person.augmentations = createPersonnelAugmentations(person, scene, id);
     return person;
   } catch (error) {
     console.warn(`[AR-Tracking] Failed to load GLTF model ${modelFile} for ${id}, falling back to capsule:`, error);
@@ -782,14 +562,6 @@ function zoneForPosition(x: number, z: number, visibleDynamicZones: Set<string>)
     return x >= zone.center[0] - halfX && x <= zone.center[0] + halfX
       && z >= zone.center[1] - halfZ && z <= zone.center[1] + halfZ;
   }) ?? null;
-}
-
-function nearestZoneBoundary(position: BABYLON.Vector3): ZoneBoundaryDistance | null {
-  return ALL_ZONES.reduce<ZoneBoundaryDistance | null>((nearest, zone) => {
-    const distance = Math.abs(behaviorDistanceToZoneBoundary(position, zone));
-    if (!nearest || distance < nearest.distance) return { zone, distance };
-    return nearest;
-  }, null);
 }
 
 function behaviorDistanceToZoneBoundary(position: BABYLON.Vector3, zone: { center: [number, number]; size: [number, number] }) {
@@ -953,51 +725,6 @@ function updateDynamicZones(dynamicZones: DynamicZoneRuntime[], deltaSeconds: nu
   });
 }
 
-function equipmentStatusText(state: EquipmentState): EquipmentStatusText {
-  if (state === 'warmup') return 'WARMING UP';
-  if (state === 'running') return 'PROCESSING';
-  if (state === 'cooldown') return 'COOLING DOWN';
-  return 'STANDBY';
-}
-
-function equipmentVisualForState(state: EquipmentState, stateTimer: number) {
-  if (state === 'warmup') {
-    const color = BABYLON.Color3.FromHexString(EQUIPMENT_STATE_VISUALS.warmup.color);
-    const pulse = Math.abs(Math.sin(performance.now() / 1000));
-    return {
-      color,
-      colorHex: EQUIPMENT_STATE_VISUALS.warmup.color,
-      emissiveColor: color.scale(0.1 + pulse * 0.2),
-    };
-  }
-
-  if (state === 'running') {
-    const color = BABYLON.Color3.FromHexString(EQUIPMENT_STATE_VISUALS.running.color);
-    return {
-      color,
-      colorHex: EQUIPMENT_STATE_VISUALS.running.color,
-      emissiveColor: color.scale(EQUIPMENT_STATE_VISUALS.running.emissive),
-    };
-  }
-
-  if (state === 'cooldown') {
-    const color = BABYLON.Color3.FromHexString(EQUIPMENT_STATE_VISUALS.cooldown.color);
-    const progress = Math.min(Math.max(stateTimer / EQUIPMENT_COOLDOWN_SECONDS, 0), 1);
-    return {
-      color,
-      colorHex: EQUIPMENT_STATE_VISUALS.cooldown.color,
-      emissiveColor: color.scale(BABYLON.Scalar.Lerp(0.18, 0.06, progress)),
-    };
-  }
-
-  const color = BABYLON.Color3.FromHexString(EQUIPMENT_STATE_VISUALS.idle.color);
-  return {
-    color,
-    colorHex: EQUIPMENT_STATE_VISUALS.idle.color,
-    emissiveColor: color.scale(EQUIPMENT_STATE_VISUALS.idle.emissive),
-  };
-}
-
 function syncRecipeDrivenEquipmentState(store: ReturnType<typeof useArTrackingStore.getState>) {
   Object.entries(RECIPE_EQUIPMENT_MAP).forEach(([recipeId, bay]) => {
     const equipment = store.equipment.find((item) => item.bay === bay);
@@ -1043,27 +770,25 @@ function publishArTrackingSceneStats(engine: BABYLON.Engine, scene: BABYLON.Scen
   return fps;
 }
 
-function updateEquipmentBays(equipmentBays: EquipmentBayRuntime[], store: ReturnType<typeof useArTrackingStore.getState>) {
-  const equipmentByBay = new Map(store.equipment.map((equipment) => [equipment.bay, equipment]));
+function updateEquipmentBays(
+  models: EquipmentModel[],
+  store: ReturnType<typeof useArTrackingStore.getState>,
+  time: number,
+): void {
+  const equipmentByBay = new Map(store.equipment.map((eq) => [eq.bay, eq]));
 
-  equipmentBays.forEach((bay, index) => {
-    const equipment = equipmentByBay.get(bay.label);
+  EQUIPMENT_BAY_LAYOUT.forEach(([label], index) => {
+    const model = models[index];
+    if (!model) return;
+    const equipment = equipmentByBay.get(label);
     const state = equipment?.state ?? 'idle';
-    const status = equipmentStatusText(state);
-    const visual = equipmentVisualForState(state, equipment?.stateTimer ?? 0);
-    const wireframes = EQUIPMENT_WIREFRAME_MESHES[index] ?? bay.wireframes;
-    const dataPanel = EQUIPMENT_DATA_PANEL_LABELS[index] ?? bay.dataPanel;
+    const visual = EQUIPMENT_STATE_VISUALS[state as keyof typeof EQUIPMENT_STATE_VISUALS] ?? EQUIPMENT_STATE_VISUALS.idle;
 
-    bay.material.albedoColor.copyFrom(visual.color);
-    bay.material.emissiveColor.copyFrom(visual.emissiveColor);
-    wireframes.forEach((wireframe) => {
-      wireframe.color.copyFrom(visual.color);
+    updateHolographicColor(model.holographicMaterial, visual.color);
+    updateHolographicTime(model.holographicMaterial, time);
+    model.internals.forEach((line) => {
+      line.color = BABYLON.Color3.FromHexString(visual.color);
     });
-
-    if (bay.displayedStatus !== status) {
-      updateLabelText(dataPanel, `${bay.label} ${status}`, visual.colorHex);
-      bay.displayedStatus = status;
-    }
   });
 }
 
@@ -1208,7 +933,7 @@ function createScene(canvas: HTMLCanvasElement, pipCanvasRef: React.RefObject<HT
     highlightedPersonnelId = personId;
   };
 
-  const equipmentBays = createFabLayout(scene, glow);
+  const equipmentModels = createFabLayout(scene, glow);
   const zones = createRestrictedZones(scene);
   const dynamicZones = createDynamicZones(scene);
   zones.forEach((zone) => {
@@ -1223,10 +948,7 @@ function createScene(canvas: HTMLCanvasElement, pipCanvasRef: React.RefObject<HT
     zone.wallMeshes.forEach((wallMesh) => glow.addIncludedOnlyMesh(wallMesh));
   });
   const persons = new Map<string, PersonRuntime>();
-  const includePersonnelAugmentationsInGlow = (person: PersonRuntime) => {
-    person.augmentations?.meshes.forEach((mesh) => {
-      glow.addIncludedOnlyMesh(mesh);
-    });
+  const includePersonnelInGlow = (person: PersonRuntime) => {
     person.node.getChildMeshes().forEach((mesh) => {
       if (mesh instanceof BABYLON.Mesh && (mesh.name.includes('ar-glasses') || mesh.name.includes('-tag'))) {
         glow.addIncludedOnlyMesh(mesh);
@@ -1236,7 +958,7 @@ function createScene(canvas: HTMLCanvasElement, pipCanvasRef: React.RefObject<HT
   Object.entries(PATROL_ROUTES).forEach(([id, route]) => {
     const person = createPerson(scene, id, route[0]);
     persons.set(id, person);
-    includePersonnelAugmentationsInGlow(person);
+    includePersonnelInGlow(person);
   });
 
   const recipeTimers = Object.fromEntries(DYNAMIC_ZONES.map((zone, index) => [
@@ -1317,7 +1039,7 @@ function createScene(canvas: HTMLCanvasElement, pipCanvasRef: React.RefObject<HT
         gltfPerson.direction.copyFrom(current.direction);
         current.node.dispose(false, true);
         persons.set(id, gltfPerson);
-        includePersonnelAugmentationsInGlow(gltfPerson);
+        includePersonnelInGlow(gltfPerson);
       }
     }
   })();
@@ -1347,7 +1069,7 @@ function createScene(canvas: HTMLCanvasElement, pipCanvasRef: React.RefObject<HT
     store.tickEquipmentTimers(deltaSeconds * 1000);
     syncRecipeDrivenEquipmentState(useArTrackingStore.getState());
     store = useArTrackingStore.getState();
-    updateEquipmentBays(equipmentBays, store);
+    updateEquipmentBays(equipmentModels, store, performance.now() / 1000);
     const visibleDynamicZones = new Set(dynamicZones.filter((zone) => zone.visible).map((zone) => zone.zoneId));
 
     persons.forEach((person, id) => {
@@ -1440,13 +1162,6 @@ function createScene(canvas: HTMLCanvasElement, pipCanvasRef: React.RefObject<HT
       store.updatePersonnelPosition(id, person.node.position.x, person.node.position.z, person.waypointIndex);
 
       const visualState = useArTrackingStore.getState().personnel.find((item) => item.id === id);
-      const pulse = visualState?.status === 'violation' ? Math.abs(Math.sin(performance.now() / 180)) : 0;
-      person.bodyMaterial.albedoColor = visualState?.status === 'violation'
-        ? BABYLON.Color3.FromHexString('#fee2e2')
-        : BABYLON.Color3.FromHexString('#f8fafc');
-      person.bodyMaterial.emissiveColor = visualState?.status === 'violation'
-        ? BABYLON.Color3.FromHexString('#ef4444').scale(0.35 + pulse * 0.45)
-        : BABYLON.Color3.FromHexString('#f8fafc').scale(0.04);
 
       const personnelData = useArTrackingStore.getState().personnel.find((p) => p.id === id);
       const stateColor = getPersonnelStateColor(personnelData);
@@ -1460,7 +1175,6 @@ function createScene(canvas: HTMLCanvasElement, pipCanvasRef: React.RefObject<HT
         animateProceduralWalk(person.armParts, person.legParts, isMoving);
       }
 
-      updatePersonnelAugmentations(person, visualState, deltaSeconds);
     });
 
     zones.forEach((zone) => {
