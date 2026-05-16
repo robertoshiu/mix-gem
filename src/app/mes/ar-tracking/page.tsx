@@ -229,7 +229,8 @@ function PipOverlay({ pipCanvasRef }: { pipCanvasRef: React.RefObject<HTMLCanvas
             ref={pipCanvasRef}
             width={512}
             height={384}
-            className="pointer-events-none absolute inset-0 h-full w-full rounded object-cover"
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+            className="pointer-events-none rounded"
           />
 
           {/* CRT scan-line overlay via CSS */}

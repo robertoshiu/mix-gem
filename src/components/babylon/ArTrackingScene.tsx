@@ -985,6 +985,7 @@ function createScene(canvas: HTMLCanvasElement, pipCanvasRef: React.RefObject<HT
   arCamera.speed = 0;
   // No viewport — RTT renders offscreen
 
+  let blitInFlight = false;
   const PIP_RTT_WIDTH = 512;
   const PIP_RTT_HEIGHT = 384;
   const pipRtt = new BABYLON.RenderTargetTexture(
@@ -1367,17 +1368,24 @@ function createScene(canvas: HTMLCanvasElement, pipCanvasRef: React.RefObject<HT
         const pipCanvas = pipCanvasRef?.current;
         if (pipCanvas) {
           const ctx = pipCanvas.getContext('2d');
-          if (ctx) {
+          if (ctx && !blitInFlight) {
+            blitInFlight = true;
             const pixelsPromise = pipRtt.readPixels();
             if (pixelsPromise) {
               void pixelsPromise.then((pixels) => {
-                const imageData = new ImageData(
-                  new Uint8ClampedArray(pixels.buffer as ArrayBuffer),
-                  PIP_RTT_WIDTH,
-                  PIP_RTT_HEIGHT,
-                );
+                blitInFlight = false;
+                const u8 = new Uint8ClampedArray(pixels.buffer as ArrayBuffer);
+                const flipped = new Uint8ClampedArray(PIP_RTT_WIDTH * PIP_RTT_HEIGHT * 4);
+                const rowBytes = PIP_RTT_WIDTH * 4;
+                for (let row = 0; row < PIP_RTT_HEIGHT; row++) {
+                  const srcRow = PIP_RTT_HEIGHT - 1 - row;
+                  flipped.set(u8.subarray(srcRow * rowBytes, (srcRow + 1) * rowBytes), row * rowBytes);
+                }
+                const imageData = new ImageData(flipped, PIP_RTT_WIDTH, PIP_RTT_HEIGHT);
                 ctx.putImageData(imageData, 0, 0);
-              });
+              }).catch(() => { blitInFlight = false; });
+            } else {
+              blitInFlight = false;
             }
           }
         }
