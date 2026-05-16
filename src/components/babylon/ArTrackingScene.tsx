@@ -7,6 +7,7 @@ import { GridMaterial } from '@babylonjs/materials/grid/gridMaterial';
 import { WebGLFallback } from '@/components/three/WebGLFallback';
 import { useWebGLSupport } from '@/hooks/use-webgl-support';
 import { createCinematicPipeline } from '@/lib/babylon-pipeline';
+import { createPersonnelHolographicMaterial, updateHolographicTime, updateHolographicColor } from '@/lib/holographic-material';
 import {
   ALL_ZONES,
   DYNAMIC_ZONES,
@@ -86,6 +87,10 @@ type PersonnelAugmentations = {
 type PersonRuntime = {
   node: BABYLON.TransformNode;
   bodyMaterial: BABYLON.PBRMaterial;
+  holographicMaterial: BABYLON.ShaderMaterial | null;
+  trackingDisc: BABYLON.Mesh | null;
+  armParts: BABYLON.Mesh[];
+  legParts: BABYLON.Mesh[];
   direction: BABYLON.Vector3;
   waypointIndex: number;
   isGltf: boolean;
@@ -167,6 +172,36 @@ function getPersonnelAugmentationColor(personnel: Personnel | undefined) {
   if (personnel?.state === 'operating') return PERSONNEL_AUGMENTATION_COLORS.operating;
   if (personnel?.state === 'observing') return PERSONNEL_AUGMENTATION_COLORS.observing;
   return PERSONNEL_AUGMENTATION_COLORS.normal;
+}
+
+function getPersonnelStateColor(personnel: { status?: string; state?: string } | undefined): string {
+  if (personnel?.status === 'violation' || personnel?.state === 'avoiding') return '#ef4444';
+  if (personnel?.state === 'operating') return '#f59e0b';
+  if (personnel?.state === 'observing') return '#3b82f6';
+  return '#22d3ee';
+}
+
+function animateProceduralWalk(
+  armParts: BABYLON.Mesh[],
+  legParts: BABYLON.Mesh[],
+  moving: boolean,
+): void {
+  const swingSpeed = moving ? 6 : 0;
+  const swingAmount = moving ? 0.3 : 0;
+  const t = (performance.now() / 1000) * swingSpeed;
+
+  if (armParts.length >= 4) {
+    armParts[0].rotation.x = Math.sin(t) * swingAmount;
+    armParts[1].rotation.x = Math.sin(t) * swingAmount * 0.7;
+    armParts[2].rotation.x = -Math.sin(t) * swingAmount;
+    armParts[3].rotation.x = -Math.sin(t) * swingAmount * 0.7;
+  }
+  if (legParts.length >= 4) {
+    legParts[0].rotation.x = -Math.sin(t) * swingAmount;
+    legParts[1].rotation.x = -Math.sin(t) * swingAmount * 0.5;
+    legParts[2].rotation.x = Math.sin(t) * swingAmount;
+    legParts[3].rotation.x = Math.sin(t) * swingAmount * 0.5;
+  }
 }
 
 function createPersonnelAugmentations(
@@ -496,33 +531,93 @@ function createPerson(scene: BABYLON.Scene, id: string, start: [number, number])
   const node = new BABYLON.TransformNode(`${id}-node`, scene);
   node.position = new BABYLON.Vector3(start[0], 0, start[1]);
 
-  const bodyMaterial = createPbr(scene, `${id}-body-material`, '#f8fafc', 0.04);
-  const body = BABYLON.MeshBuilder.CreateCapsule(`${id}-body`, { height: 1.8, radius: 0.3, tessellation: 18 }, scene);
-  body.parent = node;
-  body.position.y = 0.9;
-  body.material = bodyMaterial;
-  body.isPickable = false;
+  const holoMat = createPersonnelHolographicMaterial(scene, `${id}-holo`, { baseColor: '#22d3ee' });
 
-  const head = BABYLON.MeshBuilder.CreateSphere(`${id}-head`, { diameter: 0.5, segments: 18 }, scene);
+  // Torso
+  const torso = BABYLON.MeshBuilder.CreateCapsule(`${id}-torso`, { height: 0.8, radius: 0.22, tessellation: 12 }, scene);
+  torso.parent = node;
+  torso.position.y = 1.15;
+  torso.material = holoMat;
+  torso.isPickable = false;
+
+  // Head
+  const head = BABYLON.MeshBuilder.CreateSphere(`${id}-head`, { diameter: 0.32, segments: 12 }, scene);
   head.parent = node;
-  head.position.y = 1.92;
-  head.material = bodyMaterial;
+  head.position.y = 1.72;
+  head.material = holoMat;
   head.isPickable = false;
 
-  const glasses = BABYLON.MeshBuilder.CreateBox(`${id}-ar-glasses`, { width: 0.42, height: 0.08, depth: 0.16 }, scene);
+  // Neck
+  const neck = BABYLON.MeshBuilder.CreateCylinder(`${id}-neck`, { height: 0.12, diameter: 0.12, tessellation: 8 }, scene);
+  neck.parent = node;
+  neck.position.y = 1.52;
+  neck.material = holoMat;
+  neck.isPickable = false;
+
+  // Arms (upper + lower per side)
+  const armParts: BABYLON.Mesh[] = [];
+  for (const side of [-1, 1]) {
+    const upper = BABYLON.MeshBuilder.CreateCylinder(`${id}-arm-upper-${side}`, { height: 0.35, diameter: 0.1, tessellation: 8 }, scene);
+    upper.parent = node;
+    upper.position.set(side * 0.32, 1.25, 0);
+    upper.material = holoMat;
+    upper.isPickable = false;
+    armParts.push(upper);
+
+    const lower = BABYLON.MeshBuilder.CreateCylinder(`${id}-arm-lower-${side}`, { height: 0.3, diameter: 0.08, tessellation: 8 }, scene);
+    lower.parent = node;
+    lower.position.set(side * 0.32, 0.9, 0);
+    lower.material = holoMat;
+    lower.isPickable = false;
+    armParts.push(lower);
+  }
+
+  // Legs (upper + lower per side)
+  const legParts: BABYLON.Mesh[] = [];
+  for (const side of [-1, 1]) {
+    const upper = BABYLON.MeshBuilder.CreateCylinder(`${id}-leg-upper-${side}`, { height: 0.4, diameter: 0.12, tessellation: 8 }, scene);
+    upper.parent = node;
+    upper.position.set(side * 0.12, 0.55, 0);
+    upper.material = holoMat;
+    upper.isPickable = false;
+    legParts.push(upper);
+
+    const lower = BABYLON.MeshBuilder.CreateCylinder(`${id}-leg-lower-${side}`, { height: 0.35, diameter: 0.09, tessellation: 8 }, scene);
+    lower.parent = node;
+    lower.position.set(side * 0.12, 0.17, 0);
+    lower.material = holoMat;
+    lower.isPickable = false;
+    legParts.push(lower);
+  }
+
+  // AR glasses — one solid emissive element
+  const glasses = BABYLON.MeshBuilder.CreateBox(`${id}-ar-glasses`, { width: 0.3, height: 0.06, depth: 0.12 }, scene);
   glasses.parent = node;
-  glasses.position = new BABYLON.Vector3(0, 1.93, -0.24);
+  glasses.position = new BABYLON.Vector3(0, 1.73, -0.16);
   glasses.material = createPbr(scene, `${id}-glasses-material`, '#22d3ee', 1.2);
   glasses.isPickable = false;
 
+  // ID tag
   const tag = createLabel(scene, `${id}-tag`, id, '#22d3ee');
   tag.parent = node;
-  tag.position.y = 2.55;
-  tag.scaling = new BABYLON.Vector3(0.62, 0.62, 0.62);
+  tag.position.y = 2.05;
+  tag.scaling = new BABYLON.Vector3(0.5, 0.5, 0.5);
 
-  const person: PersonRuntime = {
+  // Ground tracking disc
+  const trackingDisc = BABYLON.MeshBuilder.CreateDisc(`${id}-tracking-disc`, { radius: 0.5, tessellation: 24 }, scene);
+  trackingDisc.parent = node;
+  trackingDisc.position.y = 0.02;
+  trackingDisc.rotation.x = Math.PI / 2;
+  trackingDisc.material = createPbr(scene, `${id}-disc-material`, '#22d3ee', 0.8, 0.4);
+  trackingDisc.isPickable = false;
+
+  return {
     node,
-    bodyMaterial,
+    bodyMaterial: createPbr(scene, `${id}-body-material`, '#f8fafc', 0.04),
+    holographicMaterial: holoMat,
+    trackingDisc,
+    armParts,
+    legParts,
     direction: new BABYLON.Vector3(0, 0, 1),
     waypointIndex: 0,
     isGltf: false,
@@ -533,8 +628,6 @@ function createPerson(scene: BABYLON.Scene, id: string, start: [number, number])
     behaviorUntilMs: 0,
     augmentations: null,
   };
-  person.augmentations = createPersonnelAugmentations(person, scene, id);
-  return person;
 }
 
 async function createGltfPerson(
@@ -556,8 +649,13 @@ async function createGltfPerson(
     root.parent = node;
     node.position.copyFrom(start);
 
+    const holoMat = createPersonnelHolographicMaterial(scene, `${id}-holo`, { baseColor: '#22d3ee' });
+
     result.meshes.forEach((mesh) => {
       mesh.isPickable = false;
+      if (mesh instanceof BABYLON.Mesh && mesh.getTotalVertices() > 0) {
+        mesh.material = holoMat;
+      }
     });
 
     const animGroups: Partial<Record<AnimState, BABYLON.AnimationGroup>> = {};
@@ -602,6 +700,10 @@ async function createGltfPerson(
     const person: PersonRuntime = {
       node,
       bodyMaterial,
+      holographicMaterial: holoMat,
+      trackingDisc: null,
+      armParts: [],
+      legParts: [],
       direction: new BABYLON.Vector3(0, 0, 1),
       waypointIndex,
       isGltf: true,
@@ -1329,6 +1431,19 @@ function createScene(canvas: HTMLCanvasElement, pipCanvasRef: React.RefObject<HT
       person.bodyMaterial.emissiveColor = visualState?.status === 'violation'
         ? BABYLON.Color3.FromHexString('#ef4444').scale(0.35 + pulse * 0.45)
         : BABYLON.Color3.FromHexString('#f8fafc').scale(0.04);
+
+      const personnelData = useArTrackingStore.getState().personnel.find((p) => p.id === id);
+      const stateColor = getPersonnelStateColor(personnelData);
+      if (person.holographicMaterial) {
+        updateHolographicColor(person.holographicMaterial, stateColor);
+        updateHolographicTime(person.holographicMaterial, performance.now() / 1000);
+      }
+
+      if (!person.isGltf && person.armParts.length > 0) {
+        const isMoving = person.currentAnim === 'walk';
+        animateProceduralWalk(person.armParts, person.legParts, isMoving);
+      }
+
       updatePersonnelAugmentations(person, visualState, deltaSeconds);
     });
 
