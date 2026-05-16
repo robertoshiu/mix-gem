@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Eye, Shield, Users } from 'lucide-react';
 import { ALL_ZONES, type AlertSeverity, useArTrackingStore } from '@/stores/ar-tracking-store';
 
@@ -180,28 +180,31 @@ function AlertToastStack() {
   );
 }
 
-function PipOverlay() {
+function PipOverlay({ pipCanvasRef }: { pipCanvasRef: React.RefObject<HTMLCanvasElement | null> }) {
   const pipTarget = useArTrackingStore((state) => state.pipTarget);
   const closePip = useArTrackingStore((state) => state.closePip);
   const alerts = useArTrackingStore((state) => state.alerts);
+  const personnel = useArTrackingStore((state) => state.personnel);
   const [timeStr, setTimeStr] = useState('');
   const [recVisible, setRecVisible] = useState(true);
   const [signalBars, setSignalBars] = useState(3);
+
   const activePipAlert = pipTarget
     ? alerts.filter((alert) => !alert.acknowledged).find((alert) => alert.personnelId === pipTarget)
     : undefined;
   const pipSeverityStyle = activePipAlert ? ALERT_SEVERITY_STYLES[activePipAlert.severity] : undefined;
+  const trackedPerson = pipTarget ? personnel.find((p) => p.id === pipTarget) : undefined;
+  const nearZone = trackedPerson?.inZone;
 
   useEffect(() => {
     const updateTime = () => setTimeStr(new Date().toLocaleTimeString('en-US', { hour12: false }));
-
     updateTime();
     const timerId = setInterval(updateTime, 1000);
     return () => clearInterval(timerId);
   }, []);
 
   useEffect(() => {
-    const blinkId = setInterval(() => setRecVisible((visible) => !visible), 500);
+    const blinkId = setInterval(() => setRecVisible((v) => !v), 500);
     return () => clearInterval(blinkId);
   }, []);
 
@@ -220,33 +223,56 @@ function PipOverlay() {
         className={`pip-surveillance-frame hud-corner-panel relative overflow-hidden rounded-lg border-2 border-[var(--sf-accent-cyan)] bg-[var(--sf-overlay-backdrop)] p-1 shadow-2xl shadow-cyan-950/40 backdrop-blur-sm ${pipSeverityStyle ? 'animate-pulse motion-reduce:animate-none' : ''}`}
         style={pipSeverityStyle ? { boxShadow: `0 0 22px ${pipSeverityStyle.color}66` } : undefined}
       >
-        <div className="relative flex h-[180px] w-[240px] rounded bg-slate-950/10 px-2 py-1.5 font-mono">
-          <div className="absolute left-2 right-2 top-1 flex items-center justify-between gap-2">
-            <span className="flex items-center gap-1 text-[9px] font-semibold tracking-[0.18em] text-[var(--sf-status-red)]">
-              <span className={`inline-block h-1.5 w-1.5 rounded-full bg-[var(--sf-status-red)] shadow-[0_0_8px_var(--sf-status-red)] transition-opacity duration-200 ${recVisible ? 'opacity-100' : 'opacity-25'}`} />
-              REC
-            </span>
-            <span className="text-[9px] font-semibold tracking-[0.18em] text-[var(--sf-accent-cyan)]">{camId}</span>
-            <span className="flex h-3 items-end gap-0.5" aria-label={`${signalBars} of 3 signal bars`}>
-              {[1, 2, 3].map((bar, index) => (
-                <span
-                  key={bar}
-                  className={`${SIGNAL_BAR_HEIGHT_CLASSES[index]} w-1 rounded-sm transition-colors duration-200 ${bar <= signalBars ? 'bg-[var(--sf-accent-cyan)]' : 'bg-[var(--sf-text-muted)]/40'}`}
-                  aria-hidden="true"
-                />
-              ))}
-            </span>
-          </div>
-          <div className="absolute bottom-1 left-2 right-2 flex items-end justify-between gap-2">
-            <span className="text-[9px] tabular-nums tracking-[0.12em] text-[var(--sf-text-secondary)]">{timeStr}</span>
-          <button
-            type="button"
-            onClick={closePip}
-              className="min-h-[28px] min-w-[28px] cursor-pointer rounded-full bg-black/50 px-1.5 py-0.5 text-[10px] text-[var(--sf-text-secondary)] transition-colors hover:bg-white/10 hover:text-[var(--sf-text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--sf-accent-cyan)]"
-            aria-label="Close picture-in-picture"
-          >
-            &times;
-          </button>
+        <div className="relative h-[180px] w-[240px] rounded bg-slate-950/80">
+          {/* RTT canvas — actual 3D content */}
+          <canvas
+            ref={pipCanvasRef}
+            width={512}
+            height={384}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+            className="pointer-events-none rounded"
+          />
+
+          {/* CRT scan-line overlay via CSS */}
+          <div
+            className="pip-scanline-overlay pointer-events-none absolute inset-0 rounded"
+            aria-hidden="true"
+          />
+
+          {/* HUD overlay elements */}
+          <div className="pointer-events-none absolute inset-0 px-2 py-1.5 font-mono">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1 text-[9px] font-semibold tracking-[0.18em] text-[var(--sf-status-red)]">
+                <span className={`inline-block h-1.5 w-1.5 rounded-full bg-[var(--sf-status-red)] shadow-[0_0_8px_var(--sf-status-red)] transition-opacity duration-200 ${recVisible ? 'opacity-100' : 'opacity-25'}`} />
+                REC
+              </span>
+              <span className="text-[9px] font-semibold tracking-[0.18em] text-[var(--sf-accent-cyan)]">{camId}</span>
+              <span className="flex h-3 items-end gap-0.5" aria-label={`${signalBars} of 3 signal bars`}>
+                {[1, 2, 3].map((bar, index) => (
+                  <span
+                    key={bar}
+                    className={`${SIGNAL_BAR_HEIGHT_CLASSES[index]} w-1 rounded-sm transition-colors duration-200 ${bar <= signalBars ? 'bg-[var(--sf-accent-cyan)]' : 'bg-[var(--sf-text-muted)]/40'}`}
+                    aria-hidden="true"
+                  />
+                ))}
+              </span>
+            </div>
+            {nearZone && (
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 rounded border border-red-500/40 bg-red-950/60 px-2 py-0.5 text-center">
+                <p className="text-[9px] font-bold text-red-400">ZONE: {nearZone}</p>
+              </div>
+            )}
+            <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between px-2 pb-1">
+              <span className="text-[9px] tabular-nums tracking-[0.12em] text-[var(--sf-text-secondary)]">{timeStr}</span>
+              <button
+                type="button"
+                onClick={closePip}
+                className="pointer-events-auto min-h-[28px] min-w-[28px] cursor-pointer rounded-full bg-black/50 px-1.5 py-0.5 text-[10px] text-[var(--sf-text-secondary)] transition-colors hover:bg-white/10 hover:text-[var(--sf-text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--sf-accent-cyan)]"
+                aria-label="Close picture-in-picture"
+              >
+                &times;
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -254,15 +280,9 @@ function PipOverlay() {
         .pip-surveillance-frame {
           --pip-sweep-distance: 188px;
         }
-
         .pip-surveillance-frame::after {
           animation: pip-overlay-sweep 2s linear infinite;
-          background: linear-gradient(
-            90deg,
-            transparent,
-            color-mix(in srgb, var(--sf-accent-cyan) 72%, transparent),
-            transparent
-          );
+          background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--sf-accent-cyan) 72%, transparent), transparent);
           content: '';
           height: 2px;
           left: 0;
@@ -272,20 +292,21 @@ function PipOverlay() {
           right: 0;
           top: 0;
         }
-
-        @keyframes pip-overlay-sweep {
-          from {
-            transform: translateY(0);
-          }
-          to {
-            transform: translateY(var(--pip-sweep-distance));
-          }
+        .pip-scanline-overlay {
+          background: repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 2px,
+            rgba(0, 0, 0, 0.08) 2px,
+            rgba(0, 0, 0, 0.08) 4px
+          );
         }
-
+        @keyframes pip-overlay-sweep {
+          from { transform: translateY(0); }
+          to { transform: translateY(var(--pip-sweep-distance)); }
+        }
         @media (prefers-reduced-motion: reduce) {
-          .pip-surveillance-frame::after {
-            animation: none;
-          }
+          .pip-surveillance-frame::after { animation: none; }
         }
       `}</style>
     </div>
@@ -294,6 +315,7 @@ function PipOverlay() {
 
 export default function ArTrackingPage() {
   const closePip = useArTrackingStore((state) => state.closePip);
+  const pipCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -305,7 +327,7 @@ export default function ArTrackingPage() {
 
   return (
     <div className="relative min-h-[calc(100dvh-104px)] overflow-hidden bg-[#0A1628] text-slate-100">
-      <ArTrackingScene />
+      <ArTrackingScene pipCanvasRef={pipCanvasRef} />
       <div className="pointer-events-none fixed inset-0 z-30">
         <div className="absolute left-4 top-[116px]">
           <PersonnelStatusPanel />
@@ -313,7 +335,7 @@ export default function ArTrackingPage() {
         <div className="absolute right-4 top-[116px]">
           <AlertToastStack />
         </div>
-        <PipOverlay />
+        <PipOverlay pipCanvasRef={pipCanvasRef} />
       </div>
       <style jsx>{`
         :global(body)::after {

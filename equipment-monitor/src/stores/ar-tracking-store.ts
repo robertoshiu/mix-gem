@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { NAV_PATROL_ROUTES, resolvePatrolRoute } from '@/lib/ar-tracking-nav-graph';
 
 export type RecipeState = 'idle' | 'running';
 export type PersonnelState = 'patrolling' | 'observing' | 'operating' | 'avoiding' | 'idle';
@@ -96,12 +97,9 @@ export const DYNAMIC_ZONES: DynamicZone[] = [
 
 export const ALL_ZONES: RestrictedZone[] = [...RESTRICTED_ZONES, ...DYNAMIC_ZONES];
 
-export const PATROL_ROUTES: Record<string, [number, number][]> = {
-  'OP-01': [[-24, -14], [-8, -14], [4, -6], [17, 9], [24, 14], [4, 15], [-16, 8], [-24, -14]],
-  'OP-02': [[22, -14], [10, -8], [-2, 1], [-21, -7], [-24, -13], [-4, -15], [18, -12], [22, -14]],
-  'OP-03': [[-18, 15], [-4, 14], [5, 14], [16, 13], [24, 9], [14, 2], [-5, 4], [-18, 15]],
-  'OP-04': [[-27, 1], [-15, 1], [-4, -4], [8, -4], [18, -2], [26, 4], [8, 7], [-14, 6], [-27, 1]],
-};
+export const PATROL_ROUTES: Record<string, [number, number][]> = Object.fromEntries(
+  Object.entries(NAV_PATROL_ROUTES).map(([id, nodeIds]) => [id, resolvePatrolRoute(nodeIds)]),
+);
 
 export const INITIAL_PERSONNEL: Personnel[] = [
   { id: 'OP-01', name: 'Chen Wei', waypointIndex: 0, position: PATROL_ROUTES['OP-01'][0], inZone: null, status: 'normal', state: 'idle', stateTimer: 0 },
