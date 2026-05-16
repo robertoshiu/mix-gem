@@ -25,6 +25,16 @@ describe('ar-tracking-nav-graph', () => {
     it('returns false when segment ends before box', () => {
       expect(segmentIntersectsAABB(-5, 2, -1, 2, box)).toBe(false);
     });
+
+    it('detects intersection when diagonal segment crosses box', () => {
+      // Diagonal from top-left to bottom-right, crossing through the box
+      expect(segmentIntersectsAABB(-1, 5, 5, -1, box)).toBe(true);
+    });
+
+    it('returns false when diagonal segment misses box entirely', () => {
+      // Diagonal entirely to the right of the box
+      expect(segmentIntersectsAABB(5, 5, 10, 0, box)).toBe(false);
+    });
   });
 
   describe('pointClearOfAABBs', () => {

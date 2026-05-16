@@ -1,6 +1,6 @@
 /**
  * Navigation graph for AR tracking fab floor.
- * 25 nodes along walkable corridors, 44 edges validated against equipment AABBs.
+ * 25 nodes along walkable corridors, 43 edges validated against equipment AABBs.
  * Patrol routes reference node IDs — runtime resolves to [x,z] coordinates.
  */
 
