@@ -6,6 +6,7 @@ import { Scene } from '@babylonjs/core/scene';
 import { FreeCamera } from '@babylonjs/core/Cameras/freeCamera';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { Engine } from '@babylonjs/core/Engines/engine';
+import '@babylonjs/core/Engines/AbstractEngine/abstractEngine.views';
 import { Camera } from '@babylonjs/core/Cameras/camera';
 
 export interface CameraGrid {
