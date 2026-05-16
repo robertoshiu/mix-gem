@@ -57,20 +57,23 @@ export function createCinematicPipeline(
 
   let ssr: SSRRenderingPipeline | undefined;
   if (options.enableSSR) {
+    let createdSsr: SSRRenderingPipeline | undefined;
     try {
-      ssr = new BABYLON.SSRRenderingPipeline(
+      createdSsr = new BABYLON.SSRRenderingPipeline(
         'cinematic-ssr',
         scene,
         [camera],
         false,
         BABYLON.Constants.TEXTURETYPE_UNSIGNED_BYTE,
       );
-      ssr.maxSteps = 64;
-      ssr.step = 1;
-      ssr.enableSmoothReflections = true;
-      ssr.useFresnel = true;
-      ssr.blurDispersionStrength = 0.3;
+      createdSsr.maxSteps = 64;
+      createdSsr.step = 1;
+      createdSsr.enableSmoothReflections = true;
+      createdSsr.useFresnel = true;
+      createdSsr.blurDispersionStrength = 0.3;
+      ssr = createdSsr;
     } catch (e) {
+      createdSsr?.dispose();
       console.warn('[babylon-pipeline] SSR not supported on this GPU, disabling:', e);
       ssr = undefined;
     }
@@ -78,16 +81,24 @@ export function createCinematicPipeline(
 
   let ssao: SSAO2RenderingPipeline | undefined;
   if (options.enableSSAO) {
-    ssao = new BABYLON.SSAO2RenderingPipeline(
-      'cinematic-ssao2',
-      scene,
-      0.75,
-      [camera],
-    );
-    ssao.totalStrength = 0.8;
-    ssao.radius = 0.5;
-    ssao.samples = 16;
-    ssao.maxZ = 100;
+    let createdSsao: SSAO2RenderingPipeline | undefined;
+    try {
+      createdSsao = new BABYLON.SSAO2RenderingPipeline(
+        'cinematic-ssao2',
+        scene,
+        0.75,
+        [camera],
+      );
+      createdSsao.totalStrength = 0.8;
+      createdSsao.radius = 0.5;
+      createdSsao.samples = 16;
+      createdSsao.maxZ = 100;
+      ssao = createdSsao;
+    } catch (e) {
+      createdSsao?.dispose();
+      console.warn('[babylon-pipeline] SSAO not supported on this GPU, disabling:', e);
+      ssao = undefined;
+    }
   }
 
   return { pipeline, glow, ssr, ssao };

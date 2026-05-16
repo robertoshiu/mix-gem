@@ -13,7 +13,6 @@ import {
   ALL_ZONES,
   DYNAMIC_ZONES,
   PATROL_ROUTES,
-  type EquipmentState,
   type PersonnelState,
   RESTRICTED_ZONES,
   useArTrackingStore,
@@ -849,7 +848,11 @@ function createScene(canvas: HTMLCanvasElement, pipCanvasRef: React.RefObject<HT
     grainIntensity: 3,
     chromaticAberration: 5,
     vignetteWeight: 1.2,
-    enableSSAO: true,
+    // AR tracking uses custom holographic ShaderMaterial meshes, so Babylon's
+    // g-buffer-dependent SSR/SSAO pipelines do not receive normals/depth and
+    // can crash in their onApply callbacks on the static GitHub Pages build.
+    enableSSR: false,
+    enableSSAO: false,
   });
   const { pipeline, glow, ssao } = effects;
   let ssr = effects.ssr;
