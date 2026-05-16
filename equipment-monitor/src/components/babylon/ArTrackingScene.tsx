@@ -849,7 +849,6 @@ function createScene(canvas: HTMLCanvasElement, pipCanvasRef: React.RefObject<HT
     grainIntensity: 3,
     chromaticAberration: 5,
     vignetteWeight: 1.2,
-    enableSSR: true,
     enableSSAO: true,
   });
   const { pipeline, glow, ssao } = effects;

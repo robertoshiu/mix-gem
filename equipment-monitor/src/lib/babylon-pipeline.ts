@@ -57,18 +57,23 @@ export function createCinematicPipeline(
 
   let ssr: SSRRenderingPipeline | undefined;
   if (options.enableSSR) {
-    ssr = new BABYLON.SSRRenderingPipeline(
-      'cinematic-ssr',
-      scene,
-      [camera],
-      false,
-      BABYLON.Constants.TEXTURETYPE_UNSIGNED_BYTE,
-    );
-    ssr.maxSteps = 64;
-    ssr.step = 1;
-    ssr.enableSmoothReflections = true;
-    ssr.useFresnel = true;
-    ssr.blurDispersionStrength = 0.3;
+    try {
+      ssr = new BABYLON.SSRRenderingPipeline(
+        'cinematic-ssr',
+        scene,
+        [camera],
+        false,
+        BABYLON.Constants.TEXTURETYPE_UNSIGNED_BYTE,
+      );
+      ssr.maxSteps = 64;
+      ssr.step = 1;
+      ssr.enableSmoothReflections = true;
+      ssr.useFresnel = true;
+      ssr.blurDispersionStrength = 0.3;
+    } catch (e) {
+      console.warn('[babylon-pipeline] SSR not supported on this GPU, disabling:', e);
+      ssr = undefined;
+    }
   }
 
   let ssao: SSAO2RenderingPipeline | undefined;
