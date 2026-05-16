@@ -40,6 +40,7 @@ uniform float scanLineSpeed;
 uniform float alphaCenter;
 uniform float alphaEdge;
 uniform float gridStrength;
+uniform float gridScale;
 
 varying vec3 vWorldNormal;
 varying vec3 vWorldPosition;
@@ -52,8 +53,6 @@ void main() {
   float scanLine = sin((vWorldPosition.y + time * scanLineSpeed) * scanLineSpacing);
   scanLine = smoothstep(0.2, 0.8, scanLine * 0.5 + 0.5);
   float scanDim = mix(0.7, 1.0, scanLine);
-
-  uniform float gridScale;
   float gridX = step(0.96, fract(vLocalPosition.x * gridScale));
   float gridZ = step(0.96, fract(vLocalPosition.z * gridScale));
   float grid = max(gridX, gridZ) * gridStrength;
