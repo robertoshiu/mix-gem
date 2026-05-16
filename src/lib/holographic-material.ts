@@ -53,8 +53,9 @@ void main() {
   scanLine = smoothstep(0.2, 0.8, scanLine * 0.5 + 0.5);
   float scanDim = mix(0.7, 1.0, scanLine);
 
-  float gridX = step(0.96, fract(vLocalPosition.x * 2.0));
-  float gridZ = step(0.96, fract(vLocalPosition.z * 2.0));
+  uniform float gridScale;
+  float gridX = step(0.96, fract(vLocalPosition.x * gridScale));
+  float gridZ = step(0.96, fract(vLocalPosition.z * gridScale));
   float grid = max(gridX, gridZ) * gridStrength;
 
   float alpha = mix(alphaCenter, alphaEdge, fresnel);
@@ -78,6 +79,7 @@ export interface HolographicOptions {
   alphaEdge?: number;
   flickerIntensity?: number;
   gridStrength?: number;
+  gridScale?: number;
 }
 
 function createHolographicMaterial(
@@ -90,7 +92,7 @@ function createHolographicMaterial(
     uniforms: [
       'world', 'worldViewProjection', 'cameraPosition', 'time',
       'baseColor', 'fresnelPower', 'scanLineSpacing', 'scanLineSpeed',
-      'alphaCenter', 'alphaEdge', 'flickerIntensity', 'gridStrength',
+      'alphaCenter', 'alphaEdge', 'flickerIntensity', 'gridStrength', 'gridScale',
     ],
     needAlphaBlending: true,
   });
@@ -104,6 +106,7 @@ function createHolographicMaterial(
   material.setFloat('alphaEdge', options.alphaEdge);
   material.setFloat('flickerIntensity', options.flickerIntensity);
   material.setFloat('gridStrength', options.gridStrength);
+  material.setFloat('gridScale', options.gridScale);
   material.setFloat('time', 0);
 
   material.backFaceCulling = false;
@@ -126,6 +129,7 @@ export function createPersonnelHolographicMaterial(
     alphaEdge: options.alphaEdge ?? 1.0,
     flickerIntensity: options.flickerIntensity ?? 1.0,
     gridStrength: options.gridStrength ?? 0.0,
+    gridScale: options.gridScale ?? 2.0,
   });
 }
 
@@ -143,6 +147,7 @@ export function createEquipmentHolographicMaterial(
     alphaEdge: options.alphaEdge ?? 0.85,
     flickerIntensity: options.flickerIntensity ?? 0.5,
     gridStrength: options.gridStrength ?? 0.6,
+    gridScale: options.gridScale ?? 0.5,
   });
 }
 
