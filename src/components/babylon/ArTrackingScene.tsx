@@ -18,6 +18,7 @@ import {
   RESTRICTED_ZONES,
   useArTrackingStore,
 } from '@/stores/ar-tracking-store';
+import { nearestNavNode, NAV_NODES } from '@/lib/ar-tracking-nav-graph';
 
 const PERSONNEL_SPEED = 2;
 const HEAD_HEIGHT = 1.72;
@@ -1375,6 +1376,21 @@ function createScene(canvas: HTMLCanvasElement, pipCanvasRef: React.RefObject<HT
           if (clearOfActiveZones) {
             setPersonnelBehavior(store, person, id, 'patrolling', elapsedMs);
             personnelState = 'patrolling';
+            // Re-enter nav graph at nearest walkable node
+            const nearestNode = nearestNavNode(person.node.position.x, person.node.position.z);
+            const nodeCoords = NAV_NODES[nearestNode];
+            if (nodeCoords) {
+              const route = PATROL_ROUTES[id];
+              if (route) {
+                let closestIdx = 0;
+                let closestDist = Infinity;
+                route.forEach(([wx, wz], idx) => {
+                  const d = Math.hypot(wx - nodeCoords[0], wz - nodeCoords[1]);
+                  if (d < closestDist) { closestDist = d; closestIdx = idx; }
+                });
+                person.waypointIndex = closestIdx;
+              }
+            }
           }
         } else if (shouldAvoid && activeZone) {
           setPersonnelBehavior(store, person, id, 'avoiding', elapsedMs);
