@@ -50,7 +50,7 @@ export default function SurveillancePage() {
 
   return (
     <div className="surveillance-page">
-      {loading && (
+      {(loading || error) && (
         <div className="loading-overlay">
           <div className="loading-text">
             {error ? `Error: ${error}` : '載入監控場景中...'}
@@ -188,6 +188,7 @@ const gridStyles = `
   display: flex;
   align-items: center;
   justify-content: center;
+  background: rgba(0, 0, 0, 0.92);
   pointer-events: none;
   z-index: 3;
 }

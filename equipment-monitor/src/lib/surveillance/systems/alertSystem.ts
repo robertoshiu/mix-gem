@@ -13,6 +13,7 @@ export interface Alert {
   zone: RestrictedZone;
   timestamp: number;
   acknowledged: boolean;
+  acknowledgedAt: number | null;
 }
 
 export interface AlertSystem {
@@ -83,6 +84,7 @@ export function createAlertSystem(): AlertSystem {
       zone,
       timestamp: Date.now(),
       acknowledged: false,
+      acknowledgedAt: null,
     };
     activeAlerts.push(alert);
     playBeep(zone.severity);
@@ -109,7 +111,7 @@ export function createAlertSystem(): AlertSystem {
     // Auto-remove acknowledged alerts after timeout
     for (let i = activeAlerts.length - 1; i >= 0; i--) {
       const alert = activeAlerts[i];
-      if (alert.acknowledged && (now - alert.timestamp) > AUTO_REMOVE_MS) {
+      if (alert.acknowledged && alert.acknowledgedAt !== null && (now - alert.acknowledgedAt) > AUTO_REMOVE_MS) {
         activeAlerts.splice(i, 1);
         const el = document.getElementById(`alert-${alert.id}`);
         if (el) el.remove();
@@ -130,6 +132,7 @@ export function createAlertSystem(): AlertSystem {
     const alert = activeAlerts.find(a => a.id === alertId);
     if (alert) {
       alert.acknowledged = true;
+      alert.acknowledgedAt = Date.now();
       const el = document.getElementById(`alert-${alertId}`);
       if (el) {
         el.style.opacity = '0.4';
@@ -186,6 +189,13 @@ export function createAlertSystem(): AlertSystem {
     });
 
     panel.prepend(el);
+    trimVisibleAlerts(panel);
+  }
+
+  function trimVisibleAlerts(panel: HTMLElement): void {
+    while (panel.children.length > MAX_VISIBLE_ALERTS) {
+      panel.lastElementChild?.remove();
+    }
   }
 
   function flashCameraBorder(zone: RestrictedZone): void {
