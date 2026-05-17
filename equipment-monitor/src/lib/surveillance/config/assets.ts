@@ -262,38 +262,33 @@ export async function loadCharacterGLB(
     }
   }
 
-  // Load and attach AR glasses at eye level
-  // Model: Quaternius glasses (882 tri, 40KB, public domain)
-  // Raw bounding box ~2.06 units wide — scale to ~0.15m on the character
+  // Load and attach AR glasses at eye level. The Khronos sample is modeled in meters
+  // (~15cm wide), so only compensate for the character root scale.
   let headNode: BABYLON.TransformNode | null = null;
   try {
     const glassesPath = BASE_PATH + ASSET_PATHS.accessory.arGlasses;
     const glassesResult = await BABYLON.SceneLoader.ImportMeshAsync(null, '', glassesPath, scene);
-    const glassesRoot = glassesResult.meshes[0] as unknown as BABYLON.TransformNode;
 
-    // Parent glasses to character root
-    glassesRoot.parent = root;
+    const glassesAnchor = new BABYLON.TransformNode(`arGlasses_${variant}`, scene);
+    glassesAnchor.parent = root;
 
-    // Position at eye level (~94% of 1.7m height) in root-local coords
     const rootScale = root.scaling.x || 1;
-    const glassesScale = 0.073 / rootScale; // 0.15m / 2.06 raw units
-    glassesRoot.scaling.setAll(glassesScale);
-    const eyeLocalY = (1.6 - root.position.y) / rootScale;
-    glassesRoot.position.set(0, eyeLocalY, 0.06 / rootScale);
+    glassesAnchor.scaling.setAll(1 / rootScale);
+    glassesAnchor.position.set(0, (1.57 - root.position.y) / rootScale, 0.07 / rootScale);
 
-    // Apply AR-tech material — cyan emissive tint on translucent dark frame
-    for (const mesh of glassesRoot.getChildMeshes()) {
-      const mat = new BABYLON.PBRMaterial(`arGlass_${mesh.name}`, scene);
-      mat.albedoColor = new BABYLON.Color3(0.08, 0.12, 0.15);
-      mat.metallic = 0.8;
-      mat.roughness = 0.15;
-      mat.emissiveColor = new BABYLON.Color3(0.0, 0.25, 0.3);
-      mat.freeze();
-      mesh.material = mat;
+    for (const mesh of glassesResult.meshes) {
+      mesh.isPickable = false;
+      mesh.receiveShadows = false;
+      if (!mesh.parent) {
+        mesh.parent = glassesAnchor;
+      }
     }
 
-    headNode = glassesRoot;
-    allMeshes.push(...glassesResult.meshes);
+    for (const group of glassesResult.animationGroups) {
+      group.stop();
+    }
+
+    headNode = glassesAnchor;
   } catch (e) {
     console.warn('[surveillance] AR glasses not loaded:', (e as Error).message);
   }

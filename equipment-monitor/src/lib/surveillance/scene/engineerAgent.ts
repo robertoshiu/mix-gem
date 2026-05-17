@@ -39,10 +39,11 @@ export function createEngineerAgent(
   route: PatrolRoute,
 ): EngineerAgent {
   const { root } = character;
+  const groundedY = root.position.y;
 
   // Position at first waypoint
   const startPos = route.waypoints[0].position.clone();
-  root.position = new Vector3(startPos.x, 0, startPos.z);
+  root.position = new Vector3(startPos.x, groundedY, startPos.z);
 
   // Create AR camera attached to head
   const arCamera = new FreeCamera(`arCam_${route.id}`, Vector3.Zero(), scene);
@@ -76,7 +77,7 @@ export function createEngineerAgent(
     // Snap position
     root.position.x = route.waypoints[currentIndex].position.x;
     root.position.z = route.waypoints[currentIndex].position.z;
-    root.position.y = 0;
+    root.position.y = groundedY;
 
     // Prepare next target with jitter
     currentTarget = applyJitter(route.waypoints[nextIndex].position);
@@ -114,7 +115,8 @@ export function createEngineerAgent(
 
         // Procedural walk bob
         walkTime += dt;
-        root.position.y = Math.abs(Math.sin(walkTime * BOB_FREQUENCY * Math.PI)) * BOB_AMPLITUDE;
+        root.position.y = groundedY
+          + Math.abs(Math.sin(walkTime * BOB_FREQUENCY * Math.PI)) * BOB_AMPLITUDE;
 
         // Rotation swing (subtle lean)
         root.rotation.z = Math.sin(walkTime * BOB_FREQUENCY * Math.PI * 0.5) * SWING_AMPLITUDE;

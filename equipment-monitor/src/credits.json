@@ -2,13 +2,13 @@
   "assets": [
     {
       "id": "ar_glasses",
-      "title": "Glasses 3D Model",
-      "author": "Quaternius",
-      "sourceUrl": "https://www.get3dmodels.com/tools-and-gadgets/glasses/",
-      "license": "CC0",
-      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "title": "Sunglasses Khronos",
+      "author": "Eric Chadwick / Darmstadt Graphics Group GmbH for Khronos Group 3D Commerce",
+      "sourceUrl": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/SunglassesKhronos",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
       "downloadDate": "2026-05-17",
-      "notes": "882 triangles, 40KB. Replaces oversized 3.4MB Meshy model that caused half-body rendering."
+      "notes": "Direct GLB, 371KB, real-world 15cm scale, no skeleton/character mesh. Includes Khronos/3D Commerce logos under Khronos Legal Mark Usage Guidelines."
     },
     {
       "id": "cleanroom_hdri",
