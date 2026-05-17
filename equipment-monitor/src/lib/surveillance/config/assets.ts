@@ -3,10 +3,11 @@
  * Loads equipment, characters, and HDRI from public/models/.
  */
 import * as BABYLON from '@babylonjs/core';
+import { HDRCubeTexture } from '@babylonjs/core/Materials/Textures/hdrCubeTexture';
 import '@babylonjs/loaders/glTF';
 
-// Base path for assets (respects Next.js basePath)
-const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
+// Base path for GitHub Pages static export. Keep aligned with next.config.ts.
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? '/mix-gem';
 
 export const ASSET_PATHS = {
   hdri: '/env/cleanroom.env',
@@ -74,7 +75,7 @@ export interface LoadedEquipment {
 export async function loadEnvironment(scene: BABYLON.Scene): Promise<void> {
   try {
     const envPath = BASE_PATH + ASSET_PATHS.hdri;
-    const envTexture = BABYLON.CubeTexture.CreateFromPrefilteredData(envPath, scene);
+    const envTexture = new HDRCubeTexture(envPath, scene, 256, false, true, false, true);
     scene.environmentTexture = envTexture;
     scene.environmentIntensity = 1.0;
   } catch (e) {
