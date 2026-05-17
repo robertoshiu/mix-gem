@@ -21,8 +21,8 @@ export const ASSET_PATHS = {
     waferCassette: '/models/equipment/wafer_cassette.glb',
   },
   character: {
-    base: '/models/character/base.glb',
-    suitBlue: '/models/character/suit_blue.glb',
+    base: '/models/character/engineer_white.glb',
+    suitBlue: '/models/character/engineer_blue.glb',
   },
   accessory: {
     arGlasses: '/models/accessory/ar_glasses.glb',
@@ -77,7 +77,7 @@ export async function loadEnvironment(scene: BABYLON.Scene): Promise<void> {
     const envPath = BASE_PATH + ASSET_PATHS.hdri;
     const envTexture = new HDRCubeTexture(envPath, scene, 256, false, true, false, true);
     scene.environmentTexture = envTexture;
-    scene.environmentIntensity = 1.0;
+    scene.environmentIntensity = 0.5;
   } catch (e) {
     console.warn('[surveillance] HDRI not available, using fallback lighting:', (e as Error).message);
   }
@@ -190,45 +190,13 @@ export async function loadCharacterGLB(
   const root = charResult.meshes[0] as unknown as BABYLON.TransformNode;
   const allMeshes = [...charResult.meshes];
 
-  // Find head bone or node for AR glasses attachment
-  let headNode: BABYLON.TransformNode | null = null;
-  const skeleton = charResult.skeletons[0];
-
-  if (skeleton) {
-    const headBone = skeleton.bones.find(b =>
-      b.name.toLowerCase().includes('head'),
-    );
-    if (headBone) {
-      // Create a TransformNode attached to head bone
-      headNode = new BABYLON.TransformNode(`${variant}_headAttach`, scene);
-      headNode.attachToBone(headBone, root as unknown as BABYLON.Mesh);
-      headNode.position = new BABYLON.Vector3(0, 0.12, 0);
-    }
-  }
-
-  // If no skeleton, find a child node named "head" or similar
-  if (!headNode) {
-    const descendants = root.getDescendants(false);
-    const headChild = descendants.find(d =>
-      d.name.toLowerCase().includes('head'),
-    );
-    if (headChild && headChild instanceof BABYLON.TransformNode) {
-      headNode = headChild;
-    } else {
-      // Fallback: create a node at top of bounding box
-      headNode = new BABYLON.TransformNode(`${variant}_headFallback`, scene);
-      headNode.parent = root;
-      headNode.position = new BABYLON.Vector3(0, 1.6, 0);
-    }
-  }
-
-  // Load AR glasses and attach to head
+  // Load AR glasses and attach at fixed head position
   try {
     const glassesPath = BASE_PATH + ASSET_PATHS.accessory.arGlasses;
     const glassesResult = await BABYLON.SceneLoader.ImportMeshAsync(null, '', glassesPath, scene);
     const glassesRoot = glassesResult.meshes[0];
-    glassesRoot.parent = headNode;
-    glassesRoot.position = new BABYLON.Vector3(0, 0.02, 0.08);
+    glassesRoot.parent = root;
+    glassesRoot.position = new BABYLON.Vector3(0, 1.6, 0.08);
     glassesRoot.scaling = new BABYLON.Vector3(0.6, 0.6, 0.6);
     allMeshes.push(...glassesResult.meshes);
   } catch {
@@ -254,5 +222,5 @@ export async function loadCharacterGLB(
     }
   }
 
-  return { root, headNode, allMeshes };
+  return { root, headNode: null, allMeshes };
 }

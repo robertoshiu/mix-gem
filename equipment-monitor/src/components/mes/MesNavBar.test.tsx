@@ -27,6 +27,10 @@ describe('MesNavBar', () => {
       'href',
       '/mes/ar-tracking'
     );
+    expect(screen.getByRole('link', { name: 'Surveillance' })).toHaveAttribute(
+      'href',
+      '/mes/surveillance'
+    );
     expect(screen.getByRole('link', { name: 'SECS/GEM Sim' })).toHaveAttribute(
       'href',
       '/mes/secs-gem'

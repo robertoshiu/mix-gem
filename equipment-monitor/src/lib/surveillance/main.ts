@@ -63,6 +63,14 @@ export async function initSurveillanceScene(canvases: HTMLCanvasElement[]): Prom
 
   console.log(`[surveillance] ${engineers.length} engineers loaded`);
 
+  // Set first engineer as default AR view for cell 4
+  if (engineers.length > 0) {
+    cameraGrid.setDefaultAR(engineers[0]);
+    // Hide STANDBY overlay since we have an AR view
+    const standby = document.getElementById('standby-overlay');
+    if (standby) standby.style.display = 'none';
+  }
+
   // Alert system
   const alertSystem = createAlertSystem();
 
@@ -70,7 +78,7 @@ export async function initSurveillanceScene(canvases: HTMLCanvasElement[]): Prom
   alertSystem.onViewAR = (engineerId: string) => {
     const agent = engineers.find(e => e.id === engineerId);
     if (agent) {
-      cameraGrid.swapCenterToAR(agent);
+      cameraGrid.swapToAR(agent);
       arHud.setActiveEngineer(agent.id, agent.name);
 
       // Update cell #4 label in DOM
@@ -96,13 +104,15 @@ export async function initSurveillanceScene(canvases: HTMLCanvasElement[]): Prom
   if (cell4) {
     cell4.addEventListener('click', () => {
       if (cameraGrid.isARSwapped) {
-        cameraGrid.revertCenter();
-        arHud.clearActiveEngineer();
-
-        // Reset cell #4 label
+        cameraGrid.revertToDefaultAR();
+        if (cameraGrid.defaultARAgent) {
+          arHud.setActiveEngineer(cameraGrid.defaultARAgent.id, cameraGrid.defaultARAgent.name);
+        } else {
+          arHud.clearActiveEngineer();
+        }
         const cell4Label = document.querySelector('[data-cam-index="4"] .cam-label');
         if (cell4Label) {
-          cell4Label.textContent = '中控追蹤';
+          cell4Label.textContent = 'AR 主視角';
           cell4Label.classList.remove('ar-active');
         }
         cell4.removeAttribute('data-ar-swap');
@@ -112,12 +122,15 @@ export async function initSurveillanceScene(canvases: HTMLCanvasElement[]): Prom
 
   // Sync HUD when cameras.ts auto-reverts after timeout
   const patchedRevertCheck = () => {
-    // Check each frame if swap was auto-reverted by timeout
-    if (!cameraGrid.isARSwapped && arHud) {
-      arHud.clearActiveEngineer();
+    if (!cameraGrid.isARSwapped) {
+      if (cameraGrid.defaultARAgent) {
+        arHud.setActiveEngineer(cameraGrid.defaultARAgent.id, cameraGrid.defaultARAgent.name);
+      } else {
+        arHud.clearActiveEngineer();
+      }
       const label = document.querySelector('[data-cam-index="4"] .cam-label');
       if (label && label.classList.contains('ar-active')) {
-        label.textContent = '中控追蹤';
+        label.textContent = 'AR 主視角';
         label.classList.remove('ar-active');
       }
       const cell = document.querySelector('[data-cam-index="4"]');
@@ -147,12 +160,11 @@ export async function initSurveillanceScene(canvases: HTMLCanvasElement[]): Prom
       // Alert system checks all engineers
       alertSystem.update(engineers);
 
-      // AR HUD update (only when swap is active)
-      if (cameraGrid.isARSwapped) {
+      // AR HUD update (always active when cell 4 shows any AR view)
+      if (cameraGrid.currentARAgent) {
         arHud.update();
-        wasARSwapped = true;
+        wasARSwapped = cameraGrid.isARSwapped;
       } else if (wasARSwapped) {
-        // Just reverted — clean up HUD state
         patchedRevertCheck();
         wasARSwapped = false;
       }

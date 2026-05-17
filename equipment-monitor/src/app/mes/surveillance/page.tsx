@@ -5,8 +5,8 @@ import { initSurveillanceScene } from '@/lib/surveillance/main';
 
 const CAMERA_LABELS = [
   'NW 走廊', '俯視全景', 'NE 走廊',
-  '微影區特寫', '中控追蹤', '化學品特寫',
-  '設備區', 'AR 視角', '出入口',
+  '微影區遠景', 'AR 主視角', '化學品遠景',
+  '設備區', '中控平移', '出入口',
 ];
 
 export default function SurveillancePage() {
@@ -63,8 +63,8 @@ export default function SurveillancePage() {
             <canvas className="cam-canvas" />
             <div className="cam-label">{label}</div>
             <div className="cam-border" />
-            {i === 7 && (
-              <div className="standby-overlay">
+            {i === 4 && (
+              <div className="standby-overlay" id="standby-overlay">
                 <span className="standby-text">STANDBY</span>
               </div>
             )}
@@ -174,12 +174,11 @@ const gridStyles = `
 }
 
 .cam-cell[data-cam-index="4"] {
-  outline: 1px solid #333;
-  cursor: pointer;
+  outline: 1px solid #0ff;
 }
 
-.cam-cell[data-cam-index="4"]:hover .cam-border {
-  border-color: rgba(0, 255, 255, 0.3);
+.cam-cell[data-cam-index="4"] .cam-label {
+  color: #0ff;
 }
 
 .standby-overlay {

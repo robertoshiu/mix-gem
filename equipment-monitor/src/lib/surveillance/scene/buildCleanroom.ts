@@ -32,12 +32,12 @@ export async function buildCleanroom(scene: Scene): Promise<CleanroomScene> {
 
   // Lighting
   const ambient = new HemisphericLight('ambient', new Vector3(0, 1, 0), scene);
-  ambient.intensity = 0.3;
+  ambient.intensity = 0.15;
   ambient.diffuse = new Color3(0.92, 0.95, 1.0);
 
   const sun = new DirectionalLight('sun', new Vector3(-0.5, -1, 0.3), scene);
   sun.position = new Vector3(10, 20, -10);
-  sun.intensity = 0.7;
+  sun.intensity = 0.5;
 
   const shadowGen = new ShadowGenerator(512, sun);
   shadowGen.useBlurExponentialShadowMap = true;
@@ -57,7 +57,7 @@ export async function buildCleanroom(scene: Scene): Promise<CleanroomScene> {
 
 function buildFloor(scene: Scene): void {
   const floorMat = new PBRMaterial('floorMat', scene);
-  floorMat.albedoColor = new Color3(0.72, 0.75, 0.78);
+  floorMat.albedoColor = new Color3(0.18, 0.20, 0.25);
   floorMat.metallic = 0.1;
   floorMat.roughness = 0.7;
   floorMat.freeze();
@@ -92,10 +92,9 @@ function buildFloor(scene: Scene): void {
 
 function buildCeiling(scene: Scene): void {
   const ceilMat = new PBRMaterial('ceilMat', scene);
-  ceilMat.albedoColor = new Color3(0.9, 0.92, 0.95);
+  ceilMat.albedoColor = new Color3(0.4, 0.42, 0.45);
   ceilMat.metallic = 0.0;
   ceilMat.roughness = 0.9;
-  ceilMat.emissiveColor = new Color3(0.08, 0.08, 0.1);
   ceilMat.alpha = 0.85;
   ceilMat.freeze();
 
@@ -130,7 +129,8 @@ function buildWalls(scene: Scene): void {
   glassMat.albedoColor = new Color3(0.7, 0.85, 0.9);
   glassMat.metallic = 0.0;
   glassMat.roughness = 0.05;
-  glassMat.alpha = 0.15;
+  glassMat.alpha = 0.25;
+  glassMat.emissiveColor = new Color3(0.02, 0.06, 0.08);
   glassMat.subSurface.isRefractionEnabled = true;
   glassMat.subSurface.refractionIntensity = 0.6;
   glassMat.freeze();
@@ -170,7 +170,7 @@ function buildRestrictedZoneVisuals(scene: Scene): void {
     const zoneMat = new PBRMaterial(`zoneMat_${zone.id}`, scene);
     zoneMat.albedoColor = new Color3(1, 0, 0);
     zoneMat.emissiveColor = new Color3(0.3, 0, 0);
-    zoneMat.alpha = 0.1;
+    zoneMat.alpha = 0.04;
     zoneMat.metallic = 0;
     zoneMat.roughness = 1;
     zoneMat.backFaceCulling = false;
@@ -208,10 +208,10 @@ function buildRestrictedZoneVisuals(scene: Scene): void {
     // Animated emissive pulse on zone volume
     scene.onBeforeRenderObservable.add(() => {
       pulseTime += scene.getEngine().getDeltaTime() / 1000;
-      const alpha = 0.08 + Math.sin(pulseTime * 2) * 0.04;
+      const alpha = 0.03 + Math.sin(pulseTime * 2) * 0.03;
       zoneMat.alpha = alpha;
       zoneMat.emissiveColor = new Color3(
-        0.3 + Math.sin(pulseTime * 2) * 0.1,
+        0.15 + Math.sin(pulseTime * 2) * 0.05,
         0,
         0,
       );

@@ -16,7 +16,6 @@ export interface EngineerAgent {
   id: string;
   name: string;
   root: TransformNode;
-  headNode: TransformNode | null;
   arCamera: FreeCamera;
   position: Vector3;
   state: AgentState;
@@ -38,7 +37,7 @@ export function createEngineerAgent(
   character: LoadedCharacter,
   route: PatrolRoute,
 ): EngineerAgent {
-  const { root, headNode } = character;
+  const { root } = character;
 
   // Position at first waypoint
   const startPos = route.waypoints[0].position.clone();
@@ -126,18 +125,16 @@ export function createEngineerAgent(
       }
     }
 
-    // Sync AR camera to head position
-    if (headNode) {
-      headNode.computeWorldMatrix(true);
-      const headWorld = headNode.getAbsolutePosition();
-      arCamera.position.copyFrom(headWorld);
-      arCamera.rotation.y = root.rotation.y;
-      arCamera.rotation.x = -0.1; // Slight downward tilt (natural head pose)
-    } else {
-      // Fallback: camera at head height
-      arCamera.position.set(root.position.x, 1.6, root.position.z);
-      arCamera.rotation.y = root.rotation.y;
-    }
+    // Sync AR camera to fixed eye position (no head bone dependency)
+    const fwd = Math.sin(root.rotation.y);
+    const fwdZ = Math.cos(root.rotation.y);
+    arCamera.position.set(
+      root.position.x + fwd * 0.15,
+      1.55,
+      root.position.z + fwdZ * 0.15,
+    );
+    arCamera.rotation.y = root.rotation.y;
+    arCamera.rotation.x = -0.05;
   }
 
   function dispose(): void {
@@ -149,7 +146,6 @@ export function createEngineerAgent(
     id: route.id,
     name: route.name,
     root,
-    headNode,
     arCamera,
     get position() { return new Vector3(root.position.x, 0, root.position.z); },
     get state() { return state; },

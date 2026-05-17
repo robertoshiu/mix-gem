@@ -210,29 +210,52 @@ export function createArHud(
     // Update engineer ID
     idText.text = activeEngineerId ? `${activeEngineerId} ${activeEngineerName}` : '';
 
-    // Equipment markers — show/hide by distance, update distance text
+    // Equipment markers — show nearest 5, cull overlap
+    const markerData: Array<{ marker: LabelMarker; dist: number; sx: number; sy: number }> = [];
+
     for (const marker of markers) {
+      marker.rect.isVisible = false; // Reset all
       const dist = Vector3.Distance(camPos, marker.worldPos);
-      const visible = dist < 10;
-      marker.rect.isVisible = visible;
+      if (dist > 12) continue;
 
-      if (visible) {
-        marker.text.text = `${marker.label} [${dist.toFixed(1)}m]`;
-        marker.rect.alpha = Math.max(0.4, 1 - dist / 10);
+      const projected = Vector3.Project(
+        marker.worldPos,
+        scene.getTransformMatrix(),
+        activeCamera.getViewMatrix().multiply(activeCamera.getProjectionMatrix()),
+        activeCamera.viewport.toGlobal(
+          scene.getEngine().getRenderWidth(),
+          scene.getEngine().getRenderHeight(),
+        ),
+      );
 
-        // Project world position to screen for positioning
-        const projected = Vector3.Project(
-          marker.worldPos,
-          scene.getTransformMatrix(),
-          activeCamera.getViewMatrix().multiply(activeCamera.getProjectionMatrix()),
-          activeCamera.viewport.toGlobal(
-            scene.getEngine().getRenderWidth(),
-            scene.getEngine().getRenderHeight(),
-          ),
-        );
-        marker.rect.left = `${(projected.x / scene.getEngine().getRenderWidth() - 0.5) * ui.idealWidth!}px`;
-        marker.rect.top = `${(projected.y / scene.getEngine().getRenderHeight() - 0.5) * ui.idealHeight!}px`;
-      }
+      // Behind camera check
+      if (projected.z > 1 || projected.z < 0) continue;
+
+      const sx = (projected.x / scene.getEngine().getRenderWidth() - 0.5) * ui.idealWidth!;
+      const sy = (projected.y / scene.getEngine().getRenderHeight() - 0.5) * ui.idealHeight!;
+      markerData.push({ marker, dist, sx, sy });
+    }
+
+    // Sort by distance, keep nearest 5
+    markerData.sort((a, b) => a.dist - b.dist);
+    const visible = markerData.slice(0, 5);
+
+    // Proximity culling: remove overlapping labels (< 30px apart)
+    const accepted: typeof visible = [];
+    for (const item of visible) {
+      const tooClose = accepted.some(a =>
+        Math.abs(a.sx - item.sx) < 30 && Math.abs(a.sy - item.sy) < 30
+      );
+      if (!tooClose) accepted.push(item);
+    }
+
+    // Apply positions
+    for (const { marker, dist, sx, sy } of accepted) {
+      marker.rect.isVisible = true;
+      marker.text.text = `${marker.label} [${dist.toFixed(1)}m]`;
+      marker.rect.alpha = Math.max(0.4, 1 - dist / 12);
+      marker.rect.left = `${sx}px`;
+      marker.rect.top = `${sy}px`;
     }
 
     // Zone corner markers — show nearby zone boundaries

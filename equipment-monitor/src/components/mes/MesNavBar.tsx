@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: '/mes/fab-floor', label: 'Fab Floor', icon: Activity },
   { href: '/mes/fab-twin', label: 'Fab Twin', icon: Activity },
   { href: '/mes/ar-tracking', label: 'AR Tracking', icon: Activity },
+  { href: '/mes/surveillance', label: 'Surveillance', icon: Activity },
   { href: '/mes/equipment', label: 'Equipment' },
   { href: '/mes/lots', label: 'Lot Tracker' },
   { href: '/mes/recipes', label: 'Recipe Manager' },

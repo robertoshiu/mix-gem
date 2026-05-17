@@ -4,8 +4,8 @@
  *
  * Layout:
  *   [0] NW 走廊      [1] 俯視全景     [2] NE 走廊
- *   [3] 微影區特寫   [4] 中控追蹤     [5] 化學品特寫
- *   [6] 設備區       [7] AR 視角      [8] 出入口
+ *   [3] 微影區遠景   [4] AR 主視角    [5] 化學品特寫
+ *   [6] 設備區       [7] 中控平移     [8] 出入口
  */
 import { Scene } from '@babylonjs/core/scene';
 import { FreeCamera } from '@babylonjs/core/Cameras/freeCamera';
@@ -20,14 +20,16 @@ const FOV_WIDE = 1.2;   // ~69 degrees — corridor overview
 
 export interface CameraGrid {
   cameras: Camera[];
-  trackingCamera: FreeCamera;    // cell 4: orbit/follow
-  arStandbyCamera: FreeCamera;   // cell 7: dormant / AR swap target
-  birdEyeCamera: FreeCamera;     // cell 1: top-down
+  arDefaultCamera: FreeCamera;
+  controlPanCamera: FreeCamera;
+  birdEyeCamera: FreeCamera;
   views: ReturnType<Engine['registerView']>[];
-  swapCenterToAR(agent: EngineerAgent): void;
-  revertCenter(): void;
+  setDefaultAR(agent: EngineerAgent): void;
+  swapToAR(agent: EngineerAgent): void;
+  revertToDefaultAR(): void;
   isARSwapped: boolean;
   currentARAgent: EngineerAgent | null;
+  defaultARAgent: EngineerAgent | null;
 }
 
 export function setupCameras(scene: Scene, engine: Engine, canvases: HTMLCanvasElement[]): CameraGrid {
@@ -55,17 +57,18 @@ export function setupCameras(scene: Scene, engine: Engine, canvases: HTMLCanvasE
   camNE.fov = FOV_WIDE;
   cameras.push(camNE);
 
-  // [3] 微影區特寫 — litho bay close-up (restricted zone glow visible)
-  const camLitho = new FreeCamera('cam-litho-closeup', new Vector3(-13, 3.5, -4), scene);
-  camLitho.setTarget(new Vector3(-9, 1.2, 1));
-  camLitho.fov = FOV_TIGHT;
+  // [3] 微影區遠景 — litho bay wide shot (pulled back from restricted zone)
+  const camLitho = new FreeCamera('cam-litho-wide', new Vector3(-16, 5, -6), scene);
+  camLitho.setTarget(new Vector3(-9, 1.5, 0));
+  camLitho.fov = 1.0;
   cameras.push(camLitho);
 
-  // [4] 中控追蹤 — default: slow orbit around fab center (tracking camera)
-  const camTracking = new FreeCamera('cam-tracking', new Vector3(0, 8, -10), scene);
-  camTracking.setTarget(new Vector3(0, 1, 0));
-  camTracking.fov = FOV_TIGHT;
-  cameras.push(camTracking);
+  // [4] AR 主視角 — default: first engineer's AR POV (swapped in main.ts after load)
+  const camARDefault = new FreeCamera('cam-ar-default', new Vector3(0, 1.55, 0), scene);
+  camARDefault.fov = 1.22;
+  camARDefault.minZ = 0.1;
+  camARDefault.maxZ = 50;
+  cameras.push(camARDefault);
 
   // [5] 化學品特寫 — chemical storage close-up (restricted zone glow visible)
   const camChem = new FreeCamera('cam-chem-closeup', new Vector3(14, 3.5, -3), scene);
@@ -79,12 +82,11 @@ export function setupCameras(scene: Scene, engine: Engine, canvases: HTMLCanvasE
   camEquip.fov = FOV_TIGHT;
   cameras.push(camEquip);
 
-  // [7] AR 視角 — dormant (black screen). Swap target for alert AR POV.
-  const camARStandby = new FreeCamera('cam-ar-standby', new Vector3(0, 1.7, 0), scene);
-  camARStandby.fov = 1.22; // ~70 degrees (natural human FOV)
-  camARStandby.minZ = 0.1;
-  camARStandby.maxZ = 50;
-  cameras.push(camARStandby);
+  // [7] 中控平移 — slow horizontal pan, security-camera style
+  const camControlPan = new FreeCamera('cam-control-pan', new Vector3(0, 8, 0), scene);
+  camControlPan.setTarget(new Vector3(0, 0, 0));
+  camControlPan.fov = FOV_WIDE;
+  cameras.push(camControlPan);
 
   // [8] 出入口 — entrance/exit at south side
   const camEntrance = new FreeCamera('cam-entrance', new Vector3(0, 4, -12), scene);
@@ -97,75 +99,70 @@ export function setupCameras(scene: Scene, engine: Engine, canvases: HTMLCanvasE
     return engine.registerView(canvas, cameras[i]);
   });
 
-  // Tracking camera slow orbit state
-  let orbitAngle = 0;
-  const ORBIT_RADIUS = 12;
-  const ORBIT_SPEED = 0.15; // radians per second
-  const ORBIT_HEIGHT = 8;
+  // Control pan state (cell 7)
+  let panX = 0;
+  let panDir = 1;
+  const PAN_SPEED = 0.3;
+  const PAN_RANGE = 10;
+  const PAN_HEIGHT = 8;
 
   // AR swap state
+  let defaultARAgent: EngineerAgent | null = null;
   let isARSwapped = false;
   let currentARAgent: EngineerAgent | null = null;
   let revertTimer: ReturnType<typeof setTimeout> | null = null;
 
-  /**
-   * Swap center cell (#4) to show the given agent's AR glasses POV.
-   * Auto-reverts after 10 seconds.
-   */
-  function swapCenterToAR(agent: EngineerAgent): void {
-    if (revertTimer) clearTimeout(revertTimer);
+  function setDefaultAR(agent: EngineerAgent): void {
+    defaultARAgent = agent;
+    if (!isARSwapped) {
+      views[4].camera = agent.arCamera;
+      currentARAgent = agent;
+    }
+  }
 
-    // Swap cell #4 to the agent's AR camera
+  function swapToAR(agent: EngineerAgent): void {
+    if (revertTimer) clearTimeout(revertTimer);
     views[4].camera = agent.arCamera;
     isARSwapped = true;
     currentARAgent = agent;
-
-    // Auto-revert after 10s
-    revertTimer = setTimeout(() => {
-      revertCenter();
-    }, 10000);
+    revertTimer = setTimeout(() => revertToDefaultAR(), 10000);
   }
 
-  /**
-   * Revert center cell back to tracking camera.
-   */
-  function revertCenter(): void {
-    if (revertTimer) {
-      clearTimeout(revertTimer);
-      revertTimer = null;
-    }
-    views[4].camera = camTracking;
+  function revertToDefaultAR(): void {
+    if (revertTimer) { clearTimeout(revertTimer); revertTimer = null; }
     isARSwapped = false;
-    currentARAgent = null;
+    if (defaultARAgent) {
+      views[4].camera = defaultARAgent.arCamera;
+      currentARAgent = defaultARAgent;
+    } else {
+      views[4].camera = camARDefault;
+      currentARAgent = null;
+    }
   }
 
-  /**
-   * Update tracking camera orbit each frame.
-   */
-  function updateTrackingOrbit(dt: number): void {
-    if (isARSwapped) return; // Don't orbit while showing AR view
-    orbitAngle += ORBIT_SPEED * dt;
-    camTracking.position.x = Math.sin(orbitAngle) * ORBIT_RADIUS;
-    camTracking.position.z = Math.cos(orbitAngle) * ORBIT_RADIUS;
-    camTracking.position.y = ORBIT_HEIGHT;
-    camTracking.setTarget(new Vector3(0, 1, 0));
-  }
-
-  // Attach orbit update to scene's before-render
+  // Horizontal pan animation for cell 7
   scene.onBeforeRenderObservable.add(() => {
     const dt = scene.getEngine().getDeltaTime() / 1000;
-    updateTrackingOrbit(dt);
+    panX += PAN_SPEED * panDir * dt;
+    if (panX > PAN_RANGE) { panX = PAN_RANGE; panDir = -1; }
+    if (panX < -PAN_RANGE) { panX = -PAN_RANGE; panDir = 1; }
+    camControlPan.position.x = panX;
+    camControlPan.position.y = PAN_HEIGHT;
+    camControlPan.position.z = 0;
+    camControlPan.setTarget(new Vector3(panX, 0, 0));
   });
 
   return {
     cameras,
-    trackingCamera: camTracking,
-    arStandbyCamera: camARStandby,
+    arDefaultCamera: camARDefault,
+    controlPanCamera: camControlPan,
     birdEyeCamera: camBirdEye,
     views,
-    swapCenterToAR,
-    revertCenter,
+    setDefaultAR,
+    swapToAR,
+    revertToDefaultAR,
     get isARSwapped() { return isARSwapped; },
     get currentARAgent() { return currentARAgent; },
+    get defaultARAgent() { return defaultARAgent; },
   };
 }
