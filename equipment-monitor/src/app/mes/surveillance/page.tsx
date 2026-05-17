@@ -4,9 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import { initSurveillanceScene } from '@/lib/surveillance/main';
 
 const CAMERA_LABELS = [
-  'NW 走廊', '俯視全景', 'NE 走廊',
-  '微影區遠景', 'AR 主視角', '化學品遠景',
-  '設備區', '中控平移', '出入口',
+  'EFEM 通道', '俯視全景', 'NE 走廊',
+  '微影區遠景', 'AR 主視角', '化學品特寫',
+  '設備區', '中央設備近景', '出入口',
 ];
 
 export default function SurveillancePage() {
