@@ -1,17 +1,19 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { initSurveillanceScene } from '@/lib/surveillance/main';
 
 const CAMERA_LABELS = [
-  'CCTV-NW', '俯視全景', 'CCTV-NE',
-  '微影區', '主視角', '化學品區',
-  'CCTV-SW', 'AR 視角', 'CCTV-SE',
+  'NW 走廊', '俯視全景', 'NE 走廊',
+  '微影區遠景', 'AR 主視角', '化學品遠景',
+  '設備區', '中控平移', '出入口',
 ];
 
 export default function SurveillancePage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -19,23 +21,53 @@ export default function SurveillancePage() {
     const canvases = containerRef.current.querySelectorAll<HTMLCanvasElement>('.cam-canvas');
     if (canvases.length !== 9) return;
 
-    const cleanup = initSurveillanceScene(Array.from(canvases));
-    cleanupRef.current = cleanup;
+    let cancelled = false;
+
+    initSurveillanceScene(Array.from(canvases))
+      .then((cleanup) => {
+        if (cancelled) {
+          cleanup();
+          return;
+        }
+        cleanupRef.current = cleanup;
+        setLoading(false);
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setError((e as Error).message);
+          setLoading(false);
+        }
+      });
 
     return () => {
-      cleanup();
-      cleanupRef.current = null;
+      cancelled = true;
+      if (cleanupRef.current) {
+        cleanupRef.current();
+        cleanupRef.current = null;
+      }
     };
   }, []);
 
   return (
     <div className="surveillance-page">
+      {(loading || error) && (
+        <div className="loading-overlay">
+          <div className="loading-text">
+            {error ? `Error: ${error}` : '載入監控場景中...'}
+          </div>
+        </div>
+      )}
       <div className="grid-3x3" ref={containerRef}>
         {CAMERA_LABELS.map((label, i) => (
           <div key={i} className="cam-cell" data-cam-index={i}>
             <canvas className="cam-canvas" />
             <div className="cam-label">{label}</div>
             <div className="cam-border" />
+            {i === 4 && (
+              <div className="standby-overlay" id="standby-overlay">
+                <span className="standby-text">STANDBY</span>
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -51,6 +83,28 @@ const gridStyles = `
   inset: 0;
   background: #000;
   overflow: hidden;
+}
+
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+}
+
+.loading-text {
+  font-family: 'Fira Code', monospace;
+  font-size: 13px;
+  color: #0ff;
+  animation: pulse-text 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-text {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
 }
 
 .grid-3x3 {
@@ -87,6 +141,12 @@ const gridStyles = `
   border-radius: 2px;
   pointer-events: none;
   z-index: 2;
+  transition: color 0.3s;
+}
+
+.cam-label.ar-active {
+  color: #ff4444;
+  text-shadow: 0 0 6px rgba(255, 0, 0, 0.6);
 }
 
 .cam-border {
@@ -94,7 +154,7 @@ const gridStyles = `
   inset: 0;
   border: 2px solid transparent;
   pointer-events: none;
-  transition: border-color 0.3s;
+  transition: border-color 0.3s, box-shadow 0.3s;
   z-index: 1;
 }
 
@@ -103,13 +163,41 @@ const gridStyles = `
   animation: flash-border 0.5s ease-in-out 6 alternate;
 }
 
+.cam-cell[data-ar-swap] .cam-border {
+  border-color: #ff0000;
+  box-shadow: inset 0 0 20px rgba(255, 0, 0, 0.15);
+}
+
 @keyframes flash-border {
   from { border-color: #ff0000; }
   to { border-color: transparent; }
 }
 
 .cam-cell[data-cam-index="4"] {
-  outline: 1px solid #333;
+  outline: 1px solid #0ff;
+}
+
+.cam-cell[data-cam-index="4"] .cam-label {
+  color: #0ff;
+}
+
+.standby-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.92);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.standby-text {
+  font-family: 'Fira Code', monospace;
+  font-size: 12px;
+  color: #444;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
 }
 
 .alert-panel {
@@ -131,13 +219,21 @@ const gridStyles = `
 }
 
 .alert-item {
-  background: rgba(20, 0, 0, 0.9);
+  background: rgba(20, 0, 0, 0.92);
   border: 1px solid #f00;
   border-radius: 4px;
   padding: 8px 10px;
   font-family: 'Fira Code', monospace;
   font-size: 11px;
   color: #fff;
+  transition: opacity 0.3s, border-color 0.3s;
+}
+
+.alert-item .alert-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
 }
 
 .alert-item .alert-time {
@@ -148,6 +244,13 @@ const gridStyles = `
 .alert-item .alert-zone {
   color: #ff4444;
   font-weight: bold;
+  margin-bottom: 2px;
+}
+
+.alert-item .alert-person {
+  color: #ccc;
+  font-size: 10px;
+  margin-bottom: 6px;
 }
 
 .alert-item .alert-severity {
@@ -155,26 +258,46 @@ const gridStyles = `
   padding: 1px 4px;
   border-radius: 2px;
   font-size: 9px;
-  margin-left: 6px;
 }
 
-.alert-item .alert-severity.critical { background: #900; }
-.alert-item .alert-severity.high { background: #960; }
-.alert-item .alert-severity.medium { background: #660; }
+.alert-item .alert-severity.critical { background: #900; color: #fff; }
+.alert-item .alert-severity.high { background: #960; color: #fff; }
+.alert-item .alert-severity.medium { background: #660; color: #fff; }
+
+.alert-item .alert-actions {
+  display: flex;
+  gap: 6px;
+}
 
 .alert-item button {
-  margin-top: 4px;
   background: #222;
   border: 1px solid #555;
   color: #0ff;
+  font-family: 'Fira Code', monospace;
   font-size: 10px;
-  padding: 2px 8px;
+  padding: 3px 10px;
   cursor: pointer;
   border-radius: 2px;
+  transition: background 0.2s, border-color 0.2s;
 }
 
 .alert-item button:hover {
   background: #333;
   border-color: #0ff;
+}
+
+.alert-item .btn-view-ar {
+  color: #0ff;
+  border-color: #0ff;
+}
+
+.alert-item .btn-ack {
+  color: #aaa;
+  border-color: #444;
+}
+
+.alert-item .btn-ack:hover {
+  color: #fff;
+  border-color: #888;
 }
 `;
