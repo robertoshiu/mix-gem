@@ -24,9 +24,6 @@ export const ASSET_PATHS = {
     base: '/models/character/engineer_white.glb',
     suitBlue: '/models/character/engineer_blue.glb',
   },
-  accessory: {
-    arGlasses: '/models/accessory/ar_glasses.glb',
-  },
 } as const;
 
 export type EquipmentKey = keyof typeof ASSET_PATHS.equipment;
@@ -63,6 +60,17 @@ export const equipmentLayout: EquipmentPlacement[] = [
 
 // Target bounding box for equipment scaling
 const EQUIPMENT_TARGET_SIZE = 2.2;
+
+// PBR color palette per equipment type — used as fallback when GLB materials are bland
+const EQUIPMENT_COLORS: Record<EquipmentKey, { albedo: [number, number, number]; metallic: number; roughness: number; emissive?: [number, number, number] }> = {
+  chamber: { albedo: [0.55, 0.57, 0.60], metallic: 0.7, roughness: 0.3, emissive: [0.01, 0.02, 0.04] },
+  efem: { albedo: [0.70, 0.72, 0.75], metallic: 0.6, roughness: 0.35 },
+  stepper: { albedo: [0.35, 0.38, 0.50], metallic: 0.5, roughness: 0.4, emissive: [0.02, 0.01, 0.04] },
+  metrology: { albedo: [0.45, 0.48, 0.52], metallic: 0.6, roughness: 0.3, emissive: [0.00, 0.03, 0.03] },
+  spinCoater: { albedo: [0.50, 0.52, 0.55], metallic: 0.4, roughness: 0.5 },
+  robotArm: { albedo: [0.85, 0.55, 0.10], metallic: 0.7, roughness: 0.25, emissive: [0.03, 0.01, 0.0] },
+  waferCassette: { albedo: [0.25, 0.25, 0.30], metallic: 0.3, roughness: 0.6 },
+};
 
 export interface LoadedEquipment {
   meshes: Map<string, BABYLON.AbstractMesh>;
@@ -146,8 +154,18 @@ export async function loadEquipmentGLBs(
             root.scaling.setAll(scale);
           }
 
-          // Add shadow casters
+          // Apply colored PBR materials — replace bland/white GLB materials
+          const palette = EQUIPMENT_COLORS[placement.assetKey];
           for (const mesh of childMeshes) {
+            const mat = new BABYLON.PBRMaterial(`${placement.label}_mat_${mesh.name}`, scene);
+            mat.albedoColor = new BABYLON.Color3(...palette.albedo);
+            mat.metallic = palette.metallic;
+            mat.roughness = palette.roughness;
+            if (palette.emissive) {
+              mat.emissiveColor = new BABYLON.Color3(...palette.emissive);
+            }
+            mat.freeze();
+            mesh.material = mat;
             shadowGen.addShadowCaster(mesh);
             mesh.receiveShadows = true;
           }
@@ -175,8 +193,15 @@ export interface LoadedCharacter {
   allMeshes: BABYLON.AbstractMesh[];
 }
 
+// PBR suit colors per variant (Meshy preview models have no texture)
+const SUIT_COLORS: Record<string, { albedo: [number, number, number]; emissive?: [number, number, number] }> = {
+  base: { albedo: [0.88, 0.90, 0.92] }, // white cleanroom suit
+  blue: { albedo: [0.35, 0.55, 0.80], emissive: [0.01, 0.02, 0.05] }, // blue cleanroom suit
+};
+
 /**
- * Load a character GLB (base or blue suit) with AR glasses attached to head.
+ * Load a character GLB (base or blue suit) with AR glasses baked into the model.
+ * Applies suit color tinting and grounds the model at Y=0.
  */
 export async function loadCharacterGLB(
   scene: BABYLON.Scene,
@@ -190,20 +215,7 @@ export async function loadCharacterGLB(
   const root = charResult.meshes[0] as unknown as BABYLON.TransformNode;
   const allMeshes = [...charResult.meshes];
 
-  // Load AR glasses and attach at fixed head position
-  try {
-    const glassesPath = BASE_PATH + ASSET_PATHS.accessory.arGlasses;
-    const glassesResult = await BABYLON.SceneLoader.ImportMeshAsync(null, '', glassesPath, scene);
-    const glassesRoot = glassesResult.meshes[0];
-    glassesRoot.parent = root;
-    glassesRoot.position = new BABYLON.Vector3(0, 1.6, 0.08);
-    glassesRoot.scaling = new BABYLON.Vector3(0.6, 0.6, 0.6);
-    allMeshes.push(...glassesResult.meshes);
-  } catch {
-    console.warn(`[surveillance] AR glasses not available for ${variant}`);
-  }
-
-  // Scale character to ~1.7m height
+  // Scale character to ~1.7m height and ground the model
   const childMeshes = root.getChildMeshes();
   if (childMeshes.length > 0) {
     root.computeWorldMatrix(true);
@@ -219,6 +231,31 @@ export async function loadCharacterGLB(
     if (currentHeight > 0 && Math.abs(currentHeight - 1.7) > 0.3) {
       const scale = 1.7 / currentHeight;
       root.scaling.scaleInPlace(scale);
+    }
+    // Recompute after scaling to ground the feet at Y=0
+    root.computeWorldMatrix(true);
+    let groundMinY = Infinity;
+    for (const mesh of childMeshes) {
+      mesh.computeWorldMatrix(true);
+      const bi = mesh.getBoundingInfo();
+      groundMinY = Math.min(groundMinY, bi.boundingBox.minimumWorld.y);
+    }
+    if (Math.abs(groundMinY) > 0.05) {
+      root.position.y = -groundMinY;
+    }
+
+    // Apply suit color tint (Meshy preview models are untextured gray)
+    const colors = SUIT_COLORS[variant] ?? SUIT_COLORS.base;
+    for (const mesh of childMeshes) {
+      const mat = new BABYLON.PBRMaterial(`suit_${variant}_${mesh.name}`, scene);
+      mat.albedoColor = new BABYLON.Color3(...colors.albedo);
+      mat.metallic = 0.05;
+      mat.roughness = 0.7;
+      if (colors.emissive) {
+        mat.emissiveColor = new BABYLON.Color3(...colors.emissive);
+      }
+      mat.freeze();
+      mesh.material = mat;
     }
   }
 

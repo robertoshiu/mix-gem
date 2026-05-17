@@ -79,14 +79,15 @@ export default function SurveillancePage() {
 
 const gridStyles = `
 .surveillance-page {
-  position: fixed;
-  inset: 0;
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 100px);
   background: #000;
   overflow: hidden;
 }
 
 .loading-overlay {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 200;
   display: flex;
@@ -111,8 +112,8 @@ const gridStyles = `
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   grid-template-rows: 1fr 1fr 1fr;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   gap: 2px;
   background: #111;
 }
@@ -201,7 +202,7 @@ const gridStyles = `
 }
 
 .alert-panel {
-  position: fixed;
+  position: absolute;
   top: 12px;
   right: 12px;
   width: 320px;

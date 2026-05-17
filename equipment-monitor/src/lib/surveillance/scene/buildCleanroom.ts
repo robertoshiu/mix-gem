@@ -92,10 +92,10 @@ function buildFloor(scene: Scene): void {
 
 function buildCeiling(scene: Scene): void {
   const ceilMat = new PBRMaterial('ceilMat', scene);
-  ceilMat.albedoColor = new Color3(0.4, 0.42, 0.45);
+  ceilMat.albedoColor = new Color3(0.15, 0.16, 0.18);
   ceilMat.metallic = 0.0;
   ceilMat.roughness = 0.9;
-  ceilMat.alpha = 0.85;
+  ceilMat.alpha = 0.15;
   ceilMat.freeze();
 
   const tile = MeshBuilder.CreateBox('ceilTile', {

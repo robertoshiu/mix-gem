@@ -43,7 +43,7 @@ const route01: PatrolRoute = {
   ],
 };
 
-// ENG-02: North-half central aisle — 1.5m clearance from all equipment
+// ENG-02: North-half central aisle — 2m+ clearance from all equipment
 const route02: PatrolRoute = {
   id: 'ENG-02',
   name: '李佩芳',
@@ -51,31 +51,31 @@ const route02: PatrolRoute = {
   walkSpeed: 0.85,
   waypoints: [
     { position: new Vector3(-2, 0, 7), pauseDuration: 3 },
-    { position: new Vector3(-2, 0, 3), pauseDuration: 4 },
-    { position: new Vector3(2, 0, 6), pauseDuration: 2 },
-    { position: new Vector3(6, 0, 6), pauseDuration: 3 },
-    { position: new Vector3(6, 0, 2), pauseDuration: 2 },
-    { position: new Vector3(2, 0, 0), pauseDuration: 3 },
-    { position: new Vector3(-2, 0, 0), pauseDuration: 2 },
+    { position: new Vector3(-2, 0, 1), pauseDuration: 4 },
+    { position: new Vector3(2, 0, 7), pauseDuration: 2 },
+    { position: new Vector3(7, 0, 7), pauseDuration: 3 },
+    { position: new Vector3(7, 0, 0), pauseDuration: 2 },
+    { position: new Vector3(2, 0, -2), pauseDuration: 3 },
+    { position: new Vector3(-2, 0, -2), pauseDuration: 2 },
     { position: new Vector3(-2, 0, 5), pauseDuration: 2 },
   ],
 };
 
-// ENG-03: South-half corridor — 1.5m clearance from all equipment
+// ENG-03: South-half corridor — 2m+ clearance from all equipment
 const route03: PatrolRoute = {
   id: 'ENG-03',
   name: '陳大偉',
   suitVariant: 'blue',
   walkSpeed: 1.15,
   waypoints: [
-    { position: new Vector3(-7, 0, -4), pauseDuration: 3 },
-    { position: new Vector3(-2, 0, -4), pauseDuration: 2 },
-    { position: new Vector3(2, 0, -4), pauseDuration: 3 },
-    { position: new Vector3(6, 0, -4), pauseDuration: 2 },
-    { position: new Vector3(6, 0, -8), pauseDuration: 2 },
-    { position: new Vector3(2, 0, -8), pauseDuration: 2 },
-    { position: new Vector3(-2, 0, -8), pauseDuration: 2 },
-    { position: new Vector3(-7, 0, -8), pauseDuration: 2 },
+    { position: new Vector3(-7, 0, -3.5), pauseDuration: 3 },
+    { position: new Vector3(-2, 0, -3.5), pauseDuration: 2 },
+    { position: new Vector3(2, 0, -3.5), pauseDuration: 3 },
+    { position: new Vector3(6, 0, -1), pauseDuration: 2 },
+    { position: new Vector3(10, 0, -1), pauseDuration: 2 },
+    { position: new Vector3(10, 0, -9), pauseDuration: 2 },
+    { position: new Vector3(2, 0, -9), pauseDuration: 2 },
+    { position: new Vector3(-7, 0, -9), pauseDuration: 2 },
   ],
 };
 
