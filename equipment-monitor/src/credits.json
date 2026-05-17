@@ -2,12 +2,13 @@
   "assets": [
     {
       "id": "ar_glasses",
-      "title": "AI Generated: Microsoft HoloLens 2 mixed reality headset, sleek black viso",
-      "author": "Meshy AI",
-      "sourceUrl": "https://www.meshy.ai",
-      "license": "Meshy-Commercial",
-      "licenseUrl": "https://www.meshy.ai/terms",
-      "downloadDate": "2026-05-16"
+      "title": "Glasses 3D Model",
+      "author": "Quaternius",
+      "sourceUrl": "https://www.get3dmodels.com/tools-and-gadgets/glasses/",
+      "license": "CC0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "downloadDate": "2026-05-17",
+      "notes": "882 triangles, 40KB. Replaces oversized 3.4MB Meshy model that caused half-body rendering."
     },
     {
       "id": "cleanroom_hdri",

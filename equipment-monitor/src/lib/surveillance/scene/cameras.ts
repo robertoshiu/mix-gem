@@ -5,7 +5,7 @@
  * Layout:
  *   [0] EFEM 通道    [1] 俯視全景     [2] NE 走廊
  *   [3] 微影區遠景   [4] AR 主視角    [5] 化學品特寫
- *   [6] 設備區       [7] 中央設備近景  [8] 出入口
+ *   [6] 設備區       [7] 中央設備近景  [8] 北側走廊
  */
 import { Scene } from '@babylonjs/core/scene';
 import { FreeCamera } from '@babylonjs/core/Cameras/freeCamera';
@@ -88,11 +88,11 @@ export function setupCameras(scene: Scene, engine: Engine, canvases: HTMLCanvasE
   camCentralBay.fov = FOV_TIGHT;
   cameras.push(camCentralBay);
 
-  // [8] 出入口 — entrance/exit at south side
-  const camEntrance = new FreeCamera('cam-entrance', new Vector3(0, 4, -12), scene);
-  camEntrance.setTarget(new Vector3(0, 1, -8));
-  camEntrance.fov = FOV_TIGHT;
-  cameras.push(camEntrance);
+  // [8] 北側走廊 — north corridor looking inward toward process bays
+  const camNorth = new FreeCamera('cam-north-corridor', new Vector3(0, 1.6, 10), scene);
+  camNorth.setTarget(new Vector3(0, 1.2, 4));
+  camNorth.fov = FOV_WIDE;
+  cameras.push(camNorth);
 
   // Register views — each canvas gets its own camera
   const views = canvases.map((canvas, i) => {

@@ -263,6 +263,8 @@ export async function loadCharacterGLB(
   }
 
   // Load and attach AR glasses at eye level
+  // Model: Quaternius glasses (882 tri, 40KB, public domain)
+  // Raw bounding box ~2.06 units wide — scale to ~0.15m on the character
   let headNode: BABYLON.TransformNode | null = null;
   try {
     const glassesPath = BASE_PATH + ASSET_PATHS.accessory.arGlasses;
@@ -272,14 +274,23 @@ export async function loadCharacterGLB(
     // Parent glasses to character root
     glassesRoot.parent = root;
 
-    // Position at eye level (~94% of 1.7m = ~1.6m) relative to grounded root
-    // Account for root.position.y offset (foot grounding)
-    const eyeHeight = 1.6 - root.position.y;
-    // Glasses need inverse of root scaling to maintain their own size
+    // Position at eye level (~94% of 1.7m height) in root-local coords
     const rootScale = root.scaling.x || 1;
-    const glassesScale = 0.15 / rootScale; // ~15cm wide glasses in world units
+    const glassesScale = 0.073 / rootScale; // 0.15m / 2.06 raw units
     glassesRoot.scaling.setAll(glassesScale);
-    glassesRoot.position.set(0, eyeHeight / rootScale, 0.05 / rootScale);
+    const eyeLocalY = (1.6 - root.position.y) / rootScale;
+    glassesRoot.position.set(0, eyeLocalY, 0.06 / rootScale);
+
+    // Apply AR-tech material — cyan emissive tint on translucent dark frame
+    for (const mesh of glassesRoot.getChildMeshes()) {
+      const mat = new BABYLON.PBRMaterial(`arGlass_${mesh.name}`, scene);
+      mat.albedoColor = new BABYLON.Color3(0.08, 0.12, 0.15);
+      mat.metallic = 0.8;
+      mat.roughness = 0.15;
+      mat.emissiveColor = new BABYLON.Color3(0.0, 0.25, 0.3);
+      mat.freeze();
+      mesh.material = mat;
+    }
 
     headNode = glassesRoot;
     allMeshes.push(...glassesResult.meshes);

@@ -6,7 +6,7 @@ import { initSurveillanceScene } from '@/lib/surveillance/main';
 const CAMERA_LABELS = [
   'EFEM 通道', '俯視全景', 'NE 走廊',
   '微影區遠景', 'AR 主視角', '化學品特寫',
-  '設備區', '中央設備近景', '出入口',
+  '設備區', '中央設備近景', '北側走廊',
 ];
 
 export default function SurveillancePage() {
