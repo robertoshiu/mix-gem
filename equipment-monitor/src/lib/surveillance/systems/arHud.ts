@@ -29,6 +29,8 @@ interface LabelMarker {
   text: TextBlock;
 }
 
+const AR_HUD_LAYER_MASK = 0x10000000;
+
 export function createArHud(
   scene: Scene,
   equipment: LoadedEquipment,
@@ -36,10 +38,15 @@ export function createArHud(
   const ui = AdvancedDynamicTexture.CreateFullscreenUI('arHud', true, scene);
   ui.idealWidth = 640;
   ui.idealHeight = 480;
+  ui.rootContainer.isVisible = false;
+  if (ui.layer) {
+    ui.layer.layerMask = AR_HUD_LAYER_MASK;
+  }
 
   const markers: LabelMarker[] = [];
   let activeCamera: FreeCamera | null = null;
   let activeEngineerId = '';
+  let activeEngineerName = '';
   let blinkVisible = true;
   let blinkTimer = 0;
   let signalBars = 3;
@@ -201,7 +208,7 @@ export function createArHud(
     signalText.text = '|'.repeat(signalBars) + '·'.repeat(3 - signalBars);
 
     // Update engineer ID
-    idText.text = activeEngineerId ? `${activeEngineerId}` : '';
+    idText.text = activeEngineerId ? `${activeEngineerId} ${activeEngineerName}` : '';
 
     // Equipment markers — show/hide by distance, update distance text
     for (const marker of markers) {
@@ -246,19 +253,29 @@ export function createArHud(
     warningBanner.isVisible = insideZone;
   }
 
-  function setActiveEngineer(id: string, _name: string): void {
+  function setActiveEngineer(id: string, name: string): void {
+    if (activeCamera) {
+      activeCamera.layerMask &= ~AR_HUD_LAYER_MASK;
+    }
     activeEngineerId = id;
+    activeEngineerName = name;
     // Find the engineer's AR camera from the scene
     const cam = scene.cameras.find(c => c.name === `arCam_${id}`);
     if (cam && cam instanceof FreeCamera) {
       activeCamera = cam;
+      activeCamera.layerMask |= AR_HUD_LAYER_MASK;
+      ui.rootContainer.isVisible = true;
     }
   }
 
   function clearActiveEngineer(): void {
+    if (activeCamera) {
+      activeCamera.layerMask &= ~AR_HUD_LAYER_MASK;
+    }
     activeEngineerId = '';
-    // name cleared
+    activeEngineerName = '';
     activeCamera = null;
+    ui.rootContainer.isVisible = false;
     // Hide all markers
     for (const marker of markers) {
       marker.rect.isVisible = false;
