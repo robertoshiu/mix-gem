@@ -24,6 +24,9 @@ export const ASSET_PATHS = {
     base: '/models/character/engineer_white.glb',
     suitBlue: '/models/character/engineer_blue.glb',
   },
+  accessory: {
+    arGlasses: '/models/accessory/ar_glasses.glb',
+  },
 } as const;
 
 export type EquipmentKey = keyof typeof ASSET_PATHS.equipment;
@@ -200,8 +203,8 @@ const SUIT_COLORS: Record<string, { albedo: [number, number, number]; emissive?:
 };
 
 /**
- * Load a character GLB (base or blue suit) with AR glasses baked into the model.
- * Applies suit color tinting and grounds the model at Y=0.
+ * Load a character GLB (base or blue suit), attach separate AR glasses accessory,
+ * apply suit color tinting, and ground the model at Y=0.
  */
 export async function loadCharacterGLB(
   scene: BABYLON.Scene,
@@ -259,5 +262,30 @@ export async function loadCharacterGLB(
     }
   }
 
-  return { root, headNode: null, allMeshes };
+  // Load and attach AR glasses at eye level
+  let headNode: BABYLON.TransformNode | null = null;
+  try {
+    const glassesPath = BASE_PATH + ASSET_PATHS.accessory.arGlasses;
+    const glassesResult = await BABYLON.SceneLoader.ImportMeshAsync(null, '', glassesPath, scene);
+    const glassesRoot = glassesResult.meshes[0] as unknown as BABYLON.TransformNode;
+
+    // Parent glasses to character root
+    glassesRoot.parent = root;
+
+    // Position at eye level (~94% of 1.7m = ~1.6m) relative to grounded root
+    // Account for root.position.y offset (foot grounding)
+    const eyeHeight = 1.6 - root.position.y;
+    // Glasses need inverse of root scaling to maintain their own size
+    const rootScale = root.scaling.x || 1;
+    const glassesScale = 0.15 / rootScale; // ~15cm wide glasses in world units
+    glassesRoot.scaling.setAll(glassesScale);
+    glassesRoot.position.set(0, eyeHeight / rootScale, 0.05 / rootScale);
+
+    headNode = glassesRoot;
+    allMeshes.push(...glassesResult.meshes);
+  } catch (e) {
+    console.warn('[surveillance] AR glasses not loaded:', (e as Error).message);
+  }
+
+  return { root, headNode, allMeshes };
 }
