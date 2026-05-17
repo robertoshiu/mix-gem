@@ -3,9 +3,9 @@
  * Uses engine.registerView() to render same scene through multiple cameras.
  *
  * Layout:
- *   [0] EFEM 通道    [1] 俯視全景     [2] NE 走廊
+ *   [0] 西側走廊     [1] 俯視全景     [2] NE 走廊
  *   [3] 微影區遠景   [4] AR 主視角    [5] 化學品特寫
- *   [6] 設備區       [7] 中央設備近景  [8] 北側走廊
+ *   [6] 設備區       [7] 中央設備近景  [8] 出入口
  */
 import { Scene } from '@babylonjs/core/scene';
 import { FreeCamera } from '@babylonjs/core/Cameras/freeCamera';
@@ -35,11 +35,11 @@ export interface CameraGrid {
 export function setupCameras(scene: Scene, engine: Engine, canvases: HTMLCanvasElement[]): CameraGrid {
   const cameras: Camera[] = [];
 
-  // [0] EFEM 通道 — eye-level shot down the EFEM/wafer handling corridor (south-west)
-  const camEfem = new FreeCamera('cam-efem-corridor', new Vector3(-6, 1.6, -4), scene);
-  camEfem.setTarget(new Vector3(-4, 1.2, -6));
-  camEfem.fov = FOV_WIDE;
-  cameras.push(camEfem);
+  // [0] 西側走廊 — high oblique along west wall, distinct from the south entrance view
+  const camWest = new FreeCamera('cam-west-corridor', new Vector3(-14, 2.4, 7), scene);
+  camWest.setTarget(new Vector3(-13, 1.2, -4));
+  camWest.fov = 0.95;
+  cameras.push(camWest);
 
   // [1] 俯視全景 — full fab bird's-eye (orthographic)
   const camBirdEye = new FreeCamera('cam-birdeye', new Vector3(0, 22, 0), scene);
@@ -88,11 +88,11 @@ export function setupCameras(scene: Scene, engine: Engine, canvases: HTMLCanvasE
   camCentralBay.fov = FOV_TIGHT;
   cameras.push(camCentralBay);
 
-  // [8] 北側走廊 — north corridor looking inward toward process bays
-  const camNorth = new FreeCamera('cam-north-corridor', new Vector3(0, 1.6, 10), scene);
-  camNorth.setTarget(new Vector3(0, 1.2, 4));
-  camNorth.fov = FOV_WIDE;
-  cameras.push(camNorth);
+  // [8] 出入口 — south-east entrance checkpoint, opposite corner from cell 0
+  const camEntrance = new FreeCamera('cam-south-entrance', new Vector3(13, 2.0, -10), scene);
+  camEntrance.setTarget(new Vector3(7, 1.1, -8));
+  camEntrance.fov = FOV_TIGHT;
+  cameras.push(camEntrance);
 
   // Register views — each canvas gets its own camera
   const views = canvases.map((canvas, i) => {
