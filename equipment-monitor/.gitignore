@@ -40,3 +40,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 3D assets (large equipment models re-fetched by npm run assets:refresh)
+/public/models/equipment/*.glb
+# Character + accessory GLBs are tracked (small, needed for GitHub Pages)
+# /public/models/character/*.glb
+# /public/models/accessory/*.glb
+/public/env/*.env
+/vendor/grabcad/*.step
+/CREDITS.md
