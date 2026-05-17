@@ -18,6 +18,7 @@ export interface EngineerAgent {
   root: TransformNode;
   arCamera: FreeCamera;
   position: Vector3;
+  heading: number; // travel direction in radians
   state: AgentState;
   currentWaypointIndex: number;
   update(dt: number): void;
@@ -56,6 +57,7 @@ export function createEngineerAgent(
   let pauseTimer = route.waypoints[0].pauseDuration;
   let state: AgentState = 'idle';
   let walkTime = 0; // Accumulator for walk bob
+  let travelHeading = 0; // radians — direction of travel
   let currentTarget: Vector3 = applyJitter(route.waypoints[1].position);
 
   function getSegmentLength(): number {
@@ -117,24 +119,26 @@ export function createEngineerAgent(
         // Rotation swing (subtle lean)
         root.rotation.z = Math.sin(walkTime * BOB_FREQUENCY * Math.PI * 0.5) * SWING_AMPLITUDE;
 
-        // Face direction
+        // Face direction of travel
         const dir = currentTarget.subtract(from);
         if (dir.length() > 0.01) {
-          root.rotation.y = Math.atan2(dir.x, dir.z);
+          travelHeading = Math.atan2(dir.x, dir.z);
+          root.rotation.y = travelHeading;
         }
       }
     }
 
-    // Sync AR camera to fixed eye position (no head bone dependency)
-    const fwd = Math.sin(root.rotation.y);
-    const fwdZ = Math.cos(root.rotation.y);
-    arCamera.position.set(
-      root.position.x + fwd * 0.15,
-      1.55,
-      root.position.z + fwdZ * 0.15,
-    );
-    arCamera.rotation.y = root.rotation.y;
-    arCamera.rotation.x = -0.05;
+    // Sync AR camera — use setTarget for unambiguous forward direction
+    const fwdX = Math.sin(travelHeading);
+    const fwdZ = Math.cos(travelHeading);
+    const eyeX = root.position.x + fwdX * 0.15;
+    const eyeZ = root.position.z + fwdZ * 0.15;
+    arCamera.position.set(eyeX, 1.55, eyeZ);
+    arCamera.setTarget(new Vector3(
+      eyeX + fwdX * 5,
+      1.45,
+      eyeZ + fwdZ * 5,
+    ));
   }
 
   function dispose(): void {
@@ -148,6 +152,7 @@ export function createEngineerAgent(
     root,
     arCamera,
     get position() { return new Vector3(root.position.x, 0, root.position.z); },
+    get heading() { return travelHeading; },
     get state() { return state; },
     get currentWaypointIndex() { return currentIndex; },
     update,

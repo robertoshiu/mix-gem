@@ -16,7 +16,7 @@ export interface PatrolRoute {
 /**
  * Add random lateral offset to a waypoint position for natural movement.
  */
-export function applyJitter(pos: Vector3, amount: number = 0.3): Vector3 {
+export function applyJitter(pos: Vector3, amount: number = 0.15): Vector3 {
   const jitterX = (Math.random() - 0.5) * 2 * amount;
   const jitterZ = (Math.random() - 0.5) * 2 * amount;
   return new Vector3(pos.x + jitterX, pos.y, pos.z + jitterZ);
@@ -62,6 +62,8 @@ const route02: PatrolRoute = {
 };
 
 // ENG-03: South-half corridor — 2m+ clearance from all equipment
+// Route loops through south gap (Z=-3.5), east perimeter (X=13),
+// south wall (Z=-8.5), then back west. Avoids EFEM-02/CHEM-01 at X=11.
 const route03: PatrolRoute = {
   id: 'ENG-03',
   name: '陳大偉',
@@ -69,13 +71,11 @@ const route03: PatrolRoute = {
   walkSpeed: 1.15,
   waypoints: [
     { position: new Vector3(-7, 0, -3.5), pauseDuration: 3 },
-    { position: new Vector3(-2, 0, -3.5), pauseDuration: 2 },
-    { position: new Vector3(2, 0, -3.5), pauseDuration: 3 },
-    { position: new Vector3(6, 0, -1), pauseDuration: 2 },
-    { position: new Vector3(10, 0, -1), pauseDuration: 2 },
-    { position: new Vector3(10, 0, -9), pauseDuration: 2 },
-    { position: new Vector3(2, 0, -9), pauseDuration: 2 },
-    { position: new Vector3(-7, 0, -9), pauseDuration: 2 },
+    { position: new Vector3(5, 0, -3.5), pauseDuration: 2 },
+    { position: new Vector3(13, 0, -3.5), pauseDuration: 2 },
+    { position: new Vector3(13, 0, -8.5), pauseDuration: 2 },
+    { position: new Vector3(5, 0, -8.5), pauseDuration: 2 },
+    { position: new Vector3(-7, 0, -8.5), pauseDuration: 2 },
   ],
 };
 

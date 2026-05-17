@@ -10,6 +10,7 @@ import { setupCameras } from './scene/cameras';
 import { createEngineerAgent, type EngineerAgent } from './scene/engineerAgent';
 import { createAlertSystem } from './systems/alertSystem';
 import { createArHud } from './systems/arHud';
+import { createEngineerLabels } from './systems/engineerLabels';
 import { loadCharacterGLB } from './config/assets';
 import { patrolRoutes } from './config/patrol';
 
@@ -62,6 +63,10 @@ export async function initSurveillanceScene(canvases: HTMLCanvasElement[]): Prom
   }
 
   console.log(`[surveillance] ${engineers.length} engineers loaded`);
+
+  // Engineer name labels (floating above each character)
+  const suitVariants = new Map(patrolRoutes.map(r => [r.id, r.suitVariant]));
+  const engineerLabels = createEngineerLabels(scene, engineers, suitVariants);
 
   // Set first engineer as default AR view for cell 4
   if (engineers.length > 0) {
@@ -182,6 +187,7 @@ export async function initSurveillanceScene(canvases: HTMLCanvasElement[]): Prom
   return () => {
     window.removeEventListener('resize', onResize);
     engine.stopRenderLoop();
+    engineerLabels.dispose();
     arHud.dispose();
     alertSystem.dispose();
     for (const engineer of engineers) {
