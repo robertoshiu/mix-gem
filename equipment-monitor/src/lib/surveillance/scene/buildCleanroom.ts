@@ -63,9 +63,9 @@ function buildFloor(scene: Scene): void {
   floorMat.freeze();
 
   const tile = MeshBuilder.CreateBox('floorTile', {
-    width: TILE_SIZE - 0.02,
+    width: TILE_SIZE,
     height: 0.05,
-    depth: TILE_SIZE - 0.02,
+    depth: TILE_SIZE,
   }, scene);
   tile.material = floorMat;
   tile.receiveShadows = true;
@@ -100,9 +100,9 @@ function buildCeiling(scene: Scene): void {
   ceilMat.freeze();
 
   const tile = MeshBuilder.CreateBox('ceilTile', {
-    width: TILE_SIZE - 0.02,
+    width: TILE_SIZE,
     height: 0.08,
-    depth: TILE_SIZE - 0.02,
+    depth: TILE_SIZE,
   }, scene);
   tile.material = ceilMat;
   tile.isVisible = false;

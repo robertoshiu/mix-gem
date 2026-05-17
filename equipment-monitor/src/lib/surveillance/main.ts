@@ -30,13 +30,15 @@ export async function initSurveillanceScene(canvases: HTMLCanvasElement[]): Prom
 
   const scene = new Scene(engine);
   scene.skipPointerMovePicking = true;
-  scene.blockMaterialDirtyMechanism = true;
+  // NOTE: Do NOT use blockMaterialDirtyMechanism with animated materials
+  // (zone emissive pulse) — it causes stale renders across multi-view canvases.
 
   // Build static environment + load equipment GLBs
   const { equipment, shadowGenerator } = await buildCleanroom(scene);
 
   // Setup 9 cameras + multi-view
   const cameraGrid = setupCameras(scene, engine, canvases);
+  scene.activeCamera = cameraGrid.cameras[0];
 
   // Load characters and create engineer agents
   const engineers: EngineerAgent[] = [];
@@ -123,36 +125,40 @@ export async function initSurveillanceScene(canvases: HTMLCanvasElement[]): Prom
     }
   };
 
-  // Render loop — capped at 30fps
-  let lastRender = 0;
+  // Render loop — simulation capped at 30fps, rendering at full rAF rate
+  // IMPORTANT: scene.render() must run every frame for multi-view canvases.
+  // Skipping it causes blank frames (preserveDrawingBuffer=false + 9 canvases).
+  let lastSim = 0;
   let wasARSwapped = false;
 
   engine.runRenderLoop(() => {
     const now = performance.now();
-    if (now - lastRender < FRAME_TIME) return;
-    lastRender = now;
 
-    const dt = scene.getEngine().getDeltaTime() / 1000;
+    // Simulation updates at 30fps
+    if (now - lastSim >= FRAME_TIME) {
+      lastSim = now;
+      const dt = scene.getEngine().getDeltaTime() / 1000;
 
-    // Update engineers
-    for (const engineer of engineers) {
-      engineer.update(dt);
+      // Update engineers
+      for (const engineer of engineers) {
+        engineer.update(dt);
+      }
+
+      // Alert system checks all engineers
+      alertSystem.update(engineers);
+
+      // AR HUD update (only when swap is active)
+      if (cameraGrid.isARSwapped) {
+        arHud.update();
+        wasARSwapped = true;
+      } else if (wasARSwapped) {
+        // Just reverted — clean up HUD state
+        patchedRevertCheck();
+        wasARSwapped = false;
+      }
     }
 
-    // Alert system checks all engineers
-    alertSystem.update(engineers);
-
-    // AR HUD update (only when swap is active)
-    if (cameraGrid.isARSwapped) {
-      arHud.update();
-      wasARSwapped = true;
-    } else if (wasARSwapped) {
-      // Just reverted — clean up HUD state
-      patchedRevertCheck();
-      wasARSwapped = false;
-    }
-
-    // Render all viewports
+    // Render all viewports every frame (required for multi-view stability)
     scene.render();
   });
 
