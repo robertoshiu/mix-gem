@@ -1,137 +1,156 @@
 /**
- * Engineer patrol agent — walks a waypoint route at constant speed,
- * rotates to face travel direction, pauses at each waypoint.
- * Exposes position for zone-check and AR camera attachment.
+ * Engineer patrol agent — GLB-based character that walks waypoint routes.
+ * Supports multiple agents with independent patrol state and AR head cameras.
+ * Procedural walk bob for realism without skeletal animation.
  */
-import { Scene } from '@babylonjs/core/scene';
-import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
-import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
-import { Color3 } from '@babylonjs/core/Maths/math.color';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
-import { Mesh } from '@babylonjs/core/Meshes/mesh';
+import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { FreeCamera } from '@babylonjs/core/Cameras/freeCamera';
-import { patrolPath, WALK_SPEED } from '../config/patrol';
+import { Scene } from '@babylonjs/core/scene';
+import { type PatrolRoute, applyJitter } from '../config/patrol';
+import type { LoadedCharacter } from '../config/assets';
 
 export type AgentState = 'walking' | 'idle';
 
 export interface EngineerAgent {
-  mesh: Mesh;
+  id: string;
+  name: string;
+  root: TransformNode;
+  arCamera: FreeCamera;
   position: Vector3;
   state: AgentState;
   currentWaypointIndex: number;
   update(dt: number): void;
-  attachARCamera(camera: FreeCamera): void;
+  dispose(): void;
 }
 
-export function createEngineerAgent(scene: Scene): EngineerAgent {
-  // Capsule body
-  const body = MeshBuilder.CreateCapsule('engineer_body', {
-    height: 1.7,
-    radius: 0.25,
-  }, scene);
-  body.position = patrolPath[0].position.clone();
-  body.position.y = 0.85; // half height
+// Walk bob parameters
+const BOB_AMPLITUDE = 0.03; // meters
+const BOB_FREQUENCY = 4.0;  // Hz (2 steps per second = 4 half-cycles)
+const SWING_AMPLITUDE = 0.087; // ~5 degrees in radians
 
-  const bodyMat = new StandardMaterial('engineerMat', scene);
-  bodyMat.diffuseColor = new Color3(0.2, 0.4, 0.8);
-  bodyMat.emissiveColor = new Color3(0.05, 0.1, 0.2);
-  bodyMat.freeze();
-  body.material = bodyMat;
+/**
+ * Create an engineer agent from a loaded character GLB and patrol route.
+ */
+export function createEngineerAgent(
+  scene: Scene,
+  character: LoadedCharacter,
+  route: PatrolRoute,
+): EngineerAgent {
+  const { root } = character;
 
-  // Head sphere (for AR camera attachment point)
-  const head = MeshBuilder.CreateSphere('engineer_head', { diameter: 0.3 }, scene);
-  head.parent = body;
-  head.position = new Vector3(0, 0.85, 0); // top of capsule
+  // Position at first waypoint
+  const startPos = route.waypoints[0].position.clone();
+  root.position = new Vector3(startPos.x, 0, startPos.z);
 
-  const headMat = new StandardMaterial('headMat', scene);
-  headMat.diffuseColor = new Color3(0.9, 0.75, 0.6);
-  headMat.freeze();
-  head.material = headMat;
+  // Create AR camera attached to head
+  const arCamera = new FreeCamera(`arCam_${route.id}`, Vector3.Zero(), scene);
+  arCamera.fov = 1.22; // ~70 degrees
+  arCamera.minZ = 0.1;
+  arCamera.maxZ = 50;
 
-  // State
+  // Patrol state
   let currentIndex = 0;
   let nextIndex = 1;
-  let progress = 0; // 0..1 between waypoints
-  let pauseTimer = patrolPath[0].pauseDuration;
+  let progress = 0;
+  let pauseTimer = route.waypoints[0].pauseDuration;
   let state: AgentState = 'idle';
-  let arCamera: FreeCamera | null = null;
+  let walkTime = 0; // Accumulator for walk bob
+  let currentTarget: Vector3 = applyJitter(route.waypoints[1].position);
 
   function getSegmentLength(): number {
-    const from = patrolPath[currentIndex].position;
-    const to = patrolPath[nextIndex].position;
-    return Vector3.Distance(from, to);
+    const from = route.waypoints[currentIndex].position;
+    return Vector3.Distance(from, currentTarget);
+  }
+
+  function arriveAtWaypoint(): void {
+    currentIndex = nextIndex;
+    nextIndex = (currentIndex + 1) % route.waypoints.length;
+    progress = 0;
+    state = 'idle';
+    pauseTimer = route.waypoints[currentIndex].pauseDuration;
+    walkTime = 0;
+
+    // Snap position
+    root.position.x = route.waypoints[currentIndex].position.x;
+    root.position.z = route.waypoints[currentIndex].position.z;
+    root.position.y = 0;
+
+    // Prepare next target with jitter
+    currentTarget = applyJitter(route.waypoints[nextIndex].position);
   }
 
   function update(dt: number): void {
     if (state === 'idle') {
       pauseTimer -= dt;
+      // Idle: slowly face nearest direction
       if (pauseTimer <= 0) {
         state = 'walking';
-        nextIndex = (currentIndex + 1) % patrolPath.length;
+        nextIndex = (currentIndex + 1) % route.waypoints.length;
         progress = 0;
+        currentTarget = applyJitter(route.waypoints[nextIndex].position);
       }
     } else {
       // Walking
       const segLen = getSegmentLength();
       if (segLen < 0.01) {
-        // Skip zero-length segments
         arriveAtWaypoint();
         return;
       }
 
-      const step = (WALK_SPEED * dt) / segLen;
+      const step = (route.walkSpeed * dt) / segLen;
       progress += step;
 
       if (progress >= 1) {
         arriveAtWaypoint();
       } else {
         // Interpolate position
-        const from = patrolPath[currentIndex].position;
-        const to = patrolPath[nextIndex].position;
-        const pos = Vector3.Lerp(from, to, progress);
-        body.position.x = pos.x;
-        body.position.z = pos.z;
-        body.position.y = 0.85;
+        const from = route.waypoints[currentIndex].position;
+        const pos = Vector3.Lerp(from, currentTarget, progress);
+        root.position.x = pos.x;
+        root.position.z = pos.z;
+
+        // Procedural walk bob
+        walkTime += dt;
+        root.position.y = Math.abs(Math.sin(walkTime * BOB_FREQUENCY * Math.PI)) * BOB_AMPLITUDE;
+
+        // Rotation swing (subtle lean)
+        root.rotation.z = Math.sin(walkTime * BOB_FREQUENCY * Math.PI * 0.5) * SWING_AMPLITUDE;
 
         // Face direction
-        const dir = to.subtract(from);
+        const dir = currentTarget.subtract(from);
         if (dir.length() > 0.01) {
-          body.rotation.y = Math.atan2(dir.x, dir.z);
+          root.rotation.y = Math.atan2(dir.x, dir.z);
         }
       }
     }
 
-    // Sync AR camera to head world position
-    if (arCamera) {
-      const headWorld = head.getAbsolutePosition();
-      arCamera.position.copyFrom(headWorld);
-      arCamera.rotation.y = body.rotation.y;
-    }
+    // Sync AR camera to fixed eye position (no head bone dependency)
+    const fwd = Math.sin(root.rotation.y);
+    const fwdZ = Math.cos(root.rotation.y);
+    arCamera.position.set(
+      root.position.x + fwd * 0.15,
+      1.55,
+      root.position.z + fwdZ * 0.15,
+    );
+    arCamera.rotation.y = root.rotation.y;
+    arCamera.rotation.x = -0.05;
   }
 
-  function arriveAtWaypoint(): void {
-    currentIndex = nextIndex;
-    nextIndex = (currentIndex + 1) % patrolPath.length;
-    progress = 0;
-    state = 'idle';
-    pauseTimer = patrolPath[currentIndex].pauseDuration;
-
-    // Snap position
-    body.position.x = patrolPath[currentIndex].position.x;
-    body.position.z = patrolPath[currentIndex].position.z;
-    body.position.y = 0.85;
-  }
-
-  function attachARCamera(camera: FreeCamera): void {
-    arCamera = camera;
+  function dispose(): void {
+    arCamera.dispose();
+    root.dispose();
   }
 
   return {
-    mesh: body,
-    get position() { return new Vector3(body.position.x, 0, body.position.z); },
+    id: route.id,
+    name: route.name,
+    root,
+    arCamera,
+    get position() { return new Vector3(root.position.x, 0, root.position.z); },
     get state() { return state; },
     get currentWaypointIndex() { return currentIndex; },
     update,
-    attachARCamera,
+    dispose,
   };
 }
