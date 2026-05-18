@@ -204,7 +204,7 @@ const SUIT_COLORS: Record<string, { albedo: [number, number, number]; emissive?:
 
 // Anchor at forehead level — model centering pulls the visor down to eye level
 const CHARACTER_EYE_HEIGHT_M = 1.65;
-const CHARACTER_FACE_LOCAL_Z_M = 0.08;
+const CHARACTER_FACE_LOCAL_Z_M = -0.08;
 const AR_HEADSET_TARGET_WIDTH_M = 0.22;
 
 async function loadArHeadsetGLB(
