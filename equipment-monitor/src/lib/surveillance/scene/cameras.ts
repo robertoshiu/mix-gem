@@ -35,9 +35,9 @@ export interface CameraGrid {
 export function setupCameras(scene: Scene, engine: Engine, canvases: HTMLCanvasElement[]): CameraGrid {
   const cameras: Camera[] = [];
 
-  // [0] 西側走廊特寫 — eye-level close-up of litho bay entry from west corridor
-  const camWest = new FreeCamera('cam-west-closeup', new Vector3(-11, 1.6, -1), scene);
-  camWest.setTarget(new Vector3(-9, 1.3, 1.5));
+  // [0] 機械手臂特寫 — eye-level close-up of ROBOT-01, CVD/ETCH in background
+  const camWest = new FreeCamera('cam-robot-closeup', new Vector3(-1, 1.4, 2), scene);
+  camWest.setTarget(new Vector3(2, 1.0, 2));
   camWest.fov = FOV_TIGHT;
   cameras.push(camWest);
 
