@@ -42,7 +42,7 @@ NW 走廊        俯視全景       NE 走廊
 
 1. HDRI first: `cleanroom.env` as environment texture for PBR reflections + IBL
 2. Equipment batch: All 6 equipment GLBs loaded in parallel via `SceneLoader.ImportMeshAsync`, placed at `equipmentLayout` positions. Scale to fit ~2m x 2.2m x 1.8m bounding box.
-3. Characters last: 2-3 `base.glb` instances with `ar_glasses.glb` attached to head bone
+3. Characters last: 2-3 `base.glb` instances with procedural AR-glasses geometry parented to the character root at eye height.
 
 ### Material Upgrade
 
@@ -68,7 +68,7 @@ NW 走廊        俯視全景       NE 走廊
 
 ### Personnel GLB Composition
 
-Each engineer = `base.glb` + `ar_glasses.glb` parented to head node.
+Each engineer = `base.glb` plus procedural AR glasses: clear cyan waveguide lenses, brow bar, sensor pod, and micro-projector. No external glasses GLB is loaded, avoiding sunglasses/temple-arm artifacts on the head.
 Procedural walk cycle: body Y bob +/-0.03m at 2Hz, rotation swing +/-5 degrees on stride.
 
 ## Alert UX Flow
