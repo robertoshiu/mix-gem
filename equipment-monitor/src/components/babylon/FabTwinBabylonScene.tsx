@@ -614,7 +614,7 @@ function createScene(canvas: HTMLCanvasElement, props: FabTwinBabylonSceneProps)
 export function FabTwinBabylonScene(props: FabTwinBabylonSceneProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const onAssetPickRef = useRef(props.onAssetPick);
-  onAssetPickRef.current = props.onAssetPick;
+  useEffect(() => { onAssetPickRef.current = props.onAssetPick; });
 
   const { view, mode, faultId } = props;
 
