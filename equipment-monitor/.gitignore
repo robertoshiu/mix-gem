@@ -41,8 +41,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# 3D assets (large equipment models re-fetched by npm run assets:refresh)
-/public/models/equipment/*.glb
+# 3D assets — equipment + infrastructure GLBs are tracked (optimized via gltf-transform)
 # Character + accessory GLBs are tracked (small, needed for GitHub Pages)
 # /public/models/character/*.glb
 # /public/models/accessory/*.glb

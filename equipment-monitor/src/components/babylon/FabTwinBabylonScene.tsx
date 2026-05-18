@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import * as BABYLON from '@babylonjs/core';
+import '@babylonjs/loaders/glTF';
 import type { FabTwinFaultId, FabTwinMode, FabTwinView } from '@/lib/fab-twin-data';
 import {
   FAB_TWIN_SENSORS,
@@ -183,6 +184,223 @@ function createTool(scene: BABYLON.Scene, tool: (typeof FAB_TWIN_TOOLS)[number],
   }
 }
 
+/** Map FAB_TWIN_TOOLS tool_type to existing equipment GLB filenames */
+const TOOL_GLB_MAP: Record<string, string> = {
+  lithography: '/models/equipment/lithography.glb',
+  etch: '/models/equipment/etch_chamber.glb',
+  deposition: '/models/equipment/etch_chamber.glb',
+  metrology: '/models/equipment/metrology.glb',
+  test: '/models/equipment/efem.glb',
+};
+
+const INFRA_GLB_MAP: Record<string, { path: string; scale?: number; rotationY?: number }> = {
+  'SCRUBBER-SUBFAB-01': { path: '/models/infrastructure/scrubber.glb' },
+  'PDU-A-01': { path: '/models/infrastructure/pdu.glb' },
+  'FOUP-CARRIER-A17': { path: '/models/equipment/wafer_cassette.glb', scale: 0.7 },
+  'GAS-CABINET-01': { path: '/models/infrastructure/gas_cabinet.glb' },
+};
+
+const FAB_TWIN_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? '/mix-gem';
+
+/**
+ * Background GLB upgrade: loads equipment GLBs and replaces base boxes.
+ * Preserves interactive elements (load port, service panel, clearance, collision, LOD, labels).
+ */
+async function upgradeToolsWithGLB(scene: BABYLON.Scene): Promise<void> {
+  try {
+    // Load unique GLBs as containers
+    const containers = new Map<string, BABYLON.AssetContainer>();
+    const uniquePaths = [...new Set(Object.values(TOOL_GLB_MAP))];
+
+    await Promise.all(uniquePaths.map(async (glbPath) => {
+      try {
+        const fullPath = FAB_TWIN_BASE_PATH + glbPath;
+        const container = await BABYLON.LoadAssetContainerAsync(fullPath, scene);
+        containers.set(glbPath, container);
+      } catch {
+        // GLB not available
+      }
+    }));
+
+    if (scene.isDisposed) return;
+    if (containers.size === 0) return;
+
+    for (const tool of FAB_TWIN_TOOLS) {
+      const glbPath = TOOL_GLB_MAP[tool.tool_type];
+      const container = glbPath ? containers.get(glbPath) : undefined;
+      if (!container) continue;
+
+      const group = scene.getTransformNodeByName(`${tool.tool_id}-node`);
+      if (!group) continue;
+
+      // Instance GLB under the tool group
+      const instance = container.instantiateModelsToScene(
+        (n) => `${tool.tool_id}-glb_${n}`,
+      );
+
+      for (const root of instance.rootNodes) {
+        if (root instanceof BABYLON.TransformNode) {
+          root.parent = group;
+          root.position.y = tool.sizeM[1] / 2;
+
+          // Scale to fit tool dimensions
+          const meshes = root.getChildMeshes();
+          if (meshes.length > 0) {
+            let minVec = new BABYLON.Vector3(Infinity, Infinity, Infinity);
+            let maxVec = new BABYLON.Vector3(-Infinity, -Infinity, -Infinity);
+            for (const mesh of meshes) {
+              mesh.computeWorldMatrix(true);
+              const bi = mesh.getBoundingInfo();
+              minVec = BABYLON.Vector3.Minimize(minVec, bi.boundingBox.minimumWorld);
+              maxVec = BABYLON.Vector3.Maximize(maxVec, bi.boundingBox.maximumWorld);
+            }
+            const extents = maxVec.subtract(minVec);
+            const maxDim = Math.max(extents.x, extents.y, extents.z);
+            if (maxDim > 0) {
+              const targetDim = Math.max(tool.sizeM[0], tool.sizeM[1], tool.sizeM[2]);
+              root.scaling.setAll(targetDim / maxDim);
+            }
+          }
+
+          // Apply semi-transparent PBR style matching the scene
+          const mat = createPbr(scene, `${tool.tool_id}-glb-mat`, tool.heroAsset ? '#dbeafe' : '#cbd5e1', 0.42, 0.36);
+          for (const mesh of root.getChildMeshes()) {
+            mesh.material = mat;
+            mesh.isPickable = false;
+          }
+        }
+      }
+
+      // Hide the original procedural base box (keep other interactive parts)
+      const baseBox = scene.getMeshByName(tool.tool_id);
+      if (baseBox) baseBox.isVisible = false;
+    }
+  } catch {
+    // GLBs not available — procedural fallbacks remain
+  }
+}
+
+/**
+ * Background GLB upgrade: loads infrastructure GLBs and replaces procedural geometry.
+ * Preserves metadata and picking behavior.
+ */
+async function upgradeInfrastructureWithGLB(scene: BABYLON.Scene): Promise<void> {
+  try {
+    const containers = new Map<string, BABYLON.AssetContainer>();
+    const uniquePaths = [...new Set(Object.values(INFRA_GLB_MAP).map(v => v.path))];
+
+    await Promise.all(uniquePaths.map(async (glbPath) => {
+      try {
+        const fullPath = FAB_TWIN_BASE_PATH + glbPath;
+        const container = await BABYLON.LoadAssetContainerAsync(fullPath, scene);
+        containers.set(glbPath, container);
+      } catch {
+        // GLB not available — procedural fallback remains
+      }
+    }));
+
+    if (scene.isDisposed) return;
+    if (containers.size === 0) return;
+
+    for (const [meshName, config] of Object.entries(INFRA_GLB_MAP)) {
+      const container = containers.get(config.path);
+      if (!container) continue;
+
+      const originalMesh = scene.getMeshByName(meshName);
+      if (!originalMesh) continue;
+
+      const instance = container.instantiateModelsToScene(
+        (n) => `${meshName}-glb_${n}`,
+      );
+
+      for (const root of instance.rootNodes) {
+        if (root instanceof BABYLON.TransformNode) {
+          root.parent = originalMesh.parent;
+          root.position = originalMesh.position.clone();
+          if (config.rotationY) root.rotation.y = config.rotationY;
+
+          // Scale to fit original mesh bounding box
+          const meshes = root.getChildMeshes();
+          if (meshes.length > 0) {
+            let minVec = new BABYLON.Vector3(Infinity, Infinity, Infinity);
+            let maxVec = new BABYLON.Vector3(-Infinity, -Infinity, -Infinity);
+            for (const mesh of meshes) {
+              mesh.computeWorldMatrix(true);
+              const bi = mesh.getBoundingInfo();
+              minVec = BABYLON.Vector3.Minimize(minVec, bi.boundingBox.minimumWorld);
+              maxVec = BABYLON.Vector3.Maximize(maxVec, bi.boundingBox.maximumWorld);
+            }
+            const extents = maxVec.subtract(minVec);
+            const maxDim = Math.max(extents.x, extents.y, extents.z);
+            if (maxDim > 0) {
+              const origBi = originalMesh.getBoundingInfo();
+              const origExtents = origBi.boundingBox.maximumWorld.subtract(origBi.boundingBox.minimumWorld);
+              const targetDim = Math.max(origExtents.x, origExtents.y, origExtents.z);
+              const scaleFactor = (config.scale ?? 1) * (targetDim / maxDim);
+              root.scaling.setAll(scaleFactor);
+            }
+          }
+
+          // Keep original PBR textures from the GLB (realistic industrial style)
+          for (const mesh of root.getChildMeshes()) {
+            mesh.isPickable = false;
+          }
+        }
+      }
+
+      // Hide procedural mesh but keep as fallback
+      originalMesh.isVisible = false;
+    }
+  } catch {
+    // GLBs not available — procedural fallbacks remain
+  }
+}
+
+/**
+ * Upgrade FFU ceiling instances with GLB model.
+ * Loads one GLB and replaces the instancing master mesh geometry.
+ */
+async function upgradeFFUWithGLB(scene: BABYLON.Scene): Promise<void> {
+  try {
+    const fullPath = FAB_TWIN_BASE_PATH + '/models/infrastructure/ffu.glb';
+    const container = await BABYLON.LoadAssetContainerAsync(fullPath, scene);
+    if (scene.isDisposed) return;
+
+    const master = scene.getMeshByName('FFU-MASTER-LOD0');
+    if (!master) return;
+
+    const entries = container.instantiateModelsToScene((n) => `FFU-glb_${n}`);
+    for (const root of entries.rootNodes) {
+      if (root instanceof BABYLON.TransformNode) {
+        root.parent = master;
+        root.position = BABYLON.Vector3.Zero();
+        // Scale GLB to match FFU master box (1.7 x 0.12 x 1.7)
+        const meshes = root.getChildMeshes();
+        if (meshes.length > 0) {
+          let minVec = new BABYLON.Vector3(Infinity, Infinity, Infinity);
+          let maxVec = new BABYLON.Vector3(-Infinity, -Infinity, -Infinity);
+          for (const mesh of meshes) {
+            mesh.computeWorldMatrix(true);
+            const bi = mesh.getBoundingInfo();
+            minVec = BABYLON.Vector3.Minimize(minVec, bi.boundingBox.minimumWorld);
+            maxVec = BABYLON.Vector3.Maximize(maxVec, bi.boundingBox.maximumWorld);
+          }
+          const extents = maxVec.subtract(minVec);
+          const maxDim = Math.max(extents.x, extents.y, extents.z);
+          if (maxDim > 0) {
+            root.scaling.setAll(1.7 / maxDim);
+          }
+        }
+        for (const mesh of root.getChildMeshes()) {
+          mesh.isPickable = false;
+        }
+      }
+    }
+  } catch {
+    // FFU GLB not available
+  }
+}
+
 function createInstancedCeiling(scene: BABYLON.Scene) {
   const ffuMaster = BABYLON.MeshBuilder.CreateBox('FFU-MASTER-LOD0', { width: 1.7, height: 0.12, depth: 1.7 }, scene);
   ffuMaster.material = createPbr(scene, 'ffu-pbr', '#e2e8f0', 0.34, 0.42);
@@ -242,6 +460,11 @@ function createUtilities(scene: BABYLON.Scene, faultId: FabTwinFaultId) {
   pdu.position = new BABYLON.Vector3(11, 1.25, -8.1);
   pdu.material = createPbr(scene, 'pdu-mat', '#1d4ed8', 0.36, 0.48);
   attachAssetMetadata(pdu, 'PDU-A-01', '/FAB1/L1/UTILITY_ROOM/POWER/PDU-A-01', 'power-distribution-panel', { incoming: '22.8kV -> 480V', upsPath: 'UPS-A/B redundant', breakerState: faultId === 'single-tool-down' ? 'ETCH feeder tripped' : 'closed-normal' });
+
+  const gasCabinet = BABYLON.MeshBuilder.CreateBox('GAS-CABINET-01', { width: 1.0, height: 2.0, depth: 0.8 }, scene);
+  gasCabinet.position = new BABYLON.Vector3(10, 1.05, 2.8);
+  gasCabinet.material = createPbr(scene, 'gas-cabinet-mat', '#94a3b8', 0.32, 0.52);
+  attachAssetMetadata(gasCabinet, 'GAS-CABINET-01', '/FAB1/B1/SUBFAB/GAS/GAS-CABINET-01', 'gas-cabinet', { gasTypes: ['N2', 'Ar', 'He'], pressureRange: '0-200 psi', linkedTools: ['DEP-ALD-03'] });
 
   createArrow(scene, 'REDUNDANT-POWER-PATH-A', new BABYLON.Vector3(12, 1.8, -7.8), new BABYLON.Vector3(8, 1.8, -2.8), '#60a5fa');
   createArrow(scene, 'SUPPLY-AIR-DOWNFLOW', new BABYLON.Vector3(-8, 4.35, -2), new BABYLON.Vector3(-8, 0.8, -2), faultId === 'ffu-efficiency-loss' ? '#ef4444' : '#67e8f9');
@@ -352,6 +575,10 @@ function createScene(canvas: HTMLCanvasElement, props: FabTwinBabylonSceneProps)
   FAB_TWIN_ZONES.forEach((zone) => createZone(scene, createPbr(scene, `${zone.id}-mat`, zone.color, 0.7, 0.08), zone, props.faultId));
   createInstancedCeiling(scene);
   FAB_TWIN_TOOLS.forEach((tool) => createTool(scene, tool, props.mode, props.faultId));
+  // Background: upgrade tool base boxes with GLB models when available
+  void upgradeToolsWithGLB(scene);
+  void upgradeInfrastructureWithGLB(scene);
+  void upgradeFFUWithGLB(scene);
   createUtilities(scene, props.faultId);
   createSensors(scene, props.faultId);
   createCarrierFlow(scene, props.mode, props.faultId);

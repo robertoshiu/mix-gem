@@ -29,8 +29,8 @@ export interface EngineerAgent {
 const BOB_AMPLITUDE = 0.03; // meters
 const BOB_FREQUENCY = 4.0;  // Hz (2 steps per second = 4 half-cycles)
 const SWING_AMPLITUDE = 0.087; // ~5 degrees in radians
-// The imported engineer GLBs visually face local -Z. Patrol headings use +Z as forward.
-const CHARACTER_FORWARD_YAW_OFFSET = Math.PI;
+// The imported Sketchfab engineer GLBs face local +Z. Patrol headings also use +Z.
+const CHARACTER_FORWARD_YAW_OFFSET = 0;
 
 /**
  * Create an engineer agent from a loaded character GLB and patrol route.

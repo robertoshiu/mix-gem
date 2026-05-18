@@ -12,9 +12,9 @@ const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? '/mix-gem';
 export const ASSET_PATHS = {
   hdri: '/env/cleanroom.env',
   equipment: {
-    chamber: '/models/equipment/chamber.glb',
+    chamber: '/models/equipment/etch_chamber.glb',
     efem: '/models/equipment/efem.glb',
-    stepper: '/models/equipment/stepper.glb',
+    stepper: '/models/equipment/lithography.glb',
     metrology: '/models/equipment/metrology.glb',
     spinCoater: '/models/equipment/spin_coater.glb',
     robotArm: '/models/equipment/robot_arm.glb',
@@ -114,7 +114,7 @@ export async function loadEquipmentGLBs(
   const loadPromises = uniqueKeys.map(async (key) => {
     const path = BASE_PATH + ASSET_PATHS.equipment[key];
     try {
-      const container = await BABYLON.SceneLoader.LoadAssetContainerAsync('', path, scene);
+      const container = await BABYLON.LoadAssetContainerAsync(path, scene);
       containers.set(key, container);
     } catch {
       console.warn(`[surveillance] Equipment not found: ${key}`);
@@ -202,8 +202,9 @@ const SUIT_COLORS: Record<string, { albedo: [number, number, number]; emissive?:
   blue: { albedo: [0.35, 0.55, 0.80], emissive: [0.01, 0.02, 0.05] }, // blue cleanroom suit
 };
 
-const CHARACTER_EYE_HEIGHT_M = 1.57;
-const CHARACTER_FACE_LOCAL_Z_M = -0.065;
+// Anchor at forehead level — model centering pulls the visor down to eye level
+const CHARACTER_EYE_HEIGHT_M = 1.65;
+const CHARACTER_FACE_LOCAL_Z_M = -0.08;
 const AR_HEADSET_TARGET_WIDTH_M = 0.22;
 
 async function loadArHeadsetGLB(
@@ -223,7 +224,7 @@ async function loadArHeadsetGLB(
 
   try {
     const headsetPath = BASE_PATH + ASSET_PATHS.accessory.arGlasses;
-    const headsetResult = await BABYLON.SceneLoader.ImportMeshAsync(null, '', headsetPath, scene);
+    const headsetResult = await BABYLON.ImportMeshAsync(headsetPath, scene);
     const modelRoot = new BABYLON.TransformNode(`arGlasses_${variant}_model`, scene);
 
     for (const mesh of headsetResult.meshes) {
@@ -250,7 +251,9 @@ async function loadArHeadsetGLB(
       if (extents.x > 0) {
         const scale = AR_HEADSET_TARGET_WIDTH_M / extents.x;
         modelRoot.scaling.setAll(scale);
-        modelRoot.position.set(-center.x * scale, -center.y * scale, -center.z * scale);
+        // Center X/Z but align bottom (visor) to anchor — don't center Y
+        const bottomOffset = -minVec.y * scale;
+        modelRoot.position.set(-center.x * scale, bottomOffset, -center.z * scale);
       }
     }
 
@@ -280,7 +283,7 @@ export async function loadCharacterGLB(
     ? BASE_PATH + ASSET_PATHS.character.suitBlue
     : BASE_PATH + ASSET_PATHS.character.base;
 
-  const charResult = await BABYLON.SceneLoader.ImportMeshAsync(null, '', charPath, scene);
+  const charResult = await BABYLON.ImportMeshAsync(charPath, scene);
   const root = charResult.meshes[0] as unknown as BABYLON.TransformNode;
   const allMeshes = [...charResult.meshes];
 
