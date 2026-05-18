@@ -41,6 +41,9 @@ export function createEngineerAgent(
   route: PatrolRoute,
 ): EngineerAgent {
   const { root } = character;
+  // glTF loader sets rotationQuaternion which overrides Euler .rotation — null it
+  // so that rotation.y (facing) and rotation.z (walk swing) actually take effect.
+  root.rotationQuaternion = null;
   const groundedY = root.position.y;
 
   // Position at first waypoint
