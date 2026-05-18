@@ -35,10 +35,10 @@ export interface CameraGrid {
 export function setupCameras(scene: Scene, engine: Engine, canvases: HTMLCanvasElement[]): CameraGrid {
   const cameras: Camera[] = [];
 
-  // [0] 西側走廊 — high oblique along west wall, distinct from the south entrance view
-  const camWest = new FreeCamera('cam-west-corridor', new Vector3(-14, 2.4, 7), scene);
-  camWest.setTarget(new Vector3(-13, 1.2, -4));
-  camWest.fov = 0.95;
+  // [0] 西側走廊特寫 — eye-level close-up of litho bay entry from west corridor
+  const camWest = new FreeCamera('cam-west-closeup', new Vector3(-11, 1.6, -1), scene);
+  camWest.setTarget(new Vector3(-9, 1.3, 1.5));
+  camWest.fov = FOV_TIGHT;
   cameras.push(camWest);
 
   // [1] 俯視全景 — full fab bird's-eye (orthographic)
