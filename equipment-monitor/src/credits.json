@@ -1,16 +1,6 @@
 {
   "assets": [
     {
-      "id": "ar_glasses",
-      "title": "Sunglasses Khronos",
-      "author": "Eric Chadwick / Darmstadt Graphics Group GmbH for Khronos Group 3D Commerce",
-      "sourceUrl": "https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/SunglassesKhronos",
-      "license": "CC-BY-4.0",
-      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
-      "downloadDate": "2026-05-17",
-      "notes": "Direct GLB, 371KB, real-world 15cm scale, no skeleton/character mesh. Includes Khronos/3D Commerce logos under Khronos Legal Mark Usage Guidelines."
-    },
-    {
       "id": "cleanroom_hdri",
       "title": "studio small 09",
       "author": "Poly Haven",

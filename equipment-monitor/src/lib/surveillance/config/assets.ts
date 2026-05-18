@@ -24,9 +24,6 @@ export const ASSET_PATHS = {
     base: '/models/character/engineer_white.glb',
     suitBlue: '/models/character/engineer_blue.glb',
   },
-  accessory: {
-    arGlasses: '/models/accessory/ar_glasses.glb',
-  },
 } as const;
 
 export type EquipmentKey = keyof typeof ASSET_PATHS.equipment;
@@ -202,6 +199,94 @@ const SUIT_COLORS: Record<string, { albedo: [number, number, number]; emissive?:
   blue: { albedo: [0.35, 0.55, 0.80], emissive: [0.01, 0.02, 0.05] }, // blue cleanroom suit
 };
 
+const CHARACTER_EYE_HEIGHT_M = 1.57;
+const CHARACTER_FACE_LOCAL_Z_M = -0.065;
+
+function createArGlassesMaterial(scene: BABYLON.Scene): {
+  frame: BABYLON.PBRMaterial;
+  lens: BABYLON.PBRMaterial;
+  emitter: BABYLON.PBRMaterial;
+} {
+  const frame = new BABYLON.PBRMaterial('ar_glasses_frame_mat', scene);
+  frame.albedoColor = new BABYLON.Color3(0.02, 0.04, 0.05);
+  frame.metallic = 0.75;
+  frame.roughness = 0.22;
+  frame.emissiveColor = new BABYLON.Color3(0, 0.03, 0.04);
+  frame.freeze();
+
+  const lens = new BABYLON.PBRMaterial('ar_glasses_waveguide_mat', scene);
+  lens.albedoColor = new BABYLON.Color3(0.18, 0.88, 1);
+  lens.emissiveColor = new BABYLON.Color3(0.02, 0.45, 0.55);
+  lens.metallic = 0.05;
+  lens.roughness = 0.08;
+  lens.alpha = 0.38;
+  lens.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
+  lens.freeze();
+
+  const emitter = new BABYLON.PBRMaterial('ar_glasses_emitter_mat', scene);
+  emitter.albedoColor = new BABYLON.Color3(0.04, 0.20, 0.24);
+  emitter.emissiveColor = new BABYLON.Color3(0.0, 0.75, 0.9);
+  emitter.metallic = 0.35;
+  emitter.roughness = 0.12;
+  emitter.freeze();
+
+  return { frame, lens, emitter };
+}
+
+function createArGlassesPart(
+  scene: BABYLON.Scene,
+  parent: BABYLON.TransformNode,
+  name: string,
+  size: { width: number; height: number; depth: number },
+  position: BABYLON.Vector3,
+  material: BABYLON.Material,
+): BABYLON.Mesh {
+  const mesh = BABYLON.MeshBuilder.CreateBox(name, size, scene);
+  mesh.parent = parent;
+  mesh.position = position;
+  mesh.material = material;
+  mesh.isPickable = false;
+  mesh.receiveShadows = false;
+  return mesh;
+}
+
+function createProceduralArGlasses(
+  scene: BABYLON.Scene,
+  variant: 'base' | 'blue',
+  root: BABYLON.TransformNode,
+): BABYLON.TransformNode {
+  const rootScale = root.scaling.x || 1;
+  const anchor = new BABYLON.TransformNode(`arGlasses_${variant}`, scene);
+  anchor.parent = root;
+  anchor.scaling.setAll(1 / rootScale);
+  anchor.position.set(
+    0,
+    (CHARACTER_EYE_HEIGHT_M - root.position.y) / rootScale,
+    CHARACTER_FACE_LOCAL_Z_M / rootScale,
+  );
+
+  const { frame, lens, emitter } = createArGlassesMaterial(scene);
+
+  createArGlassesPart(scene, anchor, `arGlasses_${variant}_left_waveguide`,
+    { width: 0.052, height: 0.032, depth: 0.004 }, new BABYLON.Vector3(-0.034, 0, -0.004), lens);
+  createArGlassesPart(scene, anchor, `arGlasses_${variant}_right_waveguide`,
+    { width: 0.052, height: 0.032, depth: 0.004 }, new BABYLON.Vector3(0.034, 0, -0.004), lens);
+  createArGlassesPart(scene, anchor, `arGlasses_${variant}_brow_bar`,
+    { width: 0.155, height: 0.006, depth: 0.010 }, new BABYLON.Vector3(0, 0.024, 0), frame);
+  createArGlassesPart(scene, anchor, `arGlasses_${variant}_bridge`,
+    { width: 0.018, height: 0.008, depth: 0.010 }, new BABYLON.Vector3(0, 0.005, -0.001), frame);
+  createArGlassesPart(scene, anchor, `arGlasses_${variant}_left_temple`,
+    { width: 0.010, height: 0.010, depth: 0.070 }, new BABYLON.Vector3(-0.083, 0.004, 0.040), frame);
+  createArGlassesPart(scene, anchor, `arGlasses_${variant}_right_temple`,
+    { width: 0.010, height: 0.010, depth: 0.070 }, new BABYLON.Vector3(0.083, 0.004, 0.040), frame);
+  createArGlassesPart(scene, anchor, `arGlasses_${variant}_right_sensor_pod`,
+    { width: 0.024, height: 0.016, depth: 0.026 }, new BABYLON.Vector3(0.086, 0.006, -0.014), emitter);
+  createArGlassesPart(scene, anchor, `arGlasses_${variant}_micro_projector`,
+    { width: 0.030, height: 0.018, depth: 0.002 }, new BABYLON.Vector3(0.043, 0.006, -0.033), lens);
+
+  return anchor;
+}
+
 /**
  * Load a character GLB (base or blue suit), attach separate AR glasses accessory,
  * apply suit color tinting, and ground the model at Y=0.
@@ -262,36 +347,7 @@ export async function loadCharacterGLB(
     }
   }
 
-  // Load and attach AR glasses at eye level. The Khronos sample is modeled in meters
-  // (~15cm wide), so only compensate for the character root scale.
-  let headNode: BABYLON.TransformNode | null = null;
-  try {
-    const glassesPath = BASE_PATH + ASSET_PATHS.accessory.arGlasses;
-    const glassesResult = await BABYLON.SceneLoader.ImportMeshAsync(null, '', glassesPath, scene);
-
-    const glassesAnchor = new BABYLON.TransformNode(`arGlasses_${variant}`, scene);
-    glassesAnchor.parent = root;
-
-    const rootScale = root.scaling.x || 1;
-    glassesAnchor.scaling.setAll(1 / rootScale);
-    glassesAnchor.position.set(0, (1.57 - root.position.y) / rootScale, 0.07 / rootScale);
-
-    for (const mesh of glassesResult.meshes) {
-      mesh.isPickable = false;
-      mesh.receiveShadows = false;
-      if (!mesh.parent) {
-        mesh.parent = glassesAnchor;
-      }
-    }
-
-    for (const group of glassesResult.animationGroups) {
-      group.stop();
-    }
-
-    headNode = glassesAnchor;
-  } catch (e) {
-    console.warn('[surveillance] AR glasses not loaded:', (e as Error).message);
-  }
+  const headNode = createProceduralArGlasses(scene, variant, root);
 
   return { root, headNode, allMeshes };
 }
