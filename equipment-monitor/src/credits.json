@@ -1,6 +1,16 @@
 {
   "assets": [
     {
+      "id": "ar_glasses",
+      "title": "AI Generated: Sleek Black VR Headset",
+      "author": "Meshy AI",
+      "sourceUrl": "https://www.meshy.ai",
+      "license": "Meshy-Commercial",
+      "licenseUrl": "https://www.meshy.ai/terms",
+      "downloadDate": "2026-05-18",
+      "notes": "Local GLB copied from Meshy_AI_Sleek_Black_VR_Headset.glb and normalized at runtime as the surveillance AR headset accessory."
+    },
+    {
       "id": "cleanroom_hdri",
       "title": "studio small 09",
       "author": "Poly Haven",
