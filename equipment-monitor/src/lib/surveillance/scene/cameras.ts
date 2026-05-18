@@ -3,7 +3,7 @@
  * Uses engine.registerView() to render same scene through multiple cameras.
  *
  * Layout:
- *   [0] 西側走廊     [1] 俯視全景     [2] NE 走廊
+ *   [0] 機械手臂特寫 [1] 俯視全景     [2] NE 走廊
  *   [3] 微影區遠景   [4] AR 主視角    [5] 化學品特寫
  *   [6] 設備區       [7] 中央設備近景  [8] 出入口
  */
@@ -35,10 +35,12 @@ export interface CameraGrid {
 export function setupCameras(scene: Scene, engine: Engine, canvases: HTMLCanvasElement[]): CameraGrid {
   const cameras: Camera[] = [];
 
-  // [0] 機械手臂特寫 — eye-level close-up of ROBOT-01, CVD/ETCH in background
-  const camWest = new FreeCamera('cam-robot-closeup', new Vector3(-1, 1.4, 2), scene);
+  // [0] 機械手臂特寫 — elevated north-west view of ROBOT-01 and central bay
+  const camWest = new FreeCamera('cam-robot-closeup', new Vector3(-12, 5, 8), scene);
   camWest.setTarget(new Vector3(2, 1.0, 2));
-  camWest.fov = FOV_TIGHT;
+  camWest.fov = 1.05;
+  camWest.minZ = 0.1;
+  camWest.maxZ = 50;
   cameras.push(camWest);
 
   // [1] 俯視全景 — full fab bird's-eye (orthographic)

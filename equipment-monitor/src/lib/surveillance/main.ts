@@ -22,8 +22,22 @@ export async function initSurveillanceScene(canvases: HTMLCanvasElement[]): Prom
     throw new Error('Surveillance grid requires exactly 9 canvases');
   }
 
-  // Create engine on first canvas
-  const engine = new Engine(canvases[0], true, {
+  // Create the WebGL engine on a hidden source canvas. The 9 visible grid canvases
+  // are registered as views below; using cell 0 as both source canvas and view
+  // leaves the first cell black in the static build.
+  const sourceCanvas = document.createElement('canvas');
+  sourceCanvas.width = 1;
+  sourceCanvas.height = 1;
+  sourceCanvas.style.position = 'fixed';
+  sourceCanvas.style.left = '-1px';
+  sourceCanvas.style.top = '-1px';
+  sourceCanvas.style.width = '1px';
+  sourceCanvas.style.height = '1px';
+  sourceCanvas.style.opacity = '0';
+  sourceCanvas.style.pointerEvents = 'none';
+  document.body.appendChild(sourceCanvas);
+
+  const engine = new Engine(sourceCanvas, true, {
     preserveDrawingBuffer: false,
     stencil: false,
     antialias: true,
@@ -195,5 +209,6 @@ export async function initSurveillanceScene(canvases: HTMLCanvasElement[]): Prom
     }
     scene.dispose();
     engine.dispose();
+    sourceCanvas.remove();
   };
 }
