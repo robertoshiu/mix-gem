@@ -29,6 +29,8 @@ export interface EngineerAgent {
 const BOB_AMPLITUDE = 0.03; // meters
 const BOB_FREQUENCY = 4.0;  // Hz (2 steps per second = 4 half-cycles)
 const SWING_AMPLITUDE = 0.087; // ~5 degrees in radians
+// The imported engineer GLBs visually face local -Z. Patrol headings use +Z as forward.
+const CHARACTER_FORWARD_YAW_OFFSET = Math.PI;
 
 /**
  * Create an engineer agent from a loaded character GLB and patrol route.
@@ -61,6 +63,16 @@ export function createEngineerAgent(
   let travelHeading = 0; // radians — direction of travel
   let currentTarget: Vector3 = applyJitter(route.waypoints[1].position);
 
+  function faceTarget(from: Vector3, target: Vector3): void {
+    const dir = target.subtract(from);
+    if (dir.length() > 0.01) {
+      travelHeading = Math.atan2(dir.x, dir.z);
+      root.rotation.y = travelHeading + CHARACTER_FORWARD_YAW_OFFSET;
+    }
+  }
+
+  faceTarget(route.waypoints[0].position, currentTarget);
+
   function getSegmentLength(): number {
     const from = route.waypoints[currentIndex].position;
     return Vector3.Distance(from, currentTarget);
@@ -81,6 +93,7 @@ export function createEngineerAgent(
 
     // Prepare next target with jitter
     currentTarget = applyJitter(route.waypoints[nextIndex].position);
+    faceTarget(route.waypoints[currentIndex].position, currentTarget);
   }
 
   function update(dt: number): void {
@@ -92,6 +105,7 @@ export function createEngineerAgent(
         nextIndex = (currentIndex + 1) % route.waypoints.length;
         progress = 0;
         currentTarget = applyJitter(route.waypoints[nextIndex].position);
+        faceTarget(route.waypoints[currentIndex].position, currentTarget);
       }
     } else {
       // Walking
@@ -122,11 +136,7 @@ export function createEngineerAgent(
         root.rotation.z = Math.sin(walkTime * BOB_FREQUENCY * Math.PI * 0.5) * SWING_AMPLITUDE;
 
         // Face direction of travel
-        const dir = currentTarget.subtract(from);
-        if (dir.length() > 0.01) {
-          travelHeading = Math.atan2(dir.x, dir.z);
-          root.rotation.y = travelHeading;
-        }
+        faceTarget(from, currentTarget);
       }
     }
 
