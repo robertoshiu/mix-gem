@@ -271,9 +271,9 @@ async function upgradeToolsWithGLB(scene: BABYLON.Scene): Promise<void> {
         }
       }
 
-      // Hide the original procedural base box (keep other interactive parts)
+      // Hide the original procedural base box but keep as invisible picking proxy
       const baseBox = scene.getMeshByName(tool.tool_id);
-      if (baseBox) baseBox.isVisible = false;
+      if (baseBox) baseBox.visibility = 0;
     }
   } catch {
     // GLBs not available — procedural fallbacks remain
@@ -348,8 +348,8 @@ async function upgradeInfrastructureWithGLB(scene: BABYLON.Scene): Promise<void>
         }
       }
 
-      // Hide procedural mesh but keep as fallback
-      originalMesh.isVisible = false;
+      // Hide procedural mesh but keep as invisible picking proxy
+      originalMesh.visibility = 0;
     }
   } catch {
     // GLBs not available — procedural fallbacks remain
@@ -613,11 +613,20 @@ function createScene(canvas: HTMLCanvasElement, props: FabTwinBabylonSceneProps)
 
 export function FabTwinBabylonScene(props: FabTwinBabylonSceneProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const onAssetPickRef = useRef(props.onAssetPick);
+  onAssetPickRef.current = props.onAssetPick;
+
+  const { view, mode, faultId } = props;
 
   useEffect(() => {
     if (!canvasRef.current) return undefined;
-    return createScene(canvasRef.current, props);
-  }, [props]);
+    return createScene(canvasRef.current, {
+      view,
+      mode,
+      faultId,
+      onAssetPick: (asset: PickedAsset) => onAssetPickRef.current(asset),
+    });
+  }, [view, mode, faultId]);
 
   return (
     <canvas
