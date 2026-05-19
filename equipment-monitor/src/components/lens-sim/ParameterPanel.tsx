@@ -25,7 +25,7 @@ export function ParameterPanel({ params, activePreset, onParamChange, onPreset }
       {/* Sliders */}
       <div className="mb-3 grid grid-cols-3 gap-x-6 gap-y-2 xl:grid-cols-6">
         {SLIDER_KEYS.map(({ key, label, labelCN }) => {
-          const bounds = PARAM_BOUNDS[key];
+          const bounds = PARAM_BOUNDS[key] as { min: number; max: number; default: number; step: number; unit: string; displayScale?: number };
           const displayValue = bounds.displayScale
             ? (params[key] * bounds.displayScale).toFixed(0)
             : params[key].toFixed(key === 'ambientTemp' ? 1 : key === 'fluidFlowRate' ? 1 : 0);

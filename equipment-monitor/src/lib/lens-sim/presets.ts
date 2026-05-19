@@ -1,5 +1,5 @@
 // equipment-monitor/src/lib/lens-sim/presets.ts
-import type { Preset, SimulationParams } from './types';
+import type { Preset } from './types';
 import { DEFAULT_PARAMS } from './constants';
 
 export const PRESETS: Preset[] = [
