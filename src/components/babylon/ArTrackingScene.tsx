@@ -13,7 +13,6 @@ import {
   ALL_ZONES,
   DYNAMIC_ZONES,
   PATROL_ROUTES,
-  type EquipmentState,
   type PersonnelState,
   RESTRICTED_ZONES,
   useArTrackingStore,
@@ -22,13 +21,21 @@ import { nearestNavNode, NAV_NODES, EQUIPMENT_BAY_LAYOUT } from '@/lib/ar-tracki
 
 const PERSONNEL_SPEED = 2;
 const HEAD_HEIGHT = 1.72;
-const MODEL_BASE_PATH = '/mix-gem/models/ar-tracking/';
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? '/mix-gem';
+const MODEL_BASE_PATH = `${BASE_PATH}/models/character/`;
 const MODEL_MANIFEST = 'models.json';
 const MODEL_VARIANTS: Record<string, string> = {
-  'OP-01': 'cleanroom-a.glb',
-  'OP-02': 'cleanroom-b.glb',
-  'OP-03': 'cleanroom-a.glb',
-  'OP-04': 'cleanroom-c.glb',
+  'OP-01': 'base.glb',
+  'OP-02': 'base.glb',
+  'OP-03': 'base.glb',
+  'OP-04': 'base.glb',
+};
+/** Per-personnel holographic base colors for visual differentiation */
+const PERSONNEL_BASE_COLORS: Record<string, string> = {
+  'OP-01': '#22d3ee', // cyan (default)
+  'OP-02': '#a78bfa', // violet
+  'OP-03': '#34d399', // emerald
+  'OP-04': '#fb923c', // orange
 };
 const RECIPE_EQUIPMENT_MAP = {
   'IMPLANT-BEAM': 'Implant',
@@ -424,7 +431,8 @@ async function createGltfPerson(
     root.parent = node;
     node.position.copyFrom(start);
 
-    const holoMat = createPersonnelHolographicMaterial(scene, `${id}-holo`, { baseColor: '#22d3ee' });
+    const baseColor = PERSONNEL_BASE_COLORS[id] ?? '#22d3ee';
+    const holoMat = createPersonnelHolographicMaterial(scene, `${id}-holo`, { baseColor });
 
     result.meshes.forEach((mesh) => {
       mesh.isPickable = false;
@@ -849,8 +857,11 @@ function createScene(canvas: HTMLCanvasElement, pipCanvasRef: React.RefObject<HT
     grainIntensity: 3,
     chromaticAberration: 5,
     vignetteWeight: 1.2,
-    enableSSR: true,
-    enableSSAO: true,
+    // AR tracking uses custom holographic ShaderMaterial meshes, so Babylon's
+    // g-buffer-dependent SSR/SSAO pipelines do not receive normals/depth and
+    // can crash in their onApply callbacks on the static GitHub Pages build.
+    enableSSR: false,
+    enableSSAO: false,
   });
   const { pipeline, glow, ssao } = effects;
   let ssr = effects.ssr;

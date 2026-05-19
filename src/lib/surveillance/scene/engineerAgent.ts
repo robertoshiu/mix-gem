@@ -18,6 +18,7 @@ export interface EngineerAgent {
   root: TransformNode;
   arCamera: FreeCamera;
   position: Vector3;
+  heading: number; // travel direction in radians
   state: AgentState;
   currentWaypointIndex: number;
   update(dt: number): void;
@@ -28,6 +29,8 @@ export interface EngineerAgent {
 const BOB_AMPLITUDE = 0.03; // meters
 const BOB_FREQUENCY = 4.0;  // Hz (2 steps per second = 4 half-cycles)
 const SWING_AMPLITUDE = 0.087; // ~5 degrees in radians
+// glTF models face local -Z. After nulling rotationQuaternion, add π so -Z aligns with heading.
+const CHARACTER_FORWARD_YAW_OFFSET = Math.PI;
 
 /**
  * Create an engineer agent from a loaded character GLB and patrol route.
@@ -38,10 +41,14 @@ export function createEngineerAgent(
   route: PatrolRoute,
 ): EngineerAgent {
   const { root } = character;
+  // glTF loader sets rotationQuaternion which overrides Euler .rotation — null it
+  // so that rotation.y (facing) and rotation.z (walk swing) actually take effect.
+  root.rotationQuaternion = null;
+  const groundedY = root.position.y;
 
   // Position at first waypoint
   const startPos = route.waypoints[0].position.clone();
-  root.position = new Vector3(startPos.x, 0, startPos.z);
+  root.position = new Vector3(startPos.x, groundedY, startPos.z);
 
   // Create AR camera attached to head
   const arCamera = new FreeCamera(`arCam_${route.id}`, Vector3.Zero(), scene);
@@ -56,7 +63,18 @@ export function createEngineerAgent(
   let pauseTimer = route.waypoints[0].pauseDuration;
   let state: AgentState = 'idle';
   let walkTime = 0; // Accumulator for walk bob
+  let travelHeading = 0; // radians — direction of travel
   let currentTarget: Vector3 = applyJitter(route.waypoints[1].position);
+
+  function faceTarget(from: Vector3, target: Vector3): void {
+    const dir = target.subtract(from);
+    if (dir.length() > 0.01) {
+      travelHeading = Math.atan2(dir.x, dir.z);
+      root.rotation.y = travelHeading + CHARACTER_FORWARD_YAW_OFFSET;
+    }
+  }
+
+  faceTarget(route.waypoints[0].position, currentTarget);
 
   function getSegmentLength(): number {
     const from = route.waypoints[currentIndex].position;
@@ -74,10 +92,11 @@ export function createEngineerAgent(
     // Snap position
     root.position.x = route.waypoints[currentIndex].position.x;
     root.position.z = route.waypoints[currentIndex].position.z;
-    root.position.y = 0;
+    root.position.y = groundedY;
 
     // Prepare next target with jitter
     currentTarget = applyJitter(route.waypoints[nextIndex].position);
+    faceTarget(route.waypoints[currentIndex].position, currentTarget);
   }
 
   function update(dt: number): void {
@@ -89,6 +108,7 @@ export function createEngineerAgent(
         nextIndex = (currentIndex + 1) % route.waypoints.length;
         progress = 0;
         currentTarget = applyJitter(route.waypoints[nextIndex].position);
+        faceTarget(route.waypoints[currentIndex].position, currentTarget);
       }
     } else {
       // Walking
@@ -112,29 +132,28 @@ export function createEngineerAgent(
 
         // Procedural walk bob
         walkTime += dt;
-        root.position.y = Math.abs(Math.sin(walkTime * BOB_FREQUENCY * Math.PI)) * BOB_AMPLITUDE;
+        root.position.y = groundedY
+          + Math.abs(Math.sin(walkTime * BOB_FREQUENCY * Math.PI)) * BOB_AMPLITUDE;
 
         // Rotation swing (subtle lean)
         root.rotation.z = Math.sin(walkTime * BOB_FREQUENCY * Math.PI * 0.5) * SWING_AMPLITUDE;
 
-        // Face direction
-        const dir = currentTarget.subtract(from);
-        if (dir.length() > 0.01) {
-          root.rotation.y = Math.atan2(dir.x, dir.z);
-        }
+        // Face direction of travel
+        faceTarget(from, currentTarget);
       }
     }
 
-    // Sync AR camera to fixed eye position (no head bone dependency)
-    const fwd = Math.sin(root.rotation.y);
-    const fwdZ = Math.cos(root.rotation.y);
-    arCamera.position.set(
-      root.position.x + fwd * 0.15,
-      1.55,
-      root.position.z + fwdZ * 0.15,
-    );
-    arCamera.rotation.y = root.rotation.y;
-    arCamera.rotation.x = -0.05;
+    // Sync AR camera — use setTarget for unambiguous forward direction
+    const fwdX = Math.sin(travelHeading);
+    const fwdZ = Math.cos(travelHeading);
+    const eyeX = root.position.x + fwdX * 0.15;
+    const eyeZ = root.position.z + fwdZ * 0.15;
+    arCamera.position.set(eyeX, 1.55, eyeZ);
+    arCamera.setTarget(new Vector3(
+      eyeX + fwdX * 5,
+      1.45,
+      eyeZ + fwdZ * 5,
+    ));
   }
 
   function dispose(): void {
@@ -148,6 +167,7 @@ export function createEngineerAgent(
     root,
     arCamera,
     get position() { return new Vector3(root.position.x, 0, root.position.z); },
+    get heading() { return travelHeading; },
     get state() { return state; },
     get currentWaypointIndex() { return currentIndex; },
     update,

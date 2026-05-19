@@ -17,7 +17,7 @@ import {
   Bell,
 } from 'lucide-react';
 
-const EVENT_COLORS: Record<SecsEventType, string> = {
+const EVENT_COLORS: Record<string, string> = {
   s6f11_spc_data:    'text-[var(--smartfactory-accent-teal)]',
   s2f41_stop:        'text-[var(--smartfactory-status-red)]',
   s2f42_ack:         'text-[var(--smartfactory-text-secondary)]',
@@ -31,7 +31,7 @@ const EVENT_COLORS: Record<SecsEventType, string> = {
   s6f11_notification: 'text-[var(--smartfactory-status-warning)]',
 };
 
-const EVENT_ICONS: Record<SecsEventType, React.ElementType> = {
+const EVENT_ICONS: Record<SecsEventType, React.ComponentType<{ className?: string; size?: number }>> = {
   s6f11_spc_data:      Zap,
   s2f41_stop:          AlertTriangle,
   s2f42_ack:           CheckCircle,

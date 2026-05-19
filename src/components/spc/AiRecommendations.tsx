@@ -6,11 +6,11 @@ import {
   Activity,
   Zap,
   Settings,
-  TrendingUp,
-  Shield,
   Clock,
   CheckCircle,
   AlertTriangle,
+  FileText,
+  Play,
 } from 'lucide-react';
 import { useMesSpcStore } from '@/stores/mes-spc-store';
 import {
@@ -22,13 +22,62 @@ import {
 import type { AiRecommendationType } from '@/lib/mes-types';
 import { fadeInUp, useReducedMotion } from '@/lib/animation';
 
-const ICON_MAP: Record<AiRecommendationType, React.FC<React.SVGProps<SVGSVGElement>>> = {
-  energy: Zap,
-  'predictive-maintenance': Settings,
-  'production-optimization': TrendingUp,
-  'carbon-reduction': Activity,
-  quality: Shield,
-  scheduling: Clock,
+
+
+const TYPE_LABELS: Record<AiRecommendationType, string> = {
+  energy: 'Energy Optimization',
+  'predictive-maintenance': 'Predictive Maintenance',
+  'production-optimization': 'Production Optimization',
+  'carbon-reduction': 'Carbon Reduction',
+  quality: 'Quality Control',
+  scheduling: 'Scheduling',
+};
+
+const TYPE_ACCENT: Record<AiRecommendationType, string> = {
+  energy: 'var(--smartfactory-status-green)',
+  'predictive-maintenance': 'var(--smartfactory-status-amber)',
+  'production-optimization': 'var(--smartfactory-accent-blue)',
+  'carbon-reduction': 'var(--smartfactory-accent-teal)',
+  quality: 'var(--smartfactory-accent-violet)',
+  scheduling: 'var(--smartfactory-accent-electric-blue)',
+};
+
+const TYPE_BADGE_BG: Record<AiRecommendationType, string> = {
+  energy: 'color-mix(in srgb, var(--smartfactory-status-green) 15%, transparent)',
+  'predictive-maintenance': 'color-mix(in srgb, var(--smartfactory-status-amber) 15%, transparent)',
+  'production-optimization': 'color-mix(in srgb, var(--smartfactory-accent-blue) 15%, transparent)',
+  'carbon-reduction': 'color-mix(in srgb, var(--smartfactory-accent-teal) 15%, transparent)',
+  quality: 'color-mix(in srgb, var(--smartfactory-accent-violet) 15%, transparent)',
+  scheduling: 'color-mix(in srgb, var(--smartfactory-accent-electric-blue) 15%, transparent)',
+};
+
+type ActionDef = { label: string; icon?: React.FC<React.SVGProps<SVGSVGElement>>; variant: 'primary' | 'secondary' };
+
+const TYPE_ACTIONS: Record<AiRecommendationType, ActionDef[]> = {
+  energy: [
+    { label: 'Apply', variant: 'primary' },
+    { label: 'Schedule', icon: Clock, variant: 'secondary' },
+  ],
+  'predictive-maintenance': [
+    { label: 'View Details', icon: FileText, variant: 'primary' },
+    { label: 'Create WO', icon: Settings, variant: 'secondary' },
+  ],
+  'production-optimization': [
+    { label: 'Optimize Now', icon: Play, variant: 'primary' },
+    { label: 'Schedule', icon: Clock, variant: 'secondary' },
+  ],
+  'carbon-reduction': [
+    { label: 'Auto-schedule', icon: Zap, variant: 'primary' },
+    { label: 'View Details', icon: FileText, variant: 'secondary' },
+  ],
+  quality: [
+    { label: 'Apply', variant: 'primary' },
+    { label: 'Schedule', icon: Clock, variant: 'secondary' },
+  ],
+  scheduling: [
+    { label: 'Apply', variant: 'primary' },
+    { label: 'Override', variant: 'secondary' },
+  ],
 };
 
 export function AiRecommendations() {
@@ -47,6 +96,16 @@ export function AiRecommendations() {
     store.overrideRecommendation(rec.id);
     store.addEvent(makeS2F49OverrideRecommendation(rec.id, 'MANUAL_OVERRIDE'));
     store.addEvent(makeS2F50OverrideAck(rec.id));
+  };
+
+  const handleAction = (rec: { id: string }, action: ActionDef) => {
+    if (action.label === 'Apply') {
+      handleApply(rec);
+    } else if (action.label === 'Override') {
+      handleOverride(rec);
+    }
+    // Other actions (Schedule, View Details, Create WO, Optimize Now, Auto-schedule)
+    // are UI-only placeholders per task requirements
   };
 
   return (
@@ -89,7 +148,6 @@ export function AiRecommendations() {
       ) : (
         <div>
           {recommendations.map((rec) => {
-            const TypeIcon = ICON_MAP[rec.type] || Zap;
             const StatusIcon = rec.status === 'applied' ? CheckCircle : AlertTriangle;
             const statusColor =
               rec.status === 'applied'
@@ -97,6 +155,9 @@ export function AiRecommendations() {
                 : rec.status === 'overridden'
                   ? 'var(--smartfactory-status-amber)'
                   : 'var(--smartfactory-accent-electric-blue)';
+            const accentColor = TYPE_ACCENT[rec.type] || TYPE_ACCENT.energy;
+            const badgeBg = TYPE_BADGE_BG[rec.type] || TYPE_BADGE_BG.energy;
+            const actions = TYPE_ACTIONS[rec.type] || TYPE_ACTIONS.energy;
 
             return (
               <motion.div key={rec.id} {...fadeInUpProps}>
@@ -105,14 +166,21 @@ export function AiRecommendations() {
                 style={{
                   backgroundColor: 'var(--smartfactory-surface-card)',
                   borderColor: 'var(--smartfactory-border-default)',
+                  borderLeftWidth: '3px',
+                  borderLeftColor: accentColor,
                 }}
               >
-                {/* Row 1: Icon + Title + Confidence */}
+                {/* Row 1: Type badge + Title + Confidence */}
                 <div className="flex items-center gap-2 mb-1">
-                  <TypeIcon
-                    className="w-4 h-4 shrink-0"
-                    style={{ color: 'var(--smartfactory-accent-electric-blue)' }}
-                  />
+                  <span
+                    className="text-[10px] font-semibold uppercase tracking-wider rounded px-1.5 py-0.5 shrink-0"
+                    style={{
+                      backgroundColor: badgeBg,
+                      color: accentColor,
+                    }}
+                  >
+                    {TYPE_LABELS[rec.type]}
+                  </span>
                   <span
                     className="text-sm font-medium truncate flex-1"
                     style={{ color: 'var(--smartfactory-text-primary)' }}
@@ -122,7 +190,7 @@ export function AiRecommendations() {
                   <span
                     className="text-xs font-mono rounded-full px-2 py-0.5 shrink-0"
                     style={{
-                      backgroundColor: 'rgba(59, 130, 246, 0.4)',
+                      backgroundColor: 'color-mix(in srgb, var(--smartfactory-accent-blue) 40%, transparent)',
                       color: 'var(--smartfactory-text-primary)',
                     }}
                   >
@@ -141,27 +209,30 @@ export function AiRecommendations() {
                 {/* Row 3: Status badge or action buttons */}
                 {rec.status === 'pending' ? (
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleApply(rec)}
-                      className="text-xs font-medium rounded px-3 py-1 cursor-pointer transition-colors hover:opacity-80"
-                      style={{ backgroundColor: 'var(--smartfactory-accent-electric-blue)', color: 'white' }}
-                      data-testid={`ai-apply-btn-${rec.id}`}
-                    >
-                      Apply
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleOverride(rec)}
-                      className="text-xs font-medium rounded px-3 py-1 cursor-pointer transition-colors hover:opacity-80 border"
-                      style={{
-                        borderColor: 'var(--smartfactory-border-default)',
-                        color: 'var(--smartfactory-text-secondary)',
-                      }}
-                      data-testid={`ai-override-btn-${rec.id}`}
-                    >
-                      Override
-                    </button>
+                    {actions.map((action) => {
+                      const ActionIcon = action.icon;
+                      const isPrimary = action.variant === 'primary';
+                      return (
+                        <button
+                          key={action.label}
+                          type="button"
+                          onClick={() => handleAction(rec, action)}
+                          className="text-xs font-medium rounded px-3 py-1 cursor-pointer transition-colors hover:opacity-80 flex items-center gap-1"
+                          style={
+                            isPrimary
+                              ? { backgroundColor: accentColor, color: 'white' }
+                              : {
+                                  borderColor: 'var(--smartfactory-border-default)',
+                                  color: 'var(--smartfactory-text-secondary)',
+                                }
+                          }
+                          data-testid={`ai-action-${action.label.toLowerCase().replace(/\s+/g, '-')}-${rec.id}`}
+                        >
+                          {ActionIcon && <ActionIcon className="w-3 h-3" />}
+                          {action.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5">

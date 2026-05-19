@@ -1,4 +1,4 @@
-import type { SecsEvent, SecsEventType, SpcParameter, SpcRule, NotificationType, NotificationSeverity } from './mes-types';
+import type { SecsEvent, SecsEventType, SpcParameter, SpcRule } from './mes-types';
 
 let _seq = 0;
 function nextId(prefix: SecsEventType) {

@@ -1,16 +1,15 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Bell, Settings, Zap } from "lucide-react";
+import Image from "next/image";
+import { Bell, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useMesSpcStore } from "@/stores/mes-spc-store";
 
 export function Header({ className }: { className?: string }) {
-  const [clock, setClock] = useState(() =>
-    new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
-  );
+  const [clock, setClock] = useState("--:--:--");
   const iconAreaRef = useRef<HTMLDivElement>(null);
 
   const notifications = useMesSpcStore((s) => s.notifications);
@@ -26,12 +25,19 @@ export function Header({ className }: { className?: string }) {
 
   // Live clock
   useEffect(() => {
-    const id = setInterval(() => {
+    const updateClock = () => {
       setClock(
         new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
       );
+    };
+    const initialId = window.setTimeout(updateClock, 0);
+    const id = setInterval(() => {
+      updateClock();
     }, 1000);
-    return () => clearInterval(id);
+    return () => {
+      window.clearTimeout(initialId);
+      clearInterval(id);
+    };
   }, []);
 
   // Click-outside handler
@@ -64,15 +70,19 @@ export function Header({ className }: { className?: string }) {
       >
         {/* Left: Logo + Title */}
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded bg-[var(--smartfactory-accent-blue)] flex items-center justify-center shrink-0">
-            <span className="text-white font-bold text-sm">AM</span>
-          </div>
+          <Image
+            src="/mix-gem/better-logo.png"
+            width={192}
+            height={48}
+            className="h-12 w-auto shrink-0"
+            alt="Better SmartFactory Logo"
+            priority
+          />
           <div className="flex flex-col leading-tight">
             <h1 className="text-sm font-semibold text-[var(--smartfactory-text-primary)]">
               Equipment Monitor
             </h1>
-            <span className="text-[11px] text-[var(--smartfactory-text-secondary)] flex items-center gap-1">
-              <Zap className="w-3 h-3 shrink-0" />
+            <span className="text-[11px] text-[var(--smartfactory-text-secondary)]">
               Better SmartFactory
             </span>
           </div>

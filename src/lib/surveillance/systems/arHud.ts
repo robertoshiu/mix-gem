@@ -210,13 +210,17 @@ export function createArHud(
     // Update engineer ID
     idText.text = activeEngineerId ? `${activeEngineerId} ${activeEngineerName}` : '';
 
-    // Equipment markers — show nearest 5, cull overlap
+    // Equipment markers — show nearest 4, cull overlap
     const markerData: Array<{ marker: LabelMarker; dist: number; sx: number; sy: number }> = [];
 
+    // Reset ALL markers first (prevents ghosting from stale positions)
     for (const marker of markers) {
-      marker.rect.isVisible = false; // Reset all
+      marker.rect.isVisible = false;
+    }
+
+    for (const marker of markers) {
       const dist = Vector3.Distance(camPos, marker.worldPos);
-      if (dist > 12) continue;
+      if (dist > 10) continue;
 
       const projected = Vector3.Project(
         marker.worldPos,
@@ -231,20 +235,23 @@ export function createArHud(
       // Behind camera check
       if (projected.z > 1 || projected.z < 0) continue;
 
+      // Out of screen bounds check
       const sx = (projected.x / scene.getEngine().getRenderWidth() - 0.5) * ui.idealWidth!;
       const sy = (projected.y / scene.getEngine().getRenderHeight() - 0.5) * ui.idealHeight!;
+      if (Math.abs(sx) > ui.idealWidth! * 0.45 || Math.abs(sy) > ui.idealHeight! * 0.45) continue;
+
       markerData.push({ marker, dist, sx, sy });
     }
 
-    // Sort by distance, keep nearest 5
+    // Sort by distance, keep nearest 4
     markerData.sort((a, b) => a.dist - b.dist);
-    const visible = markerData.slice(0, 5);
+    const visible = markerData.slice(0, 4);
 
-    // Proximity culling: remove overlapping labels (< 30px apart)
+    // Proximity culling: remove overlapping labels (< 80px apart)
     const accepted: typeof visible = [];
     for (const item of visible) {
       const tooClose = accepted.some(a =>
-        Math.abs(a.sx - item.sx) < 30 && Math.abs(a.sy - item.sy) < 30
+        Math.abs(a.sx - item.sx) < 80 && Math.abs(a.sy - item.sy) < 30
       );
       if (!tooClose) accepted.push(item);
     }
@@ -253,9 +260,9 @@ export function createArHud(
     for (const { marker, dist, sx, sy } of accepted) {
       marker.rect.isVisible = true;
       marker.text.text = `${marker.label} [${dist.toFixed(1)}m]`;
-      marker.rect.alpha = Math.max(0.4, 1 - dist / 12);
-      marker.rect.left = `${sx}px`;
-      marker.rect.top = `${sy}px`;
+      marker.rect.alpha = Math.max(0.5, 1 - dist / 10);
+      marker.rect.left = `${Math.round(sx)}px`;
+      marker.rect.top = `${Math.round(sy)}px`;
     }
 
     // Zone corner markers — show nearby zone boundaries

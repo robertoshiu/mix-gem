@@ -3,9 +3,9 @@
  * Uses engine.registerView() to render same scene through multiple cameras.
  *
  * Layout:
- *   [0] NW 走廊      [1] 俯視全景     [2] NE 走廊
+ *   [0] 機械手臂特寫 [1] 俯視全景     [2] NE 走廊
  *   [3] 微影區遠景   [4] AR 主視角    [5] 化學品特寫
- *   [6] 設備區       [7] 中控平移     [8] 出入口
+ *   [6] 設備區       [7] 中央設備近景  [8] 出入口
  */
 import { Scene } from '@babylonjs/core/scene';
 import { FreeCamera } from '@babylonjs/core/Cameras/freeCamera';
@@ -21,7 +21,7 @@ const FOV_WIDE = 1.2;   // ~69 degrees — corridor overview
 export interface CameraGrid {
   cameras: Camera[];
   arDefaultCamera: FreeCamera;
-  controlPanCamera: FreeCamera;
+  centralBayCamera: FreeCamera;
   birdEyeCamera: FreeCamera;
   views: ReturnType<Engine['registerView']>[];
   setDefaultAR(agent: EngineerAgent): void;
@@ -35,11 +35,13 @@ export interface CameraGrid {
 export function setupCameras(scene: Scene, engine: Engine, canvases: HTMLCanvasElement[]): CameraGrid {
   const cameras: Camera[] = [];
 
-  // [0] NW 走廊 — looking down the litho walkway
-  const camNW = new FreeCamera('cam-nw-corridor', new Vector3(-14, 5, 7), scene);
-  camNW.setTarget(new Vector3(-6, 1, 0));
-  camNW.fov = FOV_WIDE;
-  cameras.push(camNW);
+  // [0] 機械手臂特寫 — elevated north-west view of ROBOT-01 and central bay
+  const camWest = new FreeCamera('cam-robot-closeup', new Vector3(-12, 5, 8), scene);
+  camWest.setTarget(new Vector3(2, 1.0, 2));
+  camWest.fov = 1.05;
+  camWest.minZ = 0.1;
+  camWest.maxZ = 50;
+  cameras.push(camWest);
 
   // [1] 俯視全景 — full fab bird's-eye (orthographic)
   const camBirdEye = new FreeCamera('cam-birdeye', new Vector3(0, 22, 0), scene);
@@ -82,15 +84,15 @@ export function setupCameras(scene: Scene, engine: Engine, canvases: HTMLCanvasE
   camEquip.fov = FOV_TIGHT;
   cameras.push(camEquip);
 
-  // [7] 中控平移 — slow horizontal pan, security-camera style
-  const camControlPan = new FreeCamera('cam-control-pan', new Vector3(0, 8, 0), scene);
-  camControlPan.setTarget(new Vector3(0, 0, 0));
-  camControlPan.fov = FOV_WIDE;
-  cameras.push(camControlPan);
+  // [7] 中央設備近景 — eye-level view of central process bay (CVD/ETCH/ROBOT)
+  const camCentralBay = new FreeCamera('cam-central-bay', new Vector3(-1, 1.6, 1), scene);
+  camCentralBay.setTarget(new Vector3(3, 1.2, 3));
+  camCentralBay.fov = FOV_TIGHT;
+  cameras.push(camCentralBay);
 
-  // [8] 出入口 — entrance/exit at south side
-  const camEntrance = new FreeCamera('cam-entrance', new Vector3(0, 4, -12), scene);
-  camEntrance.setTarget(new Vector3(0, 1, -8));
+  // [8] 出入口 — south-east entrance checkpoint, opposite corner from cell 0
+  const camEntrance = new FreeCamera('cam-south-entrance', new Vector3(13, 2.0, -10), scene);
+  camEntrance.setTarget(new Vector3(7, 1.1, -8));
   camEntrance.fov = FOV_TIGHT;
   cameras.push(camEntrance);
 
@@ -98,13 +100,6 @@ export function setupCameras(scene: Scene, engine: Engine, canvases: HTMLCanvasE
   const views = canvases.map((canvas, i) => {
     return engine.registerView(canvas, cameras[i]);
   });
-
-  // Control pan state (cell 7)
-  let panX = 0;
-  let panDir = 1;
-  const PAN_SPEED = 0.3;
-  const PAN_RANGE = 10;
-  const PAN_HEIGHT = 8;
 
   // AR swap state
   let defaultARAgent: EngineerAgent | null = null;
@@ -140,22 +135,10 @@ export function setupCameras(scene: Scene, engine: Engine, canvases: HTMLCanvasE
     }
   }
 
-  // Horizontal pan animation for cell 7
-  scene.onBeforeRenderObservable.add(() => {
-    const dt = scene.getEngine().getDeltaTime() / 1000;
-    panX += PAN_SPEED * panDir * dt;
-    if (panX > PAN_RANGE) { panX = PAN_RANGE; panDir = -1; }
-    if (panX < -PAN_RANGE) { panX = -PAN_RANGE; panDir = 1; }
-    camControlPan.position.x = panX;
-    camControlPan.position.y = PAN_HEIGHT;
-    camControlPan.position.z = 0;
-    camControlPan.setTarget(new Vector3(panX, 0, 0));
-  });
-
   return {
     cameras,
     arDefaultCamera: camARDefault,
-    controlPanCamera: camControlPan,
+    centralBayCamera: camCentralBay,
     birdEyeCamera: camBirdEye,
     views,
     setDefaultAR,

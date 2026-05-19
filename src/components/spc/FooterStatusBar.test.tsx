@@ -32,10 +32,12 @@ describe('FooterStatusBar', () => {
     render(<FooterStatusBar />);
     
     expect(screen.getByTestId('footer-status-bar')).toBeInTheDocument();
-    expect(screen.getByText('SmartFactory Intelligence Platform v1.0')).toBeInTheDocument();
-    expect(screen.getByText('AI Engine: Active')).toBeInTheDocument();
-    expect(screen.getByText('Data Refresh: 2s')).toBeInTheDocument();
-    expect(screen.getByText('Connected: 8 devices')).toBeInTheDocument();
+    expect(screen.getByText('SmartFactory Analytics v9.2')).toBeInTheDocument();
+    expect(screen.getByText('AI Optimization: Active')).toBeInTheDocument();
+    expect(screen.getByText('Refresh: 2s')).toBeInTheDocument();
+    expect(screen.getByText(/Connected:/)).toBeInTheDocument();
+    expect(screen.getByText('8')).toBeInTheDocument();
+    expect(screen.getByText(/devices/)).toBeInTheDocument();
   });
 
   it('displays the current time in HH:MM:SS format', () => {

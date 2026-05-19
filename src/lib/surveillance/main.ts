@@ -10,6 +10,7 @@ import { setupCameras } from './scene/cameras';
 import { createEngineerAgent, type EngineerAgent } from './scene/engineerAgent';
 import { createAlertSystem } from './systems/alertSystem';
 import { createArHud } from './systems/arHud';
+import { createEngineerLabels } from './systems/engineerLabels';
 import { loadCharacterGLB } from './config/assets';
 import { patrolRoutes } from './config/patrol';
 
@@ -21,8 +22,22 @@ export async function initSurveillanceScene(canvases: HTMLCanvasElement[]): Prom
     throw new Error('Surveillance grid requires exactly 9 canvases');
   }
 
-  // Create engine on first canvas
-  const engine = new Engine(canvases[0], true, {
+  // Create the WebGL engine on a hidden source canvas. The 9 visible grid canvases
+  // are registered as views below; using cell 0 as both source canvas and view
+  // leaves the first cell black in the static build.
+  const sourceCanvas = document.createElement('canvas');
+  sourceCanvas.width = 1;
+  sourceCanvas.height = 1;
+  sourceCanvas.style.position = 'fixed';
+  sourceCanvas.style.left = '-1px';
+  sourceCanvas.style.top = '-1px';
+  sourceCanvas.style.width = '1px';
+  sourceCanvas.style.height = '1px';
+  sourceCanvas.style.opacity = '0';
+  sourceCanvas.style.pointerEvents = 'none';
+  document.body.appendChild(sourceCanvas);
+
+  const engine = new Engine(sourceCanvas, true, {
     preserveDrawingBuffer: false,
     stencil: false,
     antialias: true,
@@ -62,6 +77,10 @@ export async function initSurveillanceScene(canvases: HTMLCanvasElement[]): Prom
   }
 
   console.log(`[surveillance] ${engineers.length} engineers loaded`);
+
+  // Engineer name labels (floating above each character)
+  const suitVariants = new Map(patrolRoutes.map(r => [r.id, r.suitVariant]));
+  const engineerLabels = createEngineerLabels(scene, engineers, suitVariants);
 
   // Set first engineer as default AR view for cell 4
   if (engineers.length > 0) {
@@ -182,6 +201,7 @@ export async function initSurveillanceScene(canvases: HTMLCanvasElement[]): Prom
   return () => {
     window.removeEventListener('resize', onResize);
     engine.stopRenderLoop();
+    engineerLabels.dispose();
     arHud.dispose();
     alertSystem.dispose();
     for (const engineer of engineers) {
@@ -189,5 +209,6 @@ export async function initSurveillanceScene(canvases: HTMLCanvasElement[]): Prom
     }
     scene.dispose();
     engine.dispose();
+    sourceCanvas.remove();
   };
 }

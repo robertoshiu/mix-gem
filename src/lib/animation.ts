@@ -59,15 +59,19 @@ export const staggerContainer: Variants = {
   },
 };
 
-// Reduced motion — returns static variants (no animation)
-export function useReducedMotion(): boolean {
+// Reduced motion - returns static variants (no animation)
+export function prefersReducedMotion(): boolean {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
+export function useReducedMotion(): boolean {
+  return prefersReducedMotion();
+}
+
 // Get safe variants that respect reduced motion
 export function getSafeVariants(variants: Variants): Variants {
-  if (useReducedMotion()) {
+  if (prefersReducedMotion()) {
     return { initial: {}, animate: {}, exit: {} };
   }
   return variants;

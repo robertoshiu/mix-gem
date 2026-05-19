@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef } from "react";
 import { useEquipmentStore } from "@/stores/equipment-store";
 import { EquipmentCard } from "./equipment-card";
 import { cn } from "@/lib/utils";

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useEquipmentStore } from '@/stores/equipment-store';
 import { AlertToast } from './alert-toast';
 
@@ -8,16 +8,16 @@ const TOAST_WINDOW_MS = 30000;
 
 export function ToastContainer() {
   const { alarms, acknowledgeAlarm } = useEquipmentStore();
+  const [now] = useState(() => Date.now());
 
   // Show only unacknowledged alarms from the last 30 seconds
   const recentAlarms = useMemo(() => {
-    const now = Date.now();
     return alarms.filter(
       (alarm) =>
         !alarm.acknowledged &&
         now - alarm.timestamp.getTime() < TOAST_WINDOW_MS
     );
-  }, [alarms]);
+  }, [alarms, now]);
 
   return (
     <div

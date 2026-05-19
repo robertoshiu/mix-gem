@@ -1,9 +1,5 @@
 import { render, screen } from '@testing-library/react';
 
-global.ResizeObserver = jest.fn().mockImplementation(() => ({
-  observe: jest.fn(), unobserve: jest.fn(), disconnect: jest.fn(),
-}));
-
 // Simulator engine should not run in tests
 jest.mock('@/lib/simulator-engine', () => ({
   SimulatorEngine: jest.fn().mockImplementation(() => ({

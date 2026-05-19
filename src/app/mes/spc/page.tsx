@@ -14,8 +14,9 @@ import { FaultInjector } from '@/components/spc/FaultInjector';
 import { ViolationCard } from '@/components/spc/ViolationCard';
 import { EventLog } from '@/components/spc/EventLog';
 import { ProcessFlow } from '@/components/spc/ProcessFlow';
-import { WipDonutChart } from '@/components/spc/WipDonutChart';
 import { AiRecommendations } from '@/components/spc/AiRecommendations';
+import { WaferBinMap } from '@/components/spc/WaferBinMap';
+import { HeatmapTable } from '@/components/spc/HeatmapTable';
 import FooterStatusBar from '@/components/spc/FooterStatusBar';
 import type { SpcParameter } from '@/lib/mes-types';
 
@@ -67,7 +68,7 @@ export default function SpcPage() {
   return (
     <AnimatePresence mode="wait">
       <div className="p-4 space-y-4" data-testid="spc-dashboard">
-        {/* KPI Gauge Row */}
+        {/* Top Row: KPI Speedometer Gauges (5 cards) */}
         <KpiGaugeCard
           latest={latest}
           activeParam={activeParam}
@@ -77,13 +78,16 @@ export default function SpcPage() {
           history={lotMeasurements}
         />
 
-        {/* Process Flow */}
-        <ProcessFlow />
+        {/* Middle Row 1: Wafer Bin Map + Process Flow */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <WaferBinMap lotId={activeLot?.id ?? '—'} />
+          <ProcessFlow />
+        </div>
 
-        {/* Main Split: Control Chart + Thumbnails | WIP + AI Insights */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Left: Chart + Thumbnails */}
-          <div className="lg:col-span-2 space-y-4">
+        {/* Middle Row 2: Heatmap Table + Control Chart */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <HeatmapTable />
+          <div className="space-y-4">
             <ControlChart
               paramLabel={`${SPC_PARAMETERS[activeParam].label} (${activeParam.toUpperCase()})`}
               config={SPC_PARAMETERS[activeParam]}
@@ -119,32 +123,28 @@ export default function SpcPage() {
               />
             </div>
           </div>
-
-          {/* Right: WIP Donut + AI Recommendations */}
-          <div className="lg:col-span-1 flex flex-col gap-4">
-            <WipDonutChart />
-            <div className="flex-1 overflow-y-auto">
-              <AiRecommendations />
-            </div>
-          </div>
         </div>
 
-        {/* Bottom Row: Event Log + Violation Panel */}
+        {/* Bottom Row: AI Recommendations + Event Log */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-4">
+            <AiRecommendations />
+          </div>
           <div className="min-h-40">
             <EventLog events={events} />
           </div>
+        </div>
 
-          <div className="space-y-2">
-            {violations.length === 0 && (
-              <div className="bg-[var(--smartfactory-surface-card)] border border-[var(--smartfactory-border-default)] rounded p-3 text-xs text-[var(--smartfactory-text-muted)]">
-                No violations — system in control
-              </div>
-            )}
-            {violations.map((v) => (
-              <ViolationCard key={v.id} violation={v} onAcknowledge={handleAcknowledge} />
-            ))}
-          </div>
+        {/* Violations Panel */}
+        <div className="space-y-2">
+          {violations.length === 0 && (
+            <div className="bg-[var(--smartfactory-surface-card)] border border-[var(--smartfactory-border-default)] rounded p-3 text-xs text-[var(--smartfactory-text-muted)]">
+              No violations — system in control
+            </div>
+          )}
+          {violations.map((v) => (
+            <ViolationCard key={v.id} violation={v} onAcknowledge={handleAcknowledge} />
+          ))}
         </div>
 
         {/* Footer */}

@@ -1,32 +1,40 @@
 /**
- * Alert system — checks engineer position against restricted zones each frame.
- * Manages alert state transitions (clear → triggered → cooldown → clear).
- * Plays audio beep on trigger. Pushes alerts to DOM panel.
+ * Alert system — checks multiple engineers against restricted zones.
+ * Manages alert lifecycle: triggered → active → acknowledged → removed.
+ * Triggers camera swap via callback when "查看 AR" is clicked.
  */
-import { Vector3 } from '@babylonjs/core/Maths/math.vector';
-import { restrictedZones, isInsideZone, RestrictedZone, Severity } from '../config/zones';
+import { restrictedZones, isInsideZone, type RestrictedZone, type Severity } from '../config/zones';
+import type { EngineerAgent } from '../scene/engineerAgent';
 
 export interface Alert {
   id: string;
+  engineerId: string;
+  engineerName: string;
   zone: RestrictedZone;
   timestamp: number;
   acknowledged: boolean;
+  acknowledgedAt: number | null;
 }
 
 export interface AlertSystem {
   activeAlerts: Alert[];
-  update(engineerPos: Vector3): void;
+  update(engineers: EngineerAgent[]): void;
   acknowledge(alertId: string): void;
+  onViewAR: ((engineerId: string) => void) | null;
   dispose(): void;
 }
 
-const COOLDOWN_MS = 5000; // 5s cooldown after leaving zone
+const COOLDOWN_MS = 8000;
+const MAX_VISIBLE_ALERTS = 5;
+const AUTO_REMOVE_MS = 15000;
 const BEEP_DURATION = 0.15;
 
 export function createAlertSystem(): AlertSystem {
   const activeAlerts: Alert[] = [];
-  const cooldowns = new Map<string, number>(); // zone id → timestamp when cooldown expires
+  // cooldown key: `${engineerId}:${zoneId}`
+  const cooldowns = new Map<string, number>();
   let audioCtx: AudioContext | null = null;
+  let onViewAR: ((engineerId: string) => void) | null = null;
 
   function getAudioCtx(): AudioContext {
     if (!audioCtx) {
@@ -44,7 +52,6 @@ export function createAlertSystem(): AlertSystem {
       osc.connect(gain);
       gain.connect(ctx.destination);
 
-      // Frequency based on severity
       const freqMap: Record<Severity, number> = {
         critical: 880,
         high: 660,
@@ -53,25 +60,31 @@ export function createAlertSystem(): AlertSystem {
       osc.frequency.value = freqMap[severity];
       osc.type = 'square';
 
-      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + BEEP_DURATION);
 
       osc.start(ctx.currentTime);
       osc.stop(ctx.currentTime + BEEP_DURATION);
     } catch {
-      // Audio not available — silent fallback
+      // Audio not available
     }
   }
 
-  function triggerAlert(zone: RestrictedZone): void {
-    const existing = activeAlerts.find(a => a.zone.id === zone.id && !a.acknowledged);
-    if (existing) return; // Already alerting for this zone
+  function triggerAlert(engineer: EngineerAgent, zone: RestrictedZone): void {
+    // Check if already alerting for this engineer + zone combo
+    const existing = activeAlerts.find(
+      a => a.engineerId === engineer.id && a.zone.id === zone.id && !a.acknowledged,
+    );
+    if (existing) return;
 
     const alert: Alert = {
-      id: `${zone.id}_${Date.now()}`,
+      id: `${engineer.id}_${zone.id}_${Date.now()}`,
+      engineerId: engineer.id,
+      engineerName: engineer.name,
       zone,
       timestamp: Date.now(),
       acknowledged: false,
+      acknowledgedAt: null,
     };
     activeAlerts.push(alert);
     playBeep(zone.severity);
@@ -79,23 +92,39 @@ export function createAlertSystem(): AlertSystem {
     flashCameraBorder(zone);
   }
 
-  function update(engineerPos: Vector3): void {
+  function update(engineers: EngineerAgent[]): void {
     const now = Date.now();
 
-    for (const zone of restrictedZones) {
-      const inside = isInsideZone(engineerPos, zone);
-      const inCooldown = cooldowns.has(zone.id) && cooldowns.get(zone.id)! > now;
+    for (const engineer of engineers) {
+      for (const zone of restrictedZones) {
+        const key = `${engineer.id}:${zone.id}`;
+        const inside = isInsideZone(engineer.position, zone);
+        const inCooldown = cooldowns.has(key) && cooldowns.get(key)! > now;
 
-      if (inside && !inCooldown) {
-        triggerAlert(zone);
-        // Set cooldown so we don't re-trigger every frame
-        cooldowns.set(zone.id, now + COOLDOWN_MS);
+        if (inside && !inCooldown) {
+          triggerAlert(engineer, zone);
+          cooldowns.set(key, now + COOLDOWN_MS);
+        }
       }
     }
 
-    // Prune old acknowledged alerts (keep last 10)
-    while (activeAlerts.length > 10) {
-      activeAlerts.shift();
+    // Auto-remove acknowledged alerts after timeout
+    for (let i = activeAlerts.length - 1; i >= 0; i--) {
+      const alert = activeAlerts[i];
+      if (alert.acknowledged && alert.acknowledgedAt !== null && (now - alert.acknowledgedAt) > AUTO_REMOVE_MS) {
+        activeAlerts.splice(i, 1);
+        const el = document.getElementById(`alert-${alert.id}`);
+        if (el) el.remove();
+      }
+    }
+
+    // Cap visible alerts
+    while (activeAlerts.length > MAX_VISIBLE_ALERTS * 2) {
+      const removed = activeAlerts.shift();
+      if (removed) {
+        const el = document.getElementById(`alert-${removed.id}`);
+        if (el) el.remove();
+      }
     }
   }
 
@@ -103,9 +132,12 @@ export function createAlertSystem(): AlertSystem {
     const alert = activeAlerts.find(a => a.id === alertId);
     if (alert) {
       alert.acknowledged = true;
-      // Remove from DOM
+      alert.acknowledgedAt = Date.now();
       const el = document.getElementById(`alert-${alertId}`);
-      if (el) el.remove();
+      if (el) {
+        el.style.opacity = '0.4';
+        el.style.borderColor = '#444';
+      }
     }
   }
 
@@ -114,61 +146,81 @@ export function createAlertSystem(): AlertSystem {
       audioCtx.close();
       audioCtx = null;
     }
-    // Clear DOM
     const panel = document.getElementById('alert-panel');
     if (panel) panel.innerHTML = '';
   }
 
-  return { activeAlerts, update, acknowledge, dispose };
-}
+  // --- DOM rendering ---
 
-// --- DOM rendering helpers ---
+  function renderAlertToDOM(alert: Alert): void {
+    const panel = document.getElementById('alert-panel');
+    if (!panel) return;
 
-function renderAlertToDOM(alert: Alert): void {
-  const panel = document.getElementById('alert-panel');
-  if (!panel) return;
+    const el = document.createElement('div');
+    el.className = 'alert-item';
+    el.id = `alert-${alert.id}`;
 
-  const el = document.createElement('div');
-  el.className = 'alert-item';
-  el.id = `alert-${alert.id}`;
+    const time = new Date(alert.timestamp).toLocaleTimeString('zh-TW', { hour12: false });
+    const severityLabel = alert.zone.severity.toUpperCase();
 
-  const time = new Date(alert.timestamp).toLocaleTimeString('zh-TW', { hour12: false });
+    el.innerHTML = `
+      <div class="alert-header">
+        <span class="alert-time">${time}</span>
+        <span class="alert-severity ${alert.zone.severity}">${severityLabel}</span>
+      </div>
+      <div class="alert-zone">${alert.zone.name}</div>
+      <div class="alert-person">[${alert.engineerId}] ${alert.engineerName} 進入限制區域</div>
+      <div class="alert-actions">
+        <button class="btn-view-ar" data-engineer-id="${alert.engineerId}">查看 AR</button>
+        <button class="btn-ack" data-alert-id="${alert.id}">確認</button>
+      </div>
+    `;
 
-  el.innerHTML = `
-    <div>
-      <span class="alert-time">${time}</span>
-      <span class="alert-severity ${alert.zone.severity}">${alert.zone.severity.toUpperCase()}</span>
-    </div>
-    <div class="alert-zone">${alert.zone.name}</div>
-    <div>人員進入限制區域</div>
-    <button data-alert-id="${alert.id}">確認</button>
-  `;
+    // "查看 AR" button
+    el.querySelector('.btn-view-ar')?.addEventListener('click', () => {
+      if (onViewAR) {
+        onViewAR(alert.engineerId);
+      }
+    });
 
-  el.querySelector('button')?.addEventListener('click', () => {
-    const id = el.querySelector('button')?.getAttribute('data-alert-id');
-    if (id) {
-      alert.acknowledged = true;
-      el.remove();
-    }
-  });
+    // "確認" button
+    el.querySelector('.btn-ack')?.addEventListener('click', () => {
+      acknowledge(alert.id);
+    });
 
-  panel.prepend(el);
-}
+    panel.prepend(el);
+    trimVisibleAlerts(panel);
+  }
 
-function flashCameraBorder(zone: RestrictedZone): void {
-  // Map zone to camera indices that should flash
-  const zoneToCamera: Record<string, number[]> = {
-    litho_bay: [3], // cam-4: litho close-up
-    chemical_storage: [5], // cam-6: chemical close-up
-    maintenance_pit: [1], // cam-2: minimap
-  };
-
-  const indices = zoneToCamera[zone.id] || [];
-  for (const idx of indices) {
-    const cell = document.querySelector(`[data-cam-index="${idx}"]`);
-    if (cell) {
-      cell.setAttribute('data-alert', 'true');
-      setTimeout(() => cell.removeAttribute('data-alert'), 3000);
+  function trimVisibleAlerts(panel: HTMLElement): void {
+    while (panel.children.length > MAX_VISIBLE_ALERTS) {
+      panel.lastElementChild?.remove();
     }
   }
+
+  function flashCameraBorder(zone: RestrictedZone): void {
+    const zoneToCamera: Record<string, number[]> = {
+      litho_bay: [3],
+      chemical_storage: [5],
+      maintenance_pit: [6],
+    };
+
+    const indices = zoneToCamera[zone.id] || [];
+    for (const idx of indices) {
+      const cell = document.querySelector(`[data-cam-index="${idx}"]`);
+      if (cell) {
+        cell.setAttribute('data-alert', 'true');
+        setTimeout(() => cell.removeAttribute('data-alert'), 3000);
+      }
+    }
+  }
+
+  return {
+    activeAlerts,
+    update,
+    acknowledge,
+    get onViewAR() { return onViewAR; },
+    set onViewAR(cb: ((engineerId: string) => void) | null) { onViewAR = cb; },
+    dispose,
+  };
 }

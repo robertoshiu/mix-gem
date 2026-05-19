@@ -173,7 +173,7 @@ body {
   --smartfactory-border-active: #2563EB;
   --smartfactory-text-primary: #F1F5F9;
   --smartfactory-text-secondary: #94A3B8;
-  --smartfactory-text-muted: #475569;
+  --smartfactory-text-muted: #64748B;
   --smartfactory-accent-orange: #F47920;
   --smartfactory-accent-blue: #3B82F6;
   --smartfactory-accent-teal: #14B8A6;
@@ -186,6 +186,124 @@ body {
   --smartfactory-status-neon-green: #00E676;
   --smartfactory-status-neon-red: #FF1744;
   --smartfactory-status-neon-amber: #FFC107;
+  --smartfactory-surface-row-alt: #0D1825;
+}
+
+/* SmartFactory shorthand tokens (var(--sf-*) pattern) */
+:root {
+  --sf-bg-canvas: var(--smartfactory-bg-canvas);
+  --sf-bg-base: var(--smartfactory-bg-base);
+  --sf-surface-card: var(--smartfactory-surface-card);
+  --sf-surface-elevated: var(--smartfactory-surface-elevated);
+  --sf-surface-panel: var(--smartfactory-surface-panel);
+  --sf-surface-panel-alt: var(--smartfactory-surface-panel-alt);
+  --sf-border-default: var(--smartfactory-border-default);
+  --sf-border-active: var(--smartfactory-border-active);
+  --sf-text-primary: var(--smartfactory-text-primary);
+  --sf-text-secondary: var(--smartfactory-text-secondary);
+  --sf-text-muted: var(--smartfactory-text-muted);
+  --sf-accent-orange: var(--smartfactory-accent-orange);
+  --sf-accent-blue: var(--smartfactory-accent-blue);
+  --sf-accent-primary: var(--smartfactory-accent-blue);
+  --sf-accent-teal: var(--smartfactory-accent-teal);
+  --sf-accent-cyan: var(--smartfactory-accent-cyan);
+  --sf-accent-violet: var(--smartfactory-accent-violet);
+  --sf-accent-electric-blue: var(--smartfactory-accent-electric-blue);
+  --sf-status-green: var(--smartfactory-status-green);
+  --sf-status-amber: var(--smartfactory-status-amber);
+  --sf-status-red: var(--smartfactory-status-red);
+  --sf-status-neon-green: var(--smartfactory-status-neon-green);
+  --sf-status-neon-red: var(--smartfactory-status-neon-red);
+  --sf-status-neon-amber: var(--smartfactory-status-neon-amber);
+  --sf-surface-row-alt: var(--smartfactory-surface-row-alt);
+  /* Subsystem Colors */
+  /* Power Monitoring — Electric Blue */
+  --sf-power-primary: #3b82f6;
+  --sf-power-secondary: #60a5fa;
+  --sf-power-bg: rgba(59,130,246,0.1);
+  --sf-power-glow: rgba(59,130,246,0.4);
+  --sf-power-warning: #f59e0b;
+  --sf-power-danger: #ef4444;
+
+  /* Building Automation — Green/Teal */
+  --sf-ba-primary: #10b981;
+  --sf-ba-secondary: #34d399;
+  --sf-ba-bg: rgba(16,185,129,0.1);
+  --sf-ba-glow: rgba(16,185,129,0.4);
+  --sf-ba-warning: #f59e0b;
+  --sf-ba-danger: #ef4444;
+
+  /* Gas Detection — Amber/Yellow */
+  --sf-gas-primary: #f59e0b;
+  --sf-gas-secondary: #fbbf24;
+  --sf-gas-bg: rgba(245,158,11,0.1);
+  --sf-gas-glow: rgba(245,158,11,0.4);
+  --sf-gas-warning: #f97316;
+  --sf-gas-danger: #ef4444;
+
+  /* Fire Alarm — Red/Orange — HIGHEST visual priority */
+  --sf-fire-primary: #ef4444;
+  --sf-fire-secondary: #f87171;
+  --sf-fire-bg: rgba(239,68,68,0.1);
+  --sf-fire-glow: rgba(239,68,68,0.5);
+  --sf-fire-warning: #f97316;
+  --sf-fire-danger: #dc2626;
+
+  /* Shared overlay tokens */
+  --gauge-value-color: var(--sf-text-primary);
+  --kpi-value-color: var(--sf-text-primary);
+  --kpi-arc-color: var(--sf-accent-cyan);
+  --sf-overlay-backdrop: rgba(0,0,0,0.6);
+  --sf-overlay-border-radius: 12px;
+  --sf-overlay-padding: 24px;
+
+  /* Shared gauge tokens */
+  --smartfactory-gauge-bg-gradient: linear-gradient(180deg, rgba(24,40,64,0.94), rgba(10,22,40,0.96));
+  --smartfactory-gauge-arc-track: rgba(148, 163, 184, 0.18);
+  --smartfactory-gauge-arc-width: 13px;
+  --smartfactory-gauge-needle-width: 4px;
+  --smartfactory-gauge-needle-glow: 3px;
+  --smartfactory-gauge-zone-green: var(--smartfactory-status-green);
+  --smartfactory-gauge-zone-amber: var(--smartfactory-status-amber);
+  --smartfactory-gauge-zone-red: var(--smartfactory-status-red);
+  --smartfactory-gauge-value-color: var(--sf-text-primary);
+  --smartfactory-gauge-unit-color: var(--sf-text-secondary);
+  --smartfactory-gauge-label-color: var(--sf-text-muted);
+
+  /* Scene 3D tokens */
+  --smartfactory-scene-grid-color: #1E3A5F;
+  --smartfactory-scene-grid-accent: #22D3EE;
+  --smartfactory-scene-building-color: #64748B;
+  --smartfactory-scene-flow-color: #38BDF8;
+  --smartfactory-scene-tool-color: #94A3B8;
+
+  /* Gauge shorthand */
+  --sf-gauge-bg-gradient: var(--smartfactory-gauge-bg-gradient);
+  --sf-gauge-arc-track: var(--smartfactory-gauge-arc-track);
+  --sf-gauge-arc-width: var(--smartfactory-gauge-arc-width);
+  --sf-gauge-needle-width: var(--smartfactory-gauge-needle-width);
+  --sf-gauge-needle-glow: var(--smartfactory-gauge-needle-glow);
+  --sf-gauge-zone-green: var(--smartfactory-gauge-zone-green);
+  --sf-gauge-zone-amber: var(--smartfactory-gauge-zone-amber);
+  --sf-gauge-zone-red: var(--smartfactory-gauge-zone-red);
+  --sf-gauge-value-color: var(--smartfactory-gauge-value-color);
+  --sf-gauge-unit-color: var(--smartfactory-gauge-unit-color);
+  --sf-gauge-label-color: var(--smartfactory-gauge-label-color);
+
+  /* Scene shorthand */
+  --sf-scene-grid-color: var(--smartfactory-scene-grid-color);
+  --sf-scene-grid-accent: var(--smartfactory-scene-grid-accent);
+  --sf-scene-building-color: var(--smartfactory-scene-building-color);
+  --sf-scene-flow-color: var(--smartfactory-scene-flow-color);
+  --sf-scene-tool-color: var(--smartfactory-scene-tool-color);
+
+  /* Overlay layout */
+  --sf-overlay-width: min(45vw, 520px);
+  --sf-overlay-min-width: min(100vw, 360px);
+  --sf-neon-glow-spread: 0 0 12px;
+  --sf-scanline-opacity: 0.04;
+  --sf-hex-border-width: 1.5px;
+  --sf-hud-font: 'Fira Code', monospace;
 }
 
 @layer base {
@@ -198,6 +316,14 @@ body {
 }
 
 @layer utilities {
+  .factory-canvas-root > div,
+  .factory-canvas-root > div > div,
+  .factory-canvas-root canvas {
+    width: 100% !important;
+    height: max(640px, 100%) !important;
+    min-height: inherit;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .animate-pulse,
     .animate-pulse-slow {

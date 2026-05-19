@@ -1,4 +1,4 @@
-import type { Lot, Recipe, SpcMeasurement, AiRecommendation, Equipment, Notification } from './mes-types';
+import type { Lot, Recipe, SpcMeasurement, AiRecommendation, Equipment, Notification, YieldTrendPoint, DefectRecord, WaferDie, ProcessStepYield, HeatmapCell } from './mes-types';
 import { SPC_PARAMETERS, SPC_PARAM_KEYS } from './spc-parameters';
 
 export const MOCK_RECIPES: Recipe[] = [
@@ -108,4 +108,90 @@ export function generateSeedMeasurements(lotId: string, count: number): SpcMeasu
       ler:   base.ler,
     };
   });
+}
+
+// --- MES UI Reconstruction Generators ---
+
+export function generateYieldTrend(days: number): YieldTrendPoint[] {
+  const targetYield = 95;
+  return Array.from({ length: days }, (_, i) => {
+    const date = new Date(SEED_ANCHOR + i * 86400000);
+    const dateStr = date.toISOString().slice(0, 10);
+    // Realistic yield trending toward target with slight noise (70-100%)
+    const baseYield = 85 + (i / days) * 10;
+    const noise = Math.sin(i * 1.3) * 2 + Math.cos(i * 0.7) * 1.5;
+    const overallYield = Math.min(100, Math.max(70, baseYield + noise));
+    return { date: dateStr, overallYield: Math.round(overallYield * 10) / 10, targetYield };
+  });
+}
+
+export function generateDefectPareto(): DefectRecord[] {
+  const defects = [
+    { type: 'Particle', count: 142 },
+    { type: 'Scratch', count: 87 },
+    { type: 'CD Variation', count: 53 },
+    { type: 'Pattern Collapse', count: 31 },
+    { type: 'Residue', count: 19 },
+  ];
+  const total = defects.reduce((sum, d) => sum + d.count, 0);
+  let cumulative = 0;
+  return defects.map((d) => {
+    cumulative += d.count;
+    return { ...d, cumulativePercent: Math.round((cumulative / total) * 1000) / 10 };
+  });
+}
+
+export function generateWaferMap(): WaferDie[] {
+  const radius = 9; // ~250 dies in circular pattern
+  const dies: WaferDie[] = [];
+  for (let row = -radius; row <= radius; row++) {
+    for (let col = -radius; col <= radius; col++) {
+      if (row * row + col * col <= radius * radius) {
+        // ~85% pass, ~8% fail, ~4% retest, ~3% not_tested
+        const r = ((row * 31 + col * 17 + 7) % 100);
+        let status: WaferDie['status'] = 'pass';
+        if (r < 8) status = 'fail';
+        else if (r < 12) status = 'retest';
+        else if (r < 15) status = 'not_tested';
+        dies.push({ row: row + radius, col: col + radius, status });
+      }
+    }
+  }
+  return dies;
+}
+
+export function generateProcessYields(): ProcessStepYield[] {
+  const steps = [
+    { name: 'COAT', baseYield: 98.2 },
+    { name: 'EXPOSE', baseYield: 96.5 },
+    { name: 'DEVELOP', baseYield: 97.1 },
+    { name: 'METROLOGY', baseYield: 99.0 },
+    { name: 'SPC', baseYield: 95.8 },
+  ];
+  return steps.map((s) => {
+    const yieldVal = Math.round(s.baseYield * 10) / 10;
+    let status: ProcessStepYield['status'] = 'running';
+    if (yieldVal < 96) status = 'alarm';
+    else if (yieldVal < 97) status = 'warning';
+    return { name: s.name, yield: yieldVal, status };
+  });
+}
+
+export function generateHeatmapData(): HeatmapCell[] {
+  const lots = ['LOT-2026-001', 'LOT-2026-002', 'LOT-2026-003', 'LOT-2026-004', 'LOT-2026-005', 'LOT-2026-006'];
+  const params = ['CD', 'CDU', 'OVL_X', 'OVL_Y'];
+  const cells: HeatmapCell[] = [];
+  for (const lot of lots) {
+    for (const param of params) {
+      const idx = lots.indexOf(lot) * params.length + params.indexOf(param);
+      // Generate values around spec limits
+      const base = 45 + (idx * 3.7) % 10;
+      const value = Math.round(base * 100) / 100;
+      let status: HeatmapCell['status'] = 'ok';
+      if (value > 52 || value < 38) status = 'alarm';
+      else if (value > 50 || value < 40) status = 'warning';
+      cells.push({ lot, param, value, status });
+    }
+  }
+  return cells;
 }

@@ -26,7 +26,7 @@ export class SimulatorEngine {
 
   private tick() {
     const store = useMesSpcStore.getState();
-    const { activeLotId, activeRecipeId, waferNumber, activeFault, equipmentState } = store;
+    const { activeLotId, waferNumber, activeFault, equipmentState } = store;
 
     if (!activeLotId || equipmentState === 'inhibited') return;
 

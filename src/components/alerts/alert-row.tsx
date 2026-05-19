@@ -49,7 +49,9 @@ export function AlertRow({ alarm, onAcknowledge }: AlertRowProps) {
           <span className="text-xs font-medium text-slate-400">{alarm.equipmentId}</span>
         </div>
         <p className="text-sm text-slate-200 truncate">{alarm.message}</p>
-        <p className="text-xs text-slate-500">{alarm.timestamp.toLocaleString()}</p>
+        <p className="text-xs text-slate-500">
+          {alarm.timestamp.toLocaleString('en-US')}
+        </p>
       </div>
       <Button
         variant="outline"

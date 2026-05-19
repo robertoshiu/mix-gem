@@ -14,12 +14,11 @@ const rangeToMs: Record<TimeRange, number> = {
 
 export function useTimeRange(defaultRange: TimeRange = '1h') {
   const [range, setRange] = useState<TimeRange>(defaultRange);
+  const [endTime] = useState(() => new Date());
 
   const startTime = useMemo(() => {
-    return new Date(Date.now() - rangeToMs[range]);
-  }, [range]);
-
-  const endTime = useMemo(() => new Date(), []); // Fixed end time for simplicity in this step
+    return new Date(endTime.getTime() - rangeToMs[range]);
+  }, [endTime, range]);
 
   return {
     range,

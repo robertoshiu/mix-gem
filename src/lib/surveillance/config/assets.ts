@@ -12,9 +12,9 @@ const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? '/mix-gem';
 export const ASSET_PATHS = {
   hdri: '/env/cleanroom.env',
   equipment: {
-    chamber: '/models/equipment/chamber.glb',
+    chamber: '/models/equipment/etch_chamber.glb',
     efem: '/models/equipment/efem.glb',
-    stepper: '/models/equipment/stepper.glb',
+    stepper: '/models/equipment/lithography.glb',
     metrology: '/models/equipment/metrology.glb',
     spinCoater: '/models/equipment/spin_coater.glb',
     robotArm: '/models/equipment/robot_arm.glb',
@@ -64,6 +64,17 @@ export const equipmentLayout: EquipmentPlacement[] = [
 // Target bounding box for equipment scaling
 const EQUIPMENT_TARGET_SIZE = 2.2;
 
+// PBR color palette per equipment type — used as fallback when GLB materials are bland
+const EQUIPMENT_COLORS: Record<EquipmentKey, { albedo: [number, number, number]; metallic: number; roughness: number; emissive?: [number, number, number] }> = {
+  chamber: { albedo: [0.55, 0.57, 0.60], metallic: 0.7, roughness: 0.3, emissive: [0.01, 0.02, 0.04] },
+  efem: { albedo: [0.70, 0.72, 0.75], metallic: 0.6, roughness: 0.35 },
+  stepper: { albedo: [0.35, 0.38, 0.50], metallic: 0.5, roughness: 0.4, emissive: [0.02, 0.01, 0.04] },
+  metrology: { albedo: [0.45, 0.48, 0.52], metallic: 0.6, roughness: 0.3, emissive: [0.00, 0.03, 0.03] },
+  spinCoater: { albedo: [0.50, 0.52, 0.55], metallic: 0.4, roughness: 0.5 },
+  robotArm: { albedo: [0.85, 0.55, 0.10], metallic: 0.7, roughness: 0.25, emissive: [0.03, 0.01, 0.0] },
+  waferCassette: { albedo: [0.25, 0.25, 0.30], metallic: 0.3, roughness: 0.6 },
+};
+
 export interface LoadedEquipment {
   meshes: Map<string, BABYLON.AbstractMesh>;
   labels: Map<string, BABYLON.Vector3>; // label -> world position for HUD
@@ -103,7 +114,7 @@ export async function loadEquipmentGLBs(
   const loadPromises = uniqueKeys.map(async (key) => {
     const path = BASE_PATH + ASSET_PATHS.equipment[key];
     try {
-      const container = await BABYLON.SceneLoader.LoadAssetContainerAsync('', path, scene);
+      const container = await BABYLON.LoadAssetContainerAsync(path, scene);
       containers.set(key, container);
     } catch {
       console.warn(`[surveillance] Equipment not found: ${key}`);
@@ -146,8 +157,18 @@ export async function loadEquipmentGLBs(
             root.scaling.setAll(scale);
           }
 
-          // Add shadow casters
+          // Apply colored PBR materials — replace bland/white GLB materials
+          const palette = EQUIPMENT_COLORS[placement.assetKey];
           for (const mesh of childMeshes) {
+            const mat = new BABYLON.PBRMaterial(`${placement.label}_mat_${mesh.name}`, scene);
+            mat.albedoColor = new BABYLON.Color3(...palette.albedo);
+            mat.metallic = palette.metallic;
+            mat.roughness = palette.roughness;
+            if (palette.emissive) {
+              mat.emissiveColor = new BABYLON.Color3(...palette.emissive);
+            }
+            mat.freeze();
+            mesh.material = mat;
             shadowGen.addShadowCaster(mesh);
             mesh.receiveShadows = true;
           }
@@ -175,8 +196,84 @@ export interface LoadedCharacter {
   allMeshes: BABYLON.AbstractMesh[];
 }
 
+// PBR suit colors per variant (Meshy preview models have no texture)
+const SUIT_COLORS: Record<string, { albedo: [number, number, number]; emissive?: [number, number, number] }> = {
+  base: { albedo: [0.88, 0.90, 0.92] }, // white cleanroom suit
+  blue: { albedo: [0.35, 0.55, 0.80], emissive: [0.01, 0.02, 0.05] }, // blue cleanroom suit
+};
+
+// Anchor at forehead level — model centering pulls the visor down to eye level
+const CHARACTER_EYE_HEIGHT_M = 1.65;
+const CHARACTER_FACE_LOCAL_Z_M = 0.08;
+const AR_HEADSET_TARGET_WIDTH_M = 0.22;
+
+async function loadArHeadsetGLB(
+  scene: BABYLON.Scene,
+  variant: 'base' | 'blue',
+  root: BABYLON.TransformNode,
+): Promise<BABYLON.TransformNode | null> {
+  const rootScale = root.scaling.x || 1;
+  const anchor = new BABYLON.TransformNode(`arGlasses_${variant}`, scene);
+  anchor.parent = root;
+  anchor.scaling.setAll(1 / rootScale);
+  anchor.position.set(
+    0,
+    (CHARACTER_EYE_HEIGHT_M - root.position.y) / rootScale,
+    CHARACTER_FACE_LOCAL_Z_M / rootScale,
+  );
+
+  try {
+    const headsetPath = BASE_PATH + ASSET_PATHS.accessory.arGlasses;
+    const headsetResult = await BABYLON.ImportMeshAsync(headsetPath, scene);
+    const modelRoot = new BABYLON.TransformNode(`arGlasses_${variant}_model`, scene);
+
+    for (const mesh of headsetResult.meshes) {
+      mesh.isPickable = false;
+      mesh.receiveShadows = false;
+      if (!mesh.parent) {
+        mesh.parent = modelRoot;
+      }
+    }
+
+    const childMeshes = modelRoot.getChildMeshes();
+    if (childMeshes.length > 0) {
+      let minVec = new BABYLON.Vector3(Infinity, Infinity, Infinity);
+      let maxVec = new BABYLON.Vector3(-Infinity, -Infinity, -Infinity);
+      for (const mesh of childMeshes) {
+        mesh.computeWorldMatrix(true);
+        const bounds = mesh.getBoundingInfo().boundingBox;
+        minVec = BABYLON.Vector3.Minimize(minVec, bounds.minimumWorld);
+        maxVec = BABYLON.Vector3.Maximize(maxVec, bounds.maximumWorld);
+      }
+
+      const center = minVec.add(maxVec).scale(0.5);
+      const extents = maxVec.subtract(minVec);
+      if (extents.x > 0) {
+        const scale = AR_HEADSET_TARGET_WIDTH_M / extents.x;
+        modelRoot.scaling.setAll(scale);
+        // Center X/Z but align bottom (visor) to anchor — don't center Y
+        const bottomOffset = -minVec.y * scale;
+        modelRoot.position.set(-center.x * scale, bottomOffset, -center.z * scale);
+      }
+    }
+
+    for (const group of headsetResult.animationGroups) {
+      group.stop();
+    }
+
+    modelRoot.parent = anchor;
+  } catch (e) {
+    anchor.dispose();
+    console.warn('[surveillance] AR headset not loaded:', (e as Error).message);
+    return null;
+  }
+
+  return anchor;
+}
+
 /**
- * Load a character GLB (base or blue suit) with AR glasses attached to head.
+ * Load a character GLB (base or blue suit), attach separate AR glasses accessory,
+ * apply suit color tinting, and ground the model at Y=0.
  */
 export async function loadCharacterGLB(
   scene: BABYLON.Scene,
@@ -186,24 +283,11 @@ export async function loadCharacterGLB(
     ? BASE_PATH + ASSET_PATHS.character.suitBlue
     : BASE_PATH + ASSET_PATHS.character.base;
 
-  const charResult = await BABYLON.SceneLoader.ImportMeshAsync(null, '', charPath, scene);
+  const charResult = await BABYLON.ImportMeshAsync(charPath, scene);
   const root = charResult.meshes[0] as unknown as BABYLON.TransformNode;
   const allMeshes = [...charResult.meshes];
 
-  // Load AR glasses and attach at fixed head position
-  try {
-    const glassesPath = BASE_PATH + ASSET_PATHS.accessory.arGlasses;
-    const glassesResult = await BABYLON.SceneLoader.ImportMeshAsync(null, '', glassesPath, scene);
-    const glassesRoot = glassesResult.meshes[0];
-    glassesRoot.parent = root;
-    glassesRoot.position = new BABYLON.Vector3(0, 1.6, 0.08);
-    glassesRoot.scaling = new BABYLON.Vector3(0.6, 0.6, 0.6);
-    allMeshes.push(...glassesResult.meshes);
-  } catch {
-    console.warn(`[surveillance] AR glasses not available for ${variant}`);
-  }
-
-  // Scale character to ~1.7m height
+  // Scale character to ~1.7m height and ground the model
   const childMeshes = root.getChildMeshes();
   if (childMeshes.length > 0) {
     root.computeWorldMatrix(true);
@@ -220,7 +304,34 @@ export async function loadCharacterGLB(
       const scale = 1.7 / currentHeight;
       root.scaling.scaleInPlace(scale);
     }
+    // Recompute after scaling to ground the feet at Y=0
+    root.computeWorldMatrix(true);
+    let groundMinY = Infinity;
+    for (const mesh of childMeshes) {
+      mesh.computeWorldMatrix(true);
+      const bi = mesh.getBoundingInfo();
+      groundMinY = Math.min(groundMinY, bi.boundingBox.minimumWorld.y);
+    }
+    if (Math.abs(groundMinY) > 0.05) {
+      root.position.y = -groundMinY;
+    }
+
+    // Apply suit color tint (Meshy preview models are untextured gray)
+    const colors = SUIT_COLORS[variant] ?? SUIT_COLORS.base;
+    for (const mesh of childMeshes) {
+      const mat = new BABYLON.PBRMaterial(`suit_${variant}_${mesh.name}`, scene);
+      mat.albedoColor = new BABYLON.Color3(...colors.albedo);
+      mat.metallic = 0.05;
+      mat.roughness = 0.7;
+      if (colors.emissive) {
+        mat.emissiveColor = new BABYLON.Color3(...colors.emissive);
+      }
+      mat.freeze();
+      mesh.material = mat;
+    }
   }
 
-  return { root, headNode: null, allMeshes };
+  const headNode = await loadArHeadsetGLB(scene, variant, root);
+
+  return { root, headNode, allMeshes };
 }

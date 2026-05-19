@@ -96,7 +96,7 @@ describe('AlertBanner', () => {
       ['MAJOR', 'AlertCircle'],
       ['MINOR', 'AlertCircle'],
       ['INFO', 'Info'],
-    ])('should render %s severity with correct icon', (severity, iconName) => {
+    ])('should render %s severity with correct icon', (severity) => {
       const alarm = { ...mockAlarm, severity: severity as AlarmSeverity };
       const { container } = render(<AlertBanner alarm={alarm} onAcknowledge={jest.fn()} />);
 

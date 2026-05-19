@@ -86,7 +86,7 @@ export const INITIAL_MES_SPC_STATE: Omit<MesSpcState,
   selectedEquipmentId: null,
 };
 
-export const useMesSpcStore = create<MesSpcState>((set, get) => ({
+export const useMesSpcStore = create<MesSpcState>((set) => ({
   ...INITIAL_MES_SPC_STATE,
 
   updateLot: (lotId, patch) =>

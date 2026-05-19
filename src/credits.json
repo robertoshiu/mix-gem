@@ -2,12 +2,13 @@
   "assets": [
     {
       "id": "ar_glasses",
-      "title": "AI Generated: Microsoft HoloLens 2 mixed reality headset, sleek black viso",
+      "title": "AI Generated: Sleek Black VR Headset",
       "author": "Meshy AI",
       "sourceUrl": "https://www.meshy.ai",
       "license": "Meshy-Commercial",
       "licenseUrl": "https://www.meshy.ai/terms",
-      "downloadDate": "2026-05-16"
+      "downloadDate": "2026-05-18",
+      "notes": "Local GLB copied from Meshy_AI_Sleek_Black_VR_Headset.glb and normalized at runtime as the surveillance AR headset accessory."
     },
     {
       "id": "cleanroom_hdri",
@@ -197,20 +198,22 @@
     },
     {
       "id": "engineer_white",
-      "title": "Hazmat Suit Worker Character",
-      "author": "SKP_GAMES",
-      "sourceUrl": "https://sketchfab.com/3d-models/aebb820813d24ef3bb244521fd0dac7e",
-      "license": "CC-BY",
-      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "title": "AI Generated: Full body cleanroom engineer, white bunny suit, AR smart glasses",
+      "author": "Meshy AI",
+      "sourceUrl": "https://www.meshy.ai",
+      "meshyTaskId": "019e3627-3a66-78a7-89df-7b539fa11a18",
+      "license": "Meshy-Commercial",
+      "licenseUrl": "https://www.meshy.ai/terms",
       "downloadDate": "2026-05-17"
     },
     {
       "id": "engineer_blue",
-      "title": "Hazmat Suit (Version 3)",
-      "author": "RackRibs",
-      "sourceUrl": "https://sketchfab.com/3d-models/8bb847dd07bf44de8614f38740d9505a",
-      "license": "CC-BY",
-      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "title": "AI Generated: Full body cleanroom engineer, blue bunny suit, AR smart glasses",
+      "author": "Meshy AI",
+      "sourceUrl": "https://www.meshy.ai",
+      "meshyTaskId": "019e3627-670d-7f8f-af8c-1fa76fcf999e",
+      "license": "Meshy-Commercial",
+      "licenseUrl": "https://www.meshy.ai/terms",
       "downloadDate": "2026-05-17"
     }
   ],
