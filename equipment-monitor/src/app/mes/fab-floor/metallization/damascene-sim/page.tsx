@@ -91,6 +91,7 @@ export default function DamasceneSimPage() {
     <div className="relative flex min-h-[calc(100dvh-104px)] flex-col overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(148,163,184,0.10),transparent_32%),var(--sf-bg-canvas)] text-[var(--sf-text-primary)]">
       <div className="z-10 px-4 pt-3">
         <TimelineBar
+          backHref="/mes/fab-floor/metallization"
           currentIndex={sim.currentIndex}
           totalSteps={sim.totalSteps}
           playing={playing}

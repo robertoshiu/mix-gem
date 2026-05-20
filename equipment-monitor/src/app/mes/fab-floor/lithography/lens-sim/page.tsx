@@ -93,6 +93,7 @@ export default function LensSimPage() {
       {/* Timeline */}
       <div className="z-10 px-4 pt-3">
         <TimelineBar
+          backHref="/mes/fab-floor/lithography"
           currentIndex={sim.currentIndex}
           lotSize={sim.lotSize}
           playing={playing}

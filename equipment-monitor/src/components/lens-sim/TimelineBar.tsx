@@ -1,8 +1,11 @@
 'use client';
 
+import Link from 'next/link';
+import { ChevronLeft } from 'lucide-react';
 import type { WaferState } from '@/lib/lens-sim';
 
 interface TimelineBarProps {
+  backHref?: string;
   currentIndex: number;
   lotSize: number;
   playing: boolean;
@@ -17,6 +20,7 @@ interface TimelineBarProps {
 }
 
 export function TimelineBar({
+  backHref,
   currentIndex,
   lotSize,
   playing,
@@ -36,6 +40,11 @@ export function TimelineBar({
 
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-[rgba(34,211,238,0.22)] bg-[rgba(8,18,31,0.82)] px-4 py-2.5 backdrop-blur-xl">
+      {backHref && (
+        <Link href={backHref} className="flex min-h-[36px] min-w-[36px] items-center justify-center rounded-full hover:bg-white/10" aria-label="Back">
+          <ChevronLeft className="h-4 w-4" />
+        </Link>
+      )}
       {/* Transport controls */}
       <div className="flex items-center gap-1.5">
         <button

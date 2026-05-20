@@ -1,9 +1,11 @@
 'use client';
 
-import { ChevronRight, Pause, Play, RotateCcw } from 'lucide-react';
+import Link from 'next/link';
+import { ChevronLeft, ChevronRight, Pause, Play, RotateCcw } from 'lucide-react';
 import type { CycleState } from '@/lib/dep-sim';
 
 interface TimelineBarProps {
+  backHref?: string;
   currentIndex: number;
   totalCycles: number;
   playing: boolean;
@@ -32,6 +34,7 @@ const PHASE_LABELS: Record<string, string> = {
 };
 
 export function TimelineBar({
+  backHref,
   currentIndex, totalCycles, playing, currentCycle,
   onPlay, onPause, onStep, onSeek, onReset,
   playbackSpeed, onSpeedChange,
@@ -42,6 +45,11 @@ export function TimelineBar({
 
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-[rgba(59,130,246,0.2)] bg-[rgba(2,6,23,0.8)] px-4 py-2 backdrop-blur-xl">
+      {backHref && (
+        <Link href={backHref} className="flex min-h-[36px] min-w-[36px] items-center justify-center rounded-full hover:bg-white/10" aria-label="Back">
+          <ChevronLeft className="h-4 w-4" />
+        </Link>
+      )}
       <div className="flex items-center gap-1">
         <button type="button" onClick={playing ? onPause : onPlay} className="flex min-h-[36px] min-w-[36px] items-center justify-center rounded-full hover:bg-white/10" aria-label={playing ? 'Pause' : 'Play'}>
           {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
