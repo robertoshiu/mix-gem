@@ -67,6 +67,7 @@ declare module 'lucide-react' {
   const Plus: LucideIcon;
   const Power: LucideIcon;
   const RefreshCw: LucideIcon;
+  const RotateCcw: LucideIcon;
   const Save: LucideIcon;
   const Search: LucideIcon;
   const Send: LucideIcon;
@@ -103,7 +104,7 @@ declare module 'lucide-react' {
     LogIn, LogOut, Mail, Menu, MessageSquare,
     Moon, MoreHorizontal, MoreVertical,
     Package, Pause, Play, Plus, Power,
-    RefreshCw, Save, Search, Send, Settings, Share, Shield, Sliders, Square, Star, Sun,
+    RefreshCw, RotateCcw, Save, Search, Send, Settings, Share, Shield, Sliders, Square, Star, Sun,
     Tag, Terminal, Trash, TrendingDown, TrendingUp, Type,
     User, Users, X, XCircle, Zap, ZoomIn, ZoomOut
   };
