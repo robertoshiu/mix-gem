@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { ArrowRight, X } from 'lucide-react';
 import type { FabProcess } from '@/lib/fab-process-data';
+import { DIGITAL_TWIN_ROUTES } from '@/lib/digital-twin-routes';
 
 interface ProcessHudPanelProps {
   process: FabProcess | null;
@@ -69,6 +70,11 @@ export function ProcessHudPanel({ process, open, onClose }: ProcessHudPanelProps
       <Link href={`/mes/fab-floor/${process.id}`} className="mt-5 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold uppercase tracking-[0.16em] transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2" style={{ borderColor: process.color, color: process.color }}>
         View Details <ArrowRight className="h-4 w-4" aria-hidden="true" />
       </Link>
+      {DIGITAL_TWIN_ROUTES[process.id] && (
+        <Link href={DIGITAL_TWIN_ROUTES[process.id]!} className="mt-2 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold uppercase tracking-[0.16em] transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2" style={{ borderColor: process.color, backgroundColor: `color-mix(in srgb, ${process.color} 12%, transparent)`, color: process.color }}>
+          Digital Twin 數位孿生 <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </Link>
+      )}
     </aside>
   );
 }

@@ -7,6 +7,7 @@ import { WebGLFallback } from '@/components/three/WebGLFallback';
 import { useClientReady } from '@/hooks/use-client-ready';
 import { useWebGLSupport } from '@/hooks/use-webgl-support';
 import type { FabProcess, ProcessId } from '@/lib/fab-process-data';
+import { DIGITAL_TWIN_ROUTES } from '@/lib/digital-twin-routes';
 
 interface FabFloorSceneProps {
   processes: FabProcess[];
@@ -171,7 +172,48 @@ function createStation(scene: BABYLON.Scene, process: FabProcess) {
   const spot = new BABYLON.SpotLight(`${process.id}-spot`, group.position.add(new BABYLON.Vector3(0, 8, 0)), new BABYLON.Vector3(0, -1, 0), Math.PI / 3.5, 2, scene);
   spot.diffuse = BABYLON.Color3.FromHexString(process.color);
   spot.intensity = 0.32;
+  createDigitalTwinBadge(scene, process, group);
   return group;
+}
+
+function createDigitalTwinBadge(scene: BABYLON.Scene, process: FabProcess, group: BABYLON.TransformNode) {
+  if (!DIGITAL_TWIN_ROUTES[process.id]) return;
+
+  const badge = BABYLON.MeshBuilder.CreateSphere(`${process.id}-dt-badge`, { diameter: 0.55, segments: 4 }, scene);
+  badge.parent = group;
+  badge.position.y = 4.2;
+  badge.rotation.y = Math.PI / 4;
+  badge.scaling = new BABYLON.Vector3(1, 1.3, 1);
+
+  const mat = new BABYLON.StandardMaterial(`${process.id}-dt-badge-mat`, scene);
+  mat.diffuseColor = BABYLON.Color3.FromHexString(process.color);
+  mat.emissiveColor = BABYLON.Color3.FromHexString(process.color).scale(0.9);
+  mat.alpha = 0.85;
+  badge.material = mat;
+  badge.metadata = { processId: process.id, type: 'dt-badge', route: DIGITAL_TWIN_ROUTES[process.id] };
+  badge.isPickable = true;
+
+  const labelTexture = new BABYLON.DynamicTexture(`${process.id}-dt-label-tex`, { width: 256, height: 96 }, scene, false);
+  labelTexture.hasAlpha = true;
+  labelTexture.drawText('DT', 80, 64, 'bold 48px Fira Code, monospace', '#f8fafc', 'transparent', true);
+  const labelMat = new BABYLON.StandardMaterial(`${process.id}-dt-label-mat`, scene);
+  labelMat.diffuseTexture = labelTexture;
+  labelMat.opacityTexture = labelTexture;
+  labelMat.emissiveColor = BABYLON.Color3.FromHexString(process.color);
+  labelMat.disableLighting = true;
+  labelMat.backFaceCulling = false;
+  const labelPlane = BABYLON.MeshBuilder.CreatePlane(`${process.id}-dt-label`, { width: 1.2, height: 0.45 }, scene);
+  labelPlane.parent = group;
+  labelPlane.position.y = 3.85;
+  labelPlane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+  labelPlane.material = labelMat;
+  labelPlane.isPickable = false;
+
+  scene.onBeforeRenderObservable.add(() => {
+    const pulse = 0.75 + 0.25 * Math.sin(performance.now() / 600);
+    mat.alpha = pulse;
+    badge.rotation.y += 0.008;
+  });
 }
 
 function createConveyor(scene: BABYLON.Scene, processes: FabProcess[]) {
@@ -274,7 +316,11 @@ function createScene(canvas: HTMLCanvasElement, propsRef: MutableRefObject<FabFl
 
   scene.onPointerObservable.add((info) => {
     if (info.type !== BABYLON.PointerEventTypes.POINTERPICK) return;
-    const metadata = info.pickInfo?.pickedMesh?.metadata as SceneMeshMetadata | undefined;
+    const metadata = info.pickInfo?.pickedMesh?.metadata as (SceneMeshMetadata & { route?: string }) | undefined;
+    if (metadata?.type === 'dt-badge' && metadata.route) {
+      window.location.href = metadata.route;
+      return;
+    }
     if (metadata?.processId) propsRef.current.onSelectProcess(metadata.processId);
   });
 
