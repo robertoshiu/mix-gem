@@ -30,7 +30,7 @@ export interface StepMetrics {
 
 export function computeStepMetrics(
   params: SimulationParams,
-  stepIndex: number,
+  _stepIndex: number,
   prevProfile: number[],
 ): StepMetrics {
   const plasma = computePlasmaState(params);

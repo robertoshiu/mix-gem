@@ -12,7 +12,7 @@ export function computeEtchProfile(
   prevProfile: number[],
   gasRatio: number,
   ionAngle: number,
-  ionEnergy: number,
+  _ionEnergy: number,
   etchRateNmMin: number,
   dt: number,
   params: SimulationParams,
