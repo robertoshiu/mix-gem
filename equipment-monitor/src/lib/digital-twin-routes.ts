@@ -4,4 +4,5 @@ import type { ProcessId } from './fab-process-data';
 export const DIGITAL_TWIN_ROUTES: Partial<Record<ProcessId, string>> = {
   lithography: '/mes/fab-floor/lithography/lens-sim',
   deposition: '/mes/fab-floor/deposition/reactor-sim',
+  metallization: '/mes/fab-floor/metallization/damascene-sim',
 };
