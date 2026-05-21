@@ -62,7 +62,7 @@ export const DEFAULT_ION_COUNT = 500;
 export const E_CUTOFF_EV = 5;
 export const MAX_TRAJECTORY_POINTS = 400;
 export const MAX_RECOIL_CASCADES = 3;
-export const P_MAX_FACTOR = 1.2;
+export const P_MAX_FACTOR = 0.3;
 
 // ─── Empirical LSS Range Coefficients (for max depth estimation) ───
 // Rp(nm) ≈ C * E(keV)^alpha  — rough fit per species in Si
