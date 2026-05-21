@@ -20,7 +20,10 @@ export function PlanarizeScene({ step, params }: PlanarizeSceneProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const insetRef = useRef<HTMLCanvasElement>(null);
   const propsRef = useRef({ step, params });
-  propsRef.current = { step, params };
+
+  useEffect(() => {
+    propsRef.current = { step, params };
+  }, [step, params]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
