@@ -14,7 +14,8 @@
     "test:e2e": "playwright test",
     "test:e2e:list": "playwright test --list --pass-with-no-tests",
     "test:e2e:install": "playwright install --with-deps chromium",
-    "test:e2e:serve": "node tests/e2e/static-server.mjs --dir out --basePath /mix-gem --port 3000"
+    "test:e2e:serve": "node tests/e2e/static-server.mjs --dir out --basePath /mix-gem --port 3000",
+    "assets:refresh": "tsx scripts/refresh-assets.ts"
   },
   "dependencies": {
     "@babylonjs/core": "^9.6.2",
@@ -44,6 +45,8 @@
     "lightningcss-linux-x64-gnu": "^1.30.2"
   },
   "devDependencies": {
+    "@gltf-transform/cli": "^4",
+    "@gltf-transform/core": "^4",
     "@playwright/test": "^1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
@@ -56,7 +59,10 @@
     "eslint-config-next": "16.1.4",
     "jest": "^30.2.0",
     "jest-environment-jsdom": "^30.2.0",
+    "occt-import-js": "^0.0.23",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "tsx": "^4",
+    "typescript": "^5",
+    "yaml": "^2"
   }
 }

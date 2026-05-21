@@ -1,3 +1,4 @@
 {
-  "models": []
+  "models": [],
+  "note": "AR tracking now loads character models from /models/character/. See character/models.json."
 }

@@ -1,6 +1,0 @@
-1:"$Sreact.fragment"
-2:I[849479,["/mix-gem/_next/static/chunks/10y_8u8fmg5r-.js","/mix-gem/_next/static/chunks/0c.q6tkk4zxyz.js","/mix-gem/_next/static/chunks/0lc1blrq0rcxt.js","/mix-gem/_next/static/chunks/16-u~9sy4tzhb.js","/mix-gem/_next/static/chunks/01u57pjqo0h-7.js","/mix-gem/_next/static/chunks/0zajpvsgdssed.js","/mix-gem/_next/static/chunks/06kr~qjnq-3s6.js"],"LithoDashboard"]
-3:I[214213,["/mix-gem/_next/static/chunks/10y_8u8fmg5r-.js","/mix-gem/_next/static/chunks/0c.q6tkk4zxyz.js"],"OutletBoundary"]
-4:"$Sreact.suspense"
-0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"kind":"dose"}],[["$","script","script-0",{"src":"/mix-gem/_next/static/chunks/01u57pjqo0h-7.js","async":true}],["$","script","script-1",{"src":"/mix-gem/_next/static/chunks/0zajpvsgdssed.js","async":true}],["$","script","script-2",{"src":"/mix-gem/_next/static/chunks/06kr~qjnq-3s6.js","async":true}]],["$","$L3",null,{"children":["$","$4",null,{"name":"Next.MetadataOutlet","children":"$@5"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"RmLeZnlTODKgStOmz1Fd2"}
-5:null

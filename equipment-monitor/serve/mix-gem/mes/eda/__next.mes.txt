@@ -1,6 +1,0 @@
-1:"$Sreact.fragment"
-2:I[695346,["/mix-gem/_next/static/chunks/10y_8u8fmg5r-.js","/mix-gem/_next/static/chunks/0c.q6tkk4zxyz.js","/mix-gem/_next/static/chunks/0lc1blrq0rcxt.js","/mix-gem/_next/static/chunks/16-u~9sy4tzhb.js"],"Header"]
-3:I[555236,["/mix-gem/_next/static/chunks/10y_8u8fmg5r-.js","/mix-gem/_next/static/chunks/0c.q6tkk4zxyz.js","/mix-gem/_next/static/chunks/0lc1blrq0rcxt.js","/mix-gem/_next/static/chunks/16-u~9sy4tzhb.js"],"MesNavBar"]
-4:I[804757,["/mix-gem/_next/static/chunks/10y_8u8fmg5r-.js","/mix-gem/_next/static/chunks/0c.q6tkk4zxyz.js"],"default"]
-5:I[912298,["/mix-gem/_next/static/chunks/10y_8u8fmg5r-.js","/mix-gem/_next/static/chunks/0c.q6tkk4zxyz.js"],"default"]
-0:{"rsc":["$","$1","c",{"children":[[["$","script","script-0",{"src":"/mix-gem/_next/static/chunks/0lc1blrq0rcxt.js","async":true}],["$","script","script-1",{"src":"/mix-gem/_next/static/chunks/16-u~9sy4tzhb.js","async":true}]],["$","div",null,{"className":"flex flex-col min-h-screen bg-[var(--smartfactory-bg-base)]","children":[["$","$L2",null,{}],["$","$L3",null,{}],["$","main",null,{"className":"flex-1 overflow-y-auto","children":["$","$L4",null,{"parallelRouterKey":"children","template":["$","$L5",null,{}]}]}]]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"RmLeZnlTODKgStOmz1Fd2"}

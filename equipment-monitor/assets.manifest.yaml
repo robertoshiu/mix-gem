@@ -1,0 +1,204 @@
+# Multi-Source 3D Asset Manifest for Semiconductor Cleanroom Scene
+# Run: npm run assets:refresh
+# Sources: polyhaven | sketchfab | grabcad | meshy | tripo | readyplayerme
+
+settings:
+  output_root: public
+  max_file_size_mb: 5
+  texture_max_resolution: 2048
+  draco_compression: true
+  ktx2_compression: true
+  license_whitelist: [CC0, CC-BY, CC-BY-SA]
+  fail_on_missing_license: true
+
+assets:
+  # --- Environment Lighting ---
+  - id: cleanroom_hdri
+    category: hdri
+    source: polyhaven
+    query: "studio_small_09"
+    format: hdr
+    resolution: 2k
+    license_filter: [CC0]
+    target_path: public/env/cleanroom.env
+    description: "Soft studio HDRI for cleanroom ambient lighting"
+
+  - id: cleanroom_hdri_alt
+    category: hdri
+    source: polyhaven
+    query: "industrial_workshop_foundry"
+    format: hdr
+    resolution: 2k
+    license_filter: [CC0]
+    target_path: public/env/cleanroom_alt.env
+    description: "Industrial workshop HDRI for dramatic fab lighting"
+
+  # --- Semiconductor Equipment (Sketchfab first, Meshy fallback — preview only) ---
+  - id: process_chamber
+    category: equipment
+    source_priority:
+      - { source: sketchfab, query: "vacuum chamber industrial machine", license_filter: [CC0, CC-BY, CC-BY-SA] }
+      - { source: meshy, prompt: "semiconductor CVD process chamber, white stainless steel industrial vacuum equipment, circular viewport window, cable bundles on top, realistic hard surface, cleanroom environment" }
+    target_path: public/models/equipment/chamber.glb
+    description: "Main process chamber (CVD/PVD/Etch)"
+
+  - id: efem_loader
+    category: equipment
+    source_priority:
+      - { source: sketchfab, query: "wafer loader industrial robot enclosure", license_filter: [CC0, CC-BY, CC-BY-SA] }
+      - { source: meshy, prompt: "semiconductor EFEM equipment front end module, three FOUP load ports on front, white panels, robotic arm inside glass enclosure, industrial cleanroom equipment, realistic" }
+    target_path: public/models/equipment/efem.glb
+    description: "Equipment Front End Module with FOUP load ports"
+
+  - id: wafer_cassette
+    category: equipment
+    source: meshy
+    prompt: "FOUP wafer carrier cassette container, translucent purple lid, 300mm silicon wafer slots visible inside, industrial semiconductor, realistic product shot"
+    target_path: public/models/equipment/wafer_cassette.glb
+    description: "300mm FOUP wafer carrier"
+
+  - id: spin_coater
+    category: equipment
+    source: meshy
+    prompt: "semiconductor photoresist spin coater track system, white industrial equipment cabinet, multiple process modules in a row, pipes and ducts, cleanroom fab realistic"
+    target_path: public/models/equipment/spin_coater.glb
+    description: "Photoresist spin coater track system"
+
+  - id: stepper_scanner
+    category: equipment
+    source: meshy
+    prompt: "DUV lithography scanner stepper machine, large yellow and white industrial equipment, ASML style, wafer stage visible, semiconductor fab floor, realistic hard surface"
+    target_path: public/models/equipment/stepper.glb
+    description: "DUV lithography stepper/scanner"
+
+  - id: metrology_tool
+    category: equipment
+    source: meshy
+    prompt: "CD-SEM semiconductor metrology inspection tool, white cabinet body with touch screen monitor on top, sample loading port, cleanroom equipment, realistic industrial"
+    target_path: public/models/equipment/metrology.glb
+    description: "CD-SEM metrology/inspection tool"
+
+  - id: robotic_arm
+    category: equipment
+    source: meshy
+    prompt: "cleanroom SCARA wafer handling robot arm, white body, articulated joints, end effector paddle for 300mm wafer, mounted on pedestal, semiconductor automation, realistic"
+    target_path: public/models/equipment/robot_arm.glb
+    description: "Wafer handling SCARA robot arm"
+
+  # --- Characters (Meshy for full cleanroom workers) ---
+  - id: worker_base
+    category: character
+    source: meshy
+    prompt: "semiconductor fab cleanroom worker full body, white bunny suit coverall with hood, transparent face shield, blue nitrile gloves, ESD safe boots, standing T-pose, realistic human proportions"
+    target_path: public/models/character/base.glb
+    description: "Cleanroom worker in white bunny suit (T-pose)"
+
+  - id: cleanroom_suit
+    category: clothing
+    source: meshy
+    prompt: "cleanroom bunny suit coverall PPE, white fabric full body with attached hood, clear face visor, elastic wrists and ankles, ESD boots, laid flat display, realistic fabric texture"
+    target_path: public/models/character/suit.glb
+    description: "Cleanroom bunny suit (full coverall + hood)"
+
+  - id: cleanroom_suit_blue
+    category: clothing
+    source: meshy
+    prompt: "blue cleanroom gown coverall with hood and face shield, semiconductor fab protective clothing, ESD safe, realistic fabric wrinkles and folds"
+    target_path: public/models/character/suit_blue.glb
+    description: "Blue variant cleanroom gown"
+
+  - id: engineer_white
+    category: character
+    source: sketchfab
+    query: "hazmat suit worker character realistic"
+    sketchfab_uid: aebb820813d24ef3bb244521fd0dac7e
+    license_filter: [CC-BY]
+    target_path: public/models/character/engineer_white.glb
+    description: "Full-body cleanroom engineer in white protective suit (32K faces)"
+
+  - id: engineer_blue
+    category: character
+    source: sketchfab
+    query: "hazmat suit version 3 blue"
+    sketchfab_uid: 8bb847dd07bf44de8614f38740d9505a
+    license_filter: [CC-BY]
+    target_path: public/models/character/engineer_blue.glb
+    description: "Full-body cleanroom engineer in blue protective suit (27K faces)"
+
+  # --- Accessories ---
+  - id: ar_glasses
+    category: accessory
+    source: meshy
+    prompt: "Microsoft HoloLens 2 mixed reality headset, sleek black visor with transparent waveguide display, adjustable headband, realistic product shot, isolated on white"
+    target_path: public/models/accessory/ar_glasses.glb
+    description: "AR/MR glasses (HoloLens 2 style)"
+
+  - id: safety_helmet
+    category: accessory
+    source_priority:
+      - { source: sketchfab, query: "safety helmet hard hat industrial", license_filter: [CC0, CC-BY] }
+      - { source: meshy, prompt: "white industrial safety helmet with face shield visor, cleanroom compatible" }
+    target_path: public/models/accessory/safety_helmet.glb
+    description: "Safety helmet with visor"
+
+  - id: tablet_device
+    category: accessory
+    source: meshy
+    prompt: "rugged industrial tablet device, thick rubber bumper case, 10 inch screen showing data charts, held in hand position, fab floor data terminal, realistic"
+    target_path: public/models/accessory/tablet.glb
+    description: "Rugged tablet for fab floor data entry"
+
+  # --- Infrastructure / Subsystem Equipment (Sketchfab CC-BY, used in FabTwin + WarRoom) ---
+  - id: pdu_cabinet
+    category: infrastructure
+    source: sketchfab
+    query: "electrical control panel industrial"
+    sketchfab_uid: c0dfab99f2c34b4aa76e895362608677
+    license_filter: [CC-BY]
+    target_path: public/models/infrastructure/pdu.glb
+    description: "Power distribution unit / electrical control panel (3.9K faces)"
+
+  - id: gas_cabinet
+    category: infrastructure
+    source: sketchfab
+    query: "gas tank industrial"
+    sketchfab_uid: fcff049c431041a4889b836be5e93c93
+    license_filter: [CC-BY]
+    target_path: public/models/infrastructure/gas_cabinet.glb
+    description: "Gas cylinder cabinet / storage tank (8K faces)"
+
+  - id: exhaust_scrubber
+    category: infrastructure
+    source: sketchfab
+    query: "chemical tank industrial"
+    sketchfab_uid: 63c001e74ff5402fbcf1338479c9c0c5
+    license_filter: [CC-BY]
+    target_path: public/models/infrastructure/scrubber.glb
+    description: "Exhaust scrubber / chemical tank (8.7K faces)"
+
+  - id: chiller_unit
+    category: infrastructure
+    source: sketchfab
+    query: "pressure vessel heat exchanger"
+    sketchfab_uid: c4c75717bcc743ce8bb08a0aa0abe52e
+    license_filter: [CC-BY]
+    target_path: public/models/infrastructure/chiller.glb
+    description: "Chiller / heat exchanger pressure vessel (7.3K faces)"
+
+  - id: amhs_carrier
+    category: infrastructure
+    source: sketchfab
+    query: "conveyor SCADA HMI low poly"
+    sketchfab_uid: fe72a89566b04b45b79d3e9297a6a5cf
+    license_filter: [CC-BY]
+    target_path: public/models/infrastructure/amhs_carrier.glb
+    description: "AMHS overhead transport / conveyor (2.3K faces)"
+
+  - id: ffu_ceiling
+    category: infrastructure
+    source: sketchfab
+    query: "ventilation shafts low poly"
+    sketchfab_uid: 03f7eed39e654ad0a8d107d239c80e28
+    license_filter: [CC-BY]
+    target_path: public/models/infrastructure/ffu.glb
+    description: "FFU ceiling unit / ventilation shaft (488 faces)"
