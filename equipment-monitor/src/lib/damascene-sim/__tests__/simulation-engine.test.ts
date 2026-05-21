@@ -1,4 +1,4 @@
-import { createSimulation, stepForward, stepN, applyPreset } from '../simulation-engine';
+import { createSimulation, stepForward, stepN } from '../simulation-engine';
 import { DEFAULT_PARAMS, DEFAULT_TOTAL_STEPS, ECD_FILL_END, ANNEAL_END } from '../constants';
 
 describe('simulation-engine', () => {

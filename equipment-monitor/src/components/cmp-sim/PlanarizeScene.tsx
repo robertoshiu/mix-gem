@@ -144,9 +144,7 @@ export function PlanarizeScene({ step, params }: PlanarizeSceneProps) {
     advTex.addControl(phaseBanner);
 
     // --- Render loop ---
-    let frame = 0;
     scene.registerBeforeRender(() => {
-      frame++;
       const { step: s, params: pr } = propsRef.current;
       const phase = s?.phase ?? 'ramp-up';
       const dt = 0.016;
@@ -339,7 +337,7 @@ export function PlanarizeScene({ step, params }: PlanarizeSceneProps) {
       window.removeEventListener('resize', handleResize);
       engine.dispose();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="relative h-full w-full">

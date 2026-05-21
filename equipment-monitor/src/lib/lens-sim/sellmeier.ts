@@ -6,14 +6,14 @@ import { SILICA_DN_DT, WATER_DN_DT, WATER_N_193 } from './constants';
  * Simplified: constant over small temperature range near 22.5C.
  * Real Sellmeier would be wavelength-dependent, but at fixed 193nm this is sufficient.
  */
-export function silicaDnDt(_temperatureC: number): number {
+export function silicaDnDt(_temperatureC: number): number { // eslint-disable-line @typescript-eslint/no-unused-vars
   return SILICA_DN_DT;
 }
 
 /**
  * Water dn/dT at 193nm. Negative value.
  */
-export function waterDnDt(_temperatureC: number): number {
+export function waterDnDt(_temperatureC: number): number { // eslint-disable-line @typescript-eslint/no-unused-vars
   return WATER_DN_DT;
 }
 

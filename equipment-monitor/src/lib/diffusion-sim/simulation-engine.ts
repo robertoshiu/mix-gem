@@ -1,5 +1,5 @@
 import type { SimulationParams, SimulationState, StepState, SolverState } from './types';
-import { DEFAULT_PARAMS, DEFAULT_TOTAL_STEPS, DEPTH_BINS, estimateMaxDepth, DOPANT_DB } from './constants';
+import { DEFAULT_PARAMS, DEFAULT_TOTAL_STEPS, DEPTH_BINS, estimateMaxDepth } from './constants';
 import { generateThermalProfile } from './thermal-profile';
 import { createSolverState, solveDiffusionStep } from './diffusion-solver';
 import { computeMetrics } from './wafer-metrics';

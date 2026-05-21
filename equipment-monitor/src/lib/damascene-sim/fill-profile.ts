@@ -10,7 +10,8 @@ import {
   CU_VALENCE,
 } from './constants';
 
-export function computeFillProfile(fillLevel: number, _params: SimulationParams): number[] {
+export function computeFillProfile(fillLevel: number, _params?: SimulationParams): number[] {
+  void _params;
   return new Array(FILL_PROFILE_POINTS).fill(fillLevel);
 }
 
@@ -23,8 +24,9 @@ export function advanceFillProfile(
   prevProfile: number[],
   params: SimulationParams,
   localCurrentDensity: number,
-  stepCount: number,
+  _stepCount: number,
 ): number[] {
+  void _stepCount;
   const n = prevProfile.length;
   const midpoint = (n - 1) / 2;
   const dt = 0.5;

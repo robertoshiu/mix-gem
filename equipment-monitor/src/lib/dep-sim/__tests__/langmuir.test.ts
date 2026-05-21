@@ -1,5 +1,5 @@
 import { computeCoverage, computeHalfCycleCoverages } from '../langmuir';
-import { DEFAULT_PARAMS, K_BDEAS, K_O3 } from '../constants';
+import { DEFAULT_PARAMS } from '../constants';
 
 describe('langmuir', () => {
   it('coverage is 0 when exposure dose is 0', () => {

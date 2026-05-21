@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
-  DEFAULT_PARAMS, DOPANT_DB, THERMAL_MODES, DEPTH_BINS,
-  DEFAULT_TOTAL_STEPS, PARAM_BOUNDS, estimateMaxDepth, mulberry32,
-  BOLTZMANN_EV, SI_LATTICE_DENSITY,
+  DEFAULT_PARAMS, DOPANT_DB, THERMAL_MODES,
+  PARAM_BOUNDS, estimateMaxDepth, mulberry32,
 } from '../constants';
 
 describe('diffusion-sim constants', () => {

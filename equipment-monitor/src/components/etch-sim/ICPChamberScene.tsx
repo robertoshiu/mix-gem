@@ -295,7 +295,7 @@ export function ICPChamberScene({ step, params }: ICPChamberSceneProps) {
       window.removeEventListener('resize', handleResize);
       engine.dispose();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="relative h-full w-full">

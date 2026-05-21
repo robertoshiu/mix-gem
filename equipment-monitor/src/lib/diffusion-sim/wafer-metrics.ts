@@ -1,5 +1,5 @@
 import type { SimulationParams, SolverState, DiffusionMetric, DopantSpecies } from './types';
-import { DOPANT_DB, MASETTI_ELECTRONS, MASETTI_HOLES, DEPTH_BINS, ELECTRON_CHARGE } from './constants';
+import { DOPANT_DB, MASETTI_ELECTRONS, MASETTI_HOLES, ELECTRON_CHARGE } from './constants';
 import { equilibriumInterstitials, equilibriumVacancies } from './point-defects';
 
 /** Masetti mobility model (cm²/V·s) */
@@ -37,7 +37,6 @@ export function computeMetrics(
   binSize: number,
 ): Record<DiffusionMetric, number> {
   const N = state.dopantProfile.length;
-  const db = DOPANT_DB[params.dopantSpecies];
 
   // Junction depth: deepest x where active > backgroundDoping
   let junctionDepth = 0;

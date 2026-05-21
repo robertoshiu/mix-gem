@@ -1,4 +1,4 @@
-import { PRESETS, getPreset } from '../presets';
+import { getPreset } from '../presets';
 import { DEFAULT_PARAMS } from '../constants';
 
 describe('presets', () => {
