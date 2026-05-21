@@ -8,4 +8,5 @@ export const DIGITAL_TWIN_ROUTES: Partial<Record<ProcessId, string>> = {
   etching: '/mes/fab-floor/etching/etch-sim',
   cmp: '/mes/fab-floor/cmp/planarization-sim',
   implant: '/mes/fab-floor/implant/implant-sim',
+  diffusion: '/mes/fab-floor/diffusion/diffusion-sim',
 };
