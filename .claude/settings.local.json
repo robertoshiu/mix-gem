@@ -76,7 +76,17 @@
       "Bash(sudo apt-get install:*)",
       "Bash(~/.local/bin/docker-compose --version)",
       "Bash(~/.local/bin/docker-compose -f docker-compose.dev.yml --env-file .env.dev up -d)",
-      "Bash(npx jest:*)"
+      "Bash(npx jest:*)",
+      "Bash(git push:*)",
+      "WebFetch(domain:sketchfab.com)",
+      "WebFetch(domain:www.meshy.ai)",
+      "WebFetch(domain:api.sketchfab.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.meshy.ai)",
+      "WebFetch(domain:www.get3dmodels.com)",
+      "WebFetch(domain:forum.babylonjs.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:docs.meshy.ai)"
     ]
   }
 }
