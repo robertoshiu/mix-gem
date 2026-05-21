@@ -4,7 +4,6 @@ import { useEffect, useRef } from 'react';
 import * as BABYLON from '@babylonjs/core';
 import * as GUI from '@babylonjs/gui';
 import type { StepState, SimulationParams } from '@/lib/cmp-sim';
-import { RAMP_UP_END, BULK_CU_END, BARRIER_END } from '@/lib/cmp-sim';
 
 interface PlanarizeSceneProps {
   step: StepState | null;
