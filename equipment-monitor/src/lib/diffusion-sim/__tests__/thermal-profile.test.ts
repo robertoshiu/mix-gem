@@ -1,4 +1,3 @@
-import { describe, it, expect } from 'vitest';
 import { generateThermalProfile, thermalBudget } from '../thermal-profile';
 import { DEFAULT_PARAMS, DEFAULT_TOTAL_STEPS } from '../constants';
 import type { ThermalMode, SimulationParams } from '../types';

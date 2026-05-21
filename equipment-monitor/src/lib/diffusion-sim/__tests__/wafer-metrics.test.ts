@@ -1,4 +1,3 @@
-import { describe, it, expect } from 'vitest';
 import { mobilityMasetti, sheetResistance, computeMetrics } from '../wafer-metrics';
 import { createSolverState, solveDiffusionStep } from '../diffusion-solver';
 import { generateThermalProfile } from '../thermal-profile';

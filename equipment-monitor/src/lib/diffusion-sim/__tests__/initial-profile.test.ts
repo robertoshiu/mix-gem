@@ -1,4 +1,3 @@
-import { describe, it, expect } from 'vitest';
 import { generateInitialProfile, generateImplantDamage } from '../initial-profile';
 
 describe('initial-profile', () => {

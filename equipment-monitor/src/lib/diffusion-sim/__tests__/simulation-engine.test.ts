@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+
 import { createSimulation, stepForward, stepN, applyPreset } from '../simulation-engine';
 import { DEFAULT_PARAMS, DEPTH_BINS, DEFAULT_TOTAL_STEPS } from '../constants';
 import type { SimulationParams } from '../types';

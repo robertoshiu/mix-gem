@@ -1,4 +1,3 @@
-import { describe, it, expect } from 'vitest';
 import { tridiagonalSolve, createSolverState, solveDiffusionStep } from '../diffusion-solver';
 import { generateThermalProfile } from '../thermal-profile';
 import { DEFAULT_PARAMS, DEPTH_BINS, estimateMaxDepth } from '../constants';
