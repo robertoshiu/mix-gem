@@ -2,7 +2,7 @@ import type { SimulationParams, SimulationState, StepState, ProcessPhase } from 
 import {
   DEFAULT_PARAMS, DEFAULT_TOTAL_STEPS,
   RAMP_UP_END, BULK_CU_END, BARRIER_END,
-  RADIAL_NODES, BARRIER_THICKNESS_NM,
+  BARRIER_THICKNESS_NM,
 } from './constants';
 import { computeStepMetrics } from './wafer-metrics';
 import { getPreset } from './presets';

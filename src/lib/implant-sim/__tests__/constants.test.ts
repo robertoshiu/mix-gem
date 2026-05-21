@@ -1,4 +1,4 @@
-import { DEFAULT_PARAMS, ION_DB, MATERIAL_DB, CHANNEL_DB, estimateMaxDepth, mulberry32, DEPTH_BINS } from '../constants';
+import { DEFAULT_PARAMS, ION_DB, MATERIAL_DB, estimateMaxDepth, mulberry32 } from '../constants';
 
 describe('constants', () => {
   test('DEFAULT_PARAMS has all required fields', () => {

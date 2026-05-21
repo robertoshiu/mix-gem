@@ -1,7 +1,6 @@
 // equipment-monitor/src/lib/lens-sim/thermal-model.ts
 import type { LensElementState, SimulationParams } from './types';
 import {
-  ABSORPTION_FRACTION,
   DELTA_T_MAX_BASE,
   ELEMENT_THICKNESS_MM,
   LENS_COUNT,

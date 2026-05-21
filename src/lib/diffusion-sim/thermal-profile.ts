@@ -29,8 +29,9 @@ function computeThermalState(
   mode: ThermalMode,
   params: SimulationParams,
   time: number,
-  dt: number,
+  _dt: number,
 ): { temperature: number; phase: ThermalPhase; tempProfile: number[] } {
+  void _dt;
   let temperature: number;
   let phase: ThermalPhase;
   let depthDependent = false;

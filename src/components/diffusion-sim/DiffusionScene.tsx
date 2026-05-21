@@ -22,7 +22,7 @@ function concToColor(logC: number): BABYLON.Color3 {
 export function DiffusionScene({ step, params }: DiffusionSceneProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const propsRef = useRef({ step, params });
-  propsRef.current = { step, params };
+  useEffect(() => { propsRef.current = { step, params }; });
 
   useEffect(() => {
     const canvas = canvasRef.current;

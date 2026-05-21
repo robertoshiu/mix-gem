@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import * as BABYLON from '@babylonjs/core';
 import * as GUI from '@babylonjs/gui';
 import type { StepState, SimulationParams } from '@/lib/etch-sim';
-import { STRIKE_END, MAIN_ETCH_END, ETCH_PROFILE_POINTS } from '@/lib/etch-sim';
+import { STRIKE_END, ETCH_PROFILE_POINTS } from '@/lib/etch-sim';
 
 interface ICPChamberSceneProps {
   step: StepState | null;
@@ -295,7 +295,7 @@ export function ICPChamberScene({ step, params }: ICPChamberSceneProps) {
       window.removeEventListener('resize', handleResize);
       engine.dispose();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="relative h-full w-full">

@@ -3,7 +3,6 @@ import {
   BOLTZMANN_EV, C_EQUIL_PREFACTOR, E_FORM_V, E_FORM_I,
   E_RECOMBINATION, D_DEFECT_PREFACTOR, E_DEFECT_MIGRATION,
   E_311, TAU_311_0, K_OX_DRY, K_OX_WET, SI_LATTICE_SPACING,
-  DEPTH_BINS,
 } from './constants';
 
 /** Equilibrium vacancy concentration at temperature T (°C) */
@@ -61,7 +60,7 @@ export function stepPointDefects(
   T_celsius: number,
   dt: number,
   ambient: AmbientGas,
-  binSize: number,
+  _binSize: number,
   interstitialFactor: number,
   vacancyFactor: number,
 ): void {

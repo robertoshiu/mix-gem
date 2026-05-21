@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   intrinsicCarrier, carrierConcentrations, effectiveDiffusivity,
-  solidSolubility, activeFraction, activeConcentration,
+  solidSolubility, activeFraction,
 } from '../diffusivity';
 
 describe('diffusivity', () => {

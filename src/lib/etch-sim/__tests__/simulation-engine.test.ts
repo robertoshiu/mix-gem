@@ -1,5 +1,5 @@
 import { createSimulation, stepForward, stepN, applyPreset } from '../simulation-engine';
-import { DEFAULT_PARAMS, STRIKE_END, MAIN_ETCH_END } from '../constants';
+import { STRIKE_END, MAIN_ETCH_END } from '../constants';
 
 describe('simulation-engine', () => {
   it('createSimulation returns initial state with index -1', () => {

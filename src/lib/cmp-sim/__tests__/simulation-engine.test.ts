@@ -1,5 +1,5 @@
 import { createSimulation, stepForward, stepN, applyPreset } from '../simulation-engine';
-import { DEFAULT_PARAMS, RAMP_UP_END, BULK_CU_END, BARRIER_END } from '../constants';
+import { RAMP_UP_END, BULK_CU_END, BARRIER_END } from '../constants';
 
 describe('simulation-engine', () => {
   it('createSimulation returns initial state with index -1', () => {
