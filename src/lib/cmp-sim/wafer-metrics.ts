@@ -63,7 +63,7 @@ function buildNormalizedProfile(profile: number[]): number[] {
 
   // Step 1: interpolate gaps
   const filled = [...profile];
-  for (const gi of gapSet) {
+  for (const gi of Array.from(gapSet)) {
     let lo = gi - 1;
     while (lo >= 0 && gapSet.has(lo)) lo--;
     let hi = gi + 1;
