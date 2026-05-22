@@ -1,4 +1,4 @@
-import { generateToolPerformance, generatePmSchedule, generateMtbfPrediction, generateFdcTraces } from '../mock-data';
+import { generateToolPerformance, generatePmSchedule, generateMtbfPrediction, generateFdcTraces, generateChamberMatchStats } from '../mock-data';
 
 describe('generateToolPerformance', () => {
   test('deterministic — same ID produces same output', () => {
@@ -136,6 +136,59 @@ describe('generateFdcTraces', () => {
   test('deterministic — same inputs produce same output', () => {
     const a = generateFdcTraces('CMP-OX-01', 'oscillation');
     const b = generateFdcTraces('CMP-OX-01', 'oscillation');
+    expect(a).toEqual(b);
+  });
+});
+
+describe('generateChamberMatchStats', () => {
+  test('returns stats for multiple chambers', () => {
+    const stats = generateChamberMatchStats(
+      [
+        { id: 'FUR-OX-01', name: 'Horizontal Furnace A' },
+        { id: 'FUR-OX-02', name: 'Wet Ox Furnace B' },
+        { id: 'MET-OX-01', name: 'Ellipsometer' },
+      ],
+      'pressure',
+    );
+    expect(stats.length).toBe(3);
+  });
+
+  test('all stats have positive sigma and n', () => {
+    const stats = generateChamberMatchStats(
+      [
+        { id: 'ETCH-ICP-01', name: 'ICP Poly Etcher' },
+        { id: 'ETCH-ICP-02', name: 'Dielectric Etcher' },
+      ],
+      'rfPower',
+    );
+    for (const s of stats) {
+      expect(s.sigma).toBeGreaterThan(0);
+      expect(s.n).toBeGreaterThan(0);
+    }
+  });
+
+  test('one chamber has offset > 1 sigma from group mean', () => {
+    const stats = generateChamberMatchStats(
+      [
+        { id: 'DEP-ALD-01', name: 'ALD Cluster' },
+        { id: 'DEP-CVD-04', name: 'PECVD Twin' },
+        { id: 'DEP-PVD-02', name: 'PVD Metal Seed' },
+      ],
+      'temperature',
+    );
+    const groupMean = stats.reduce((s, c) => s + c.mean, 0) / stats.length;
+    const groupSigma = Math.sqrt(stats.reduce((s, c) => s + c.sigma ** 2, 0) / stats.length);
+    const maxOffset = Math.max(...stats.map(c => Math.abs(c.mean - groupMean)));
+    expect(maxOffset).toBeGreaterThan(groupSigma);
+  });
+
+  test('deterministic — same inputs produce same output', () => {
+    const chambers = [
+      { id: 'CMP-OX-01', name: 'Oxide Polish Module' },
+      { id: 'CMP-CU-02', name: 'Copper Polish Module' },
+    ];
+    const a = generateChamberMatchStats(chambers, 'pressure');
+    const b = generateChamberMatchStats(chambers, 'pressure');
     expect(a).toEqual(b);
   });
 });

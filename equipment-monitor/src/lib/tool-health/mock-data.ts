@@ -245,3 +245,54 @@ export function generateFdcTraces(chamberId: string, anomalyType?: FdcAnomalyTyp
     return { chamberId, paramId, samples };
   });
 }
+
+// ── 5. Chamber Matching ──
+
+export function generateChamberMatchStats(
+  chambers: { id: string; name: string }[],
+  paramId: FdcParamId,
+): ChamberMatchStat[] {
+  const param = FDC_PARAMS[paramId];
+  const rng = mulberry32(hashCode(chambers.map(c => c.id).join(',') + '-' + paramId));
+
+  // Pick one chamber to have a deliberate offset
+  const offsetIdx = Math.floor(rng() * chambers.length);
+  const offsetAmount = (1.5 + rng()) * param.setpoint * 0.02;
+
+  return chambers.map((chamber, idx) => {
+    const traceRng = mulberry32(hashCode(chamber.id + '-match-' + paramId));
+    const n = 50;
+    const sigma = param.setpoint * 0.02;
+
+    let sum = 0;
+    let sumSq = 0;
+    let min = Infinity;
+    let max = -Infinity;
+
+    for (let i = 0; i < n; i++) {
+      let v = param.setpoint + gaussianNoise(traceRng) * sigma;
+      if (idx === offsetIdx) {
+        v += offsetAmount;
+      }
+      sum += v;
+      sumSq += v * v;
+      if (v < min) min = v;
+      if (v > max) max = v;
+    }
+
+    const mean = sum / n;
+    const variance = sumSq / n - mean * mean;
+    const computedSigma = Math.sqrt(Math.max(0, variance));
+
+    return {
+      chamberId: chamber.id,
+      chamberName: chamber.name,
+      paramId,
+      mean: Number(mean.toFixed(2)),
+      sigma: Number(computedSigma.toFixed(2)),
+      min: Number(min.toFixed(2)),
+      max: Number(max.toFixed(2)),
+      n,
+    };
+  });
+}
