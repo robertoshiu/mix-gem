@@ -1,4 +1,4 @@
-import { generateToolPerformance, generatePmSchedule } from '../mock-data';
+import { generateToolPerformance, generatePmSchedule, generateMtbfPrediction } from '../mock-data';
 
 describe('generateToolPerformance', () => {
   test('deterministic — same ID produces same output', () => {
@@ -59,6 +59,41 @@ describe('generatePmSchedule', () => {
   test('deterministic — same ID produces same output', () => {
     const a = generatePmSchedule('ETCH-ICP-01');
     const b = generatePmSchedule('ETCH-ICP-01');
+    expect(a).toEqual(b);
+  });
+});
+
+describe('generateMtbfPrediction', () => {
+  test('survivalCurve has 50 points', () => {
+    const m = generateMtbfPrediction('NXE-3800-01');
+    expect(m.survivalCurve).toHaveLength(50);
+  });
+
+  test('S(0) is close to 1', () => {
+    const m = generateMtbfPrediction('FUR-OX-01');
+    expect(m.survivalCurve[0].probability).toBeGreaterThan(0.99);
+  });
+
+  test('S(2*eta) is close to 0', () => {
+    const m = generateMtbfPrediction('ETCH-ICP-01');
+    const last = m.survivalCurve[m.survivalCurve.length - 1];
+    expect(last.probability).toBeLessThan(0.05);
+  });
+
+  test('failureProbability is in 0-1', () => {
+    const m = generateMtbfPrediction('CMP-OX-01');
+    expect(m.failureProbability).toBeGreaterThanOrEqual(0);
+    expect(m.failureProbability).toBeLessThanOrEqual(1);
+  });
+
+  test('MTBF > 0', () => {
+    const m = generateMtbfPrediction('DEP-ALD-01');
+    expect(m.mtbfHours).toBeGreaterThan(0);
+  });
+
+  test('deterministic — same ID produces same output', () => {
+    const a = generateMtbfPrediction('RTP-01');
+    const b = generateMtbfPrediction('RTP-01');
     expect(a).toEqual(b);
   });
 });
