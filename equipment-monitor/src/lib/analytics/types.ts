@@ -203,3 +203,77 @@ export interface PipelineResult {
   filmStack: FilmLayer[];
   cumulativeYield: number;
 }
+
+// ── VPP Accordion Panels ──
+export type SubstrateType = 'Si(100)' | 'Si(111)' | 'SiGe' | 'SOI';
+export type StressMode = 'biaxial' | 'plane-stress' | 'plane-strain';
+export type DefectSource = 'particles' | 'scratches' | 'voids' | 'inclusions';
+export type DopantSpeciesId = 'B' | 'P' | 'As' | 'Sb' | 'In' | 'Ga';
+
+export interface StressLayerResult {
+  stepId: ProcessStepId;
+  material: string;
+  intrinsicStress: number;
+  thermalStress: number;
+  totalStress: number;
+  thickness: number;
+}
+
+export interface StressProfileResult {
+  layers: StressLayerResult[];
+  netStress: number;
+  waferBow: number;
+  cumulativeStress: { depth: number; stress: number }[];
+}
+
+export interface DefectSourceBreakdown {
+  source: DefectSource;
+  density: number;
+  killerDensity: number;
+  color: string;
+}
+
+export interface DefectStepResult {
+  stepId: ProcessStepId;
+  totalD0: number;
+  killerD0: number;
+  sources: DefectSourceBreakdown[];
+  yieldImpact: number;
+}
+
+export interface DefectMapResult {
+  perStep: DefectStepResult[];
+  totalD0: number;
+  totalKillerD0: number;
+  totalYieldImpact: number;
+  paretoPoints: { stepId: ProcessStepId; cumPct: number }[];
+  waferDots: { x: number; y: number; source: DefectSource }[];
+}
+
+export interface DopantProfilePoint {
+  depth: number;
+  concentration: number;
+  activeConcentration: number;
+}
+
+export interface DopantSpeciesResult {
+  species: DopantSpeciesId;
+  profile: DopantProfilePoint[];
+  peakConcentration: number;
+  junctionDepth: number;
+  dose: number;
+  color: string;
+}
+
+export interface DopantProfileResult {
+  species: DopantSpeciesResult[];
+  backgroundDoping: number;
+}
+
+export interface ThermalBudgetStep {
+  stepId: ProcessStepId;
+  temperature: number;
+  time: number;
+  dt: number;
+  cumulativeDt: number;
+}

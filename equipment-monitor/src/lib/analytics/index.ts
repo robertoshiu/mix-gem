@@ -7,6 +7,11 @@ export type {
   SensitivityBar, ConstraintSet,
   FabId, FabConfig, TostResult, TransferFit, DistributionCurvePoint, ReplicationParam,
   PipelineStep, PipelineStepResult, FilmLayer, PipelineResult,
+  SubstrateType, StressMode, DefectSource, DopantSpeciesId,
+  StressLayerResult, StressProfileResult,
+  DefectSourceBreakdown, DefectStepResult, DefectMapResult,
+  DopantProfilePoint, DopantSpeciesResult, DopantProfileResult,
+  ThermalBudgetStep,
 } from './types';
 
 export {
@@ -49,3 +54,26 @@ export {
 export {
   createDefaultPipeline, runFederatedSim, computeFilmStack, computePipelineYield,
 } from './vpp-engine';
+
+export {
+  SUBSTRATE_PROPERTIES,
+  FILM_STRESS_PROPERTIES,
+  DEFAULT_PROCESS_TIMES,
+  DEFAULT_PROCESS_TEMPS,
+  DEFAULT_THERMAL_BUDGET_CEILING,
+  WAFER_RADIUS_MM,
+  WAFER_THICKNESS_UM,
+  DEFECT_SOURCE_FRACTIONS,
+  DEFECT_SOURCE_COLORS,
+  DEFECT_SOURCES,
+  DEFAULT_KILL_RATIOS,
+  DOPANT_IMPLANT_DATA,
+  ALL_DOPANT_SPECIES,
+  DEFAULT_BACKGROUND_DOPING,
+} from './vpp-constants';
+
+export type {
+  SubstrateProperties,
+  FilmStressProperties,
+  DopantImplantData,
+} from './vpp-constants';
