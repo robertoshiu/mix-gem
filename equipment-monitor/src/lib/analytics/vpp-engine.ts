@@ -1,7 +1,13 @@
 import type {
   PipelineStep, PipelineStepResult, PipelineResult, FilmLayer, ProcessStepId,
+  SubstrateType, StressMode, StressLayerResult, StressProfileResult,
+  DefectSource, DefectSourceBreakdown, DefectStepResult, DefectMapResult,
 } from './types';
 import { PROCESS_STEPS, FILM_MATERIALS, DEFAULT_D0, mulberry32, hashCode } from './constants';
+import {
+  SUBSTRATE_PROPERTIES, FILM_STRESS_PROPERTIES, WAFER_RADIUS_MM, WAFER_THICKNESS_UM,
+  DEFECT_SOURCE_FRACTIONS, DEFECT_SOURCE_COLORS, DEFECT_SOURCES,
+} from './vpp-constants';
 
 export function createDefaultPipeline(): PipelineStep[] {
   return PROCESS_STEPS.map((stepId) => ({
@@ -76,4 +82,131 @@ export function computePipelineYield(
     return { stepId: r.stepId, yield: r.yield };
   });
   return { perStep, cumulative };
+}
+
+export function computeStressProfile(
+  perStep: PipelineStepResult[],
+  substrate: SubstrateType,
+  tempC: number,
+  mode: StressMode,
+): StressProfileResult {
+  const sub = SUBSTRATE_PROPERTIES[substrate];
+  const deltaT = tempC - 25;
+
+  const layers: StressLayerResult[] = [];
+  let totalStressThickness = 0;
+  let totalThickness = 0;
+
+  for (const step of perStep) {
+    const fp = FILM_STRESS_PROPERTIES[step.stepId];
+    if (fp.E === 0 || step.thickness <= 0) continue;
+
+    let Eeff: number;
+    if (mode === 'biaxial') Eeff = fp.E / (1 - fp.nu);
+    else if (mode === 'plane-strain') Eeff = fp.E / (1 - fp.nu * fp.nu);
+    else Eeff = fp.E;
+
+    const thermalStress = Eeff * (sub.alpha - fp.cte) * deltaT * 1000;
+    const totalStress = fp.intrinsicStress + thermalStress;
+
+    layers.push({
+      stepId: step.stepId,
+      material: FILM_MATERIALS[step.stepId].material,
+      intrinsicStress: fp.intrinsicStress,
+      thermalStress,
+      totalStress,
+      thickness: step.thickness,
+    });
+
+    totalStressThickness += totalStress * step.thickness;
+    totalThickness += step.thickness;
+  }
+
+  const netStress = totalThickness > 0 ? totalStressThickness / totalThickness : 0;
+
+  const L = WAFER_RADIUS_MM * 1000;
+  const tSub = WAFER_THICKNESS_UM;
+  const tFilm = totalThickness / 1000;
+  const Ms = (sub.E / (1 - sub.nu)) * 1000;
+  const waferBow = totalThickness > 0
+    ? Math.abs(3 * netStress * tFilm * L * L / (Ms * tSub * tSub))
+    : 0;
+
+  const cumulativeStress: { depth: number; stress: number }[] = [{ depth: 0, stress: 0 }];
+  let cumDepth = 0;
+  let cumStress = 0;
+  for (const layer of layers) {
+    cumDepth += layer.thickness;
+    cumStress += layer.totalStress;
+    cumulativeStress.push({ depth: cumDepth, stress: cumStress });
+  }
+
+  return { layers, netStress, waferBow, cumulativeStress };
+}
+
+export function computeDefectMap(
+  perStep: PipelineStepResult[],
+  killRatios: Record<DefectSource, number>,
+  enabledSources: DefectSource[],
+): DefectMapResult {
+  const enabledSet = new Set(enabledSources);
+  const stepResults: DefectStepResult[] = [];
+  let totalD0 = 0;
+  let totalKillerD0 = 0;
+
+  for (const step of perStep) {
+    const sources: DefectSourceBreakdown[] = DEFECT_SOURCES.map((src) => {
+      const density = enabledSet.has(src) ? step.defectDensity * DEFECT_SOURCE_FRACTIONS[src] : 0;
+      const killerDensity = density * (killRatios[src] ?? 0);
+      return { source: src, density, killerDensity, color: DEFECT_SOURCE_COLORS[src] };
+    });
+
+    const stepTotal = sources.reduce((s, src) => s + src.density, 0);
+    const stepKiller = sources.reduce((s, src) => s + src.killerDensity, 0);
+    const yieldImpact = 1 - Math.pow(1 + (stepKiller * 100) / 2, -2);
+
+    stepResults.push({
+      stepId: step.stepId,
+      totalD0: stepTotal,
+      killerD0: stepKiller,
+      sources,
+      yieldImpact,
+    });
+
+    totalD0 += stepTotal;
+    totalKillerD0 += stepKiller;
+  }
+
+  const sorted = [...stepResults].sort((a, b) => b.killerD0 - a.killerD0);
+  let cumSum = 0;
+  const paretoPoints = sorted.map((step) => {
+    cumSum += step.killerD0;
+    return { stepId: step.stepId, cumPct: totalKillerD0 > 0 ? (cumSum / totalKillerD0) * 100 : 0 };
+  });
+
+  const rng = mulberry32(hashCode('defect-wafer-map'));
+  const dotCount = Math.min(200, Math.round(totalD0 * 100));
+  const waferDots: { x: number; y: number; source: DefectSource }[] = [];
+  const enabledSourcesList = DEFECT_SOURCES.filter((s) => enabledSet.has(s));
+
+  for (let i = 0; i < dotCount; i++) {
+    let x: number, y: number;
+    do {
+      x = rng() * 2 - 1;
+      y = rng() * 2 - 1;
+    } while (x * x + y * y > 1);
+
+    const r = rng();
+    let cumFrac = 0;
+    let source: DefectSource = enabledSourcesList[0] ?? 'particles';
+    for (const src of enabledSourcesList) {
+      cumFrac += DEFECT_SOURCE_FRACTIONS[src];
+      if (r < cumFrac) { source = src; break; }
+    }
+    waferDots.push({ x, y, source });
+  }
+
+  const totalYieldImpact = 1 - Math.pow(1 + (totalKillerD0 * 100) / 2, -2);
+
+  return { perStep: stepResults, totalD0, totalKillerD0, totalYieldImpact, paretoPoints, waferDots };
 }
