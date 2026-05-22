@@ -21,16 +21,16 @@ export function VppTab() {
   useMemo(() => computePipelineYield(result.perStep), [result]);
 
   // Thermal budget computed from process temps/times
-  const thermalSteps: ThermalBudgetStep[] = useMemo(() => {
-    let cumDt = 0;
-    return result.perStep.map((step) => {
+  const thermalSteps: ThermalBudgetStep[] = useMemo(() =>
+    result.perStep.reduce<ThermalBudgetStep[]>((acc, step) => {
       const temp = DEFAULT_PROCESS_TEMPS[step.stepId];
       const time = DEFAULT_PROCESS_TIMES[step.stepId];
       const dt = temp * time;
-      cumDt += dt;
-      return { stepId: step.stepId, temperature: temp, time, dt, cumulativeDt: cumDt };
-    });
-  }, [result]);
+      const cumulativeDt = (acc.length > 0 ? acc[acc.length - 1].cumulativeDt : 0) + dt;
+      acc.push({ stepId: step.stepId, temperature: temp, time, dt, cumulativeDt });
+      return acc;
+    }, []),
+  [result]);
 
   const waterfallRef = useRef<HTMLCanvasElement>(null);
   const metricRef = useRef<HTMLCanvasElement>(null);
