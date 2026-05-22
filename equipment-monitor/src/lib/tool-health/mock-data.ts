@@ -77,3 +77,54 @@ export function generateToolPerformance(equipmentId: string, baseOee: number): T
     trend24h,
   };
 }
+
+// ── 2. PM Schedule ──
+
+function getWeibullDefaults(equipmentId: string) {
+  const prefix = equipmentId.split('-')[0];
+  return WEIBULL_DEFAULTS[prefix] ?? WEIBULL_DEFAULTS.DEFAULT;
+}
+
+export function generatePmSchedule(equipmentId: string): PmSchedule {
+  const rng = mulberry32(hashCode(equipmentId + '-pm'));
+  const { pmIntervalDays } = getWeibullDefaults(equipmentId);
+
+  const today = new Date('2026-05-22');
+  const history: PmSchedule['history'] = [];
+  let cursor = new Date(today);
+
+  for (let i = 0; i < 6; i++) {
+    const jitter = Math.floor(rng() * 5) - 2;
+    cursor = new Date(cursor.getTime() - (pmIntervalDays + jitter) * 86400000);
+
+    const roll = rng();
+    const type = roll < 0.8 ? 'completed' as const : 'unscheduled' as const;
+    const durationHours = 2 + Math.floor(rng() * 10);
+
+    const descriptions: Record<string, string[]> = {
+      completed: ['Chamber clean', 'Consumable swap', 'Calibration', 'Filter replacement'],
+      unscheduled: ['RF generator fault repair', 'Leak fix', 'Sensor replacement'],
+    };
+    const descList = descriptions[type];
+    const description = descList[Math.floor(rng() * descList.length)];
+
+    history.push({
+      id: `pm-${equipmentId}-${i}`,
+      type,
+      date: cursor.toISOString().split('T')[0],
+      durationHours,
+      description,
+    });
+  }
+
+  const lastPmDate = history[0].date;
+  const nextPm = new Date(new Date(lastPmDate).getTime() + pmIntervalDays * 86400000);
+
+  return {
+    equipmentId,
+    nextPmDate: nextPm.toISOString().split('T')[0],
+    pmIntervalDays,
+    lastPmDate,
+    history,
+  };
+}

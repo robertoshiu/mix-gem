@@ -1,4 +1,4 @@
-import { generateToolPerformance } from '../mock-data';
+import { generateToolPerformance, generatePmSchedule } from '../mock-data';
 
 describe('generateToolPerformance', () => {
   test('deterministic — same ID produces same output', () => {
@@ -37,5 +37,28 @@ describe('generateToolPerformance', () => {
     const p = generateToolPerformance('NXE-3800-01', baseOee);
     const minOee = Math.min(...p.trend24h.map(t => t.oee));
     expect(minOee).toBeLessThan(baseOee - 5);
+  });
+});
+
+describe('generatePmSchedule', () => {
+  test('returns 6 history events', () => {
+    const s = generatePmSchedule('NXE-3800-01');
+    expect(s.history).toHaveLength(6);
+  });
+
+  test('nextPmDate > lastPmDate', () => {
+    const s = generatePmSchedule('FUR-OX-01');
+    expect(new Date(s.nextPmDate).getTime()).toBeGreaterThan(new Date(s.lastPmDate).getTime());
+  });
+
+  test('interval matches equipment type prefix', () => {
+    const s = generatePmSchedule('CMP-OX-01');
+    expect(s.pmIntervalDays).toBe(21);
+  });
+
+  test('deterministic — same ID produces same output', () => {
+    const a = generatePmSchedule('ETCH-ICP-01');
+    const b = generatePmSchedule('ETCH-ICP-01');
+    expect(a).toEqual(b);
   });
 });
