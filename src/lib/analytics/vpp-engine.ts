@@ -1,7 +1,11 @@
 import type {
   PipelineStep, PipelineStepResult, PipelineResult, FilmLayer, ProcessStepId,
+  SubstrateType, StressMode, StressLayerResult, StressProfileResult,
 } from './types';
 import { PROCESS_STEPS, FILM_MATERIALS, DEFAULT_D0, mulberry32, hashCode } from './constants';
+import {
+  SUBSTRATE_PROPERTIES, FILM_STRESS_PROPERTIES, WAFER_RADIUS_MM, WAFER_THICKNESS_UM,
+} from './vpp-constants';
 
 export function createDefaultPipeline(): PipelineStep[] {
   return PROCESS_STEPS.map((stepId) => ({
@@ -76,4 +80,64 @@ export function computePipelineYield(
     return { stepId: r.stepId, yield: r.yield };
   });
   return { perStep, cumulative };
+}
+
+export function computeStressProfile(
+  perStep: PipelineStepResult[],
+  substrate: SubstrateType,
+  tempC: number,
+  mode: StressMode,
+): StressProfileResult {
+  const sub = SUBSTRATE_PROPERTIES[substrate];
+  const deltaT = tempC - 25;
+
+  const layers: StressLayerResult[] = [];
+  let totalStressThickness = 0;
+  let totalThickness = 0;
+
+  for (const step of perStep) {
+    const fp = FILM_STRESS_PROPERTIES[step.stepId];
+    if (fp.E === 0 || step.thickness <= 0) continue;
+
+    let Eeff: number;
+    if (mode === 'biaxial') Eeff = fp.E / (1 - fp.nu);
+    else if (mode === 'plane-strain') Eeff = fp.E / (1 - fp.nu * fp.nu);
+    else Eeff = fp.E;
+
+    const thermalStress = Eeff * (sub.alpha - fp.cte) * deltaT * 1000;
+    const totalStress = fp.intrinsicStress + thermalStress;
+
+    layers.push({
+      stepId: step.stepId,
+      material: FILM_MATERIALS[step.stepId].material,
+      intrinsicStress: fp.intrinsicStress,
+      thermalStress,
+      totalStress,
+      thickness: step.thickness,
+    });
+
+    totalStressThickness += totalStress * step.thickness;
+    totalThickness += step.thickness;
+  }
+
+  const netStress = totalThickness > 0 ? totalStressThickness / totalThickness : 0;
+
+  const L = WAFER_RADIUS_MM * 1000;
+  const tSub = WAFER_THICKNESS_UM;
+  const tFilm = totalThickness / 1000;
+  const Ms = (sub.E / (1 - sub.nu)) * 1000;
+  const waferBow = totalThickness > 0
+    ? Math.abs(3 * netStress * tFilm * L * L / (Ms * tSub * tSub))
+    : 0;
+
+  const cumulativeStress: { depth: number; stress: number }[] = [{ depth: 0, stress: 0 }];
+  let cumDepth = 0;
+  let cumStress = 0;
+  for (const layer of layers) {
+    cumDepth += layer.thickness;
+    cumStress += layer.totalStress;
+    cumulativeStress.push({ depth: cumDepth, stress: cumStress });
+  }
+
+  return { layers, netStress, waferBow, cumulativeStress };
 }
