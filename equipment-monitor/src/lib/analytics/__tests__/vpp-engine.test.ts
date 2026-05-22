@@ -5,6 +5,7 @@ import {
   computePipelineYield,
   computeStressProfile,
   computeDefectMap,
+  computeDopantProfile,
 } from '../vpp-engine';
 
 describe('createDefaultPipeline', () => {
@@ -226,5 +227,97 @@ describe('computeDefectMap', () => {
     const defects = computeDefectMap(result.perStep, defaultKill, [...allSources]);
     const sum = defects.perStep.reduce((s, step) => s + step.totalD0, 0);
     expect(defects.totalD0).toBeCloseTo(sum, 6);
+  });
+});
+
+describe('computeDopantProfile', () => {
+  test('returns profiles for each requested species', () => {
+    const result = computeDopantProfile(['B', 'P'], 0, 500, 1000, 30, false);
+    expect(result.species).toHaveLength(2);
+    expect(result.species[0].species).toBe('B');
+    expect(result.species[1].species).toBe('P');
+  });
+
+  test('profile has correct depth range', () => {
+    const result = computeDopantProfile(['B'], 0, 500, 1000, 30, false);
+    const profile = result.species[0].profile;
+    expect(profile[0].depth).toBe(0);
+    expect(profile[profile.length - 1].depth).toBeCloseTo(500, 6);
+  });
+
+  test('peak concentration is positive', () => {
+    const result = computeDopantProfile(['As'], 0, 500, 1000, 30, false);
+    expect(result.species[0].peakConcentration).toBeGreaterThan(0);
+  });
+
+  test('Gaussian profile peaks near projected range', () => {
+    const result = computeDopantProfile(['B'], 0, 200, 25, 0, false);
+    const profile = result.species[0].profile;
+    const peakIdx = profile.reduce((best, pt, i) => pt.concentration > profile[best].concentration ? i : best, 0);
+    const peakDepth = profile[peakIdx].depth;
+    expect(peakDepth).toBeGreaterThan(10);
+    expect(peakDepth).toBeLessThan(80);
+  });
+
+  test('concentration decreases away from peak', () => {
+    const result = computeDopantProfile(['B'], 0, 300, 25, 0, false);
+    const profile = result.species[0].profile;
+    const peakIdx = profile.reduce((best, pt, i) => pt.concentration > profile[best].concentration ? i : best, 0);
+    if (peakIdx > 0) {
+      expect(profile[0].concentration).toBeLessThan(profile[peakIdx].concentration);
+    }
+    expect(profile[profile.length - 1].concentration).toBeLessThan(profile[peakIdx].concentration);
+  });
+
+  test('higher anneal temperature broadens profile', () => {
+    const low = computeDopantProfile(['B'], 0, 500, 800, 30, false);
+    const high = computeDopantProfile(['B'], 0, 500, 1100, 30, false);
+    expect(high.species[0].peakConcentration).toBeLessThan(low.species[0].peakConcentration);
+  });
+
+  test('longer anneal time broadens profile', () => {
+    const short = computeDopantProfile(['B'], 0, 500, 1000, 1, false);
+    const long = computeDopantProfile(['B'], 0, 500, 1000, 120, false);
+    expect(long.species[0].peakConcentration).toBeLessThan(short.species[0].peakConcentration);
+  });
+
+  test('junction depth is where concentration crosses background doping', () => {
+    const result = computeDopantProfile(['B'], 0, 500, 1000, 30, false);
+    const xj = result.species[0].junctionDepth;
+    expect(xj).toBeGreaterThan(0);
+    expect(xj).toBeLessThan(500);
+  });
+
+  test('active concentration is <= total concentration', () => {
+    const result = computeDopantProfile(['As'], 0, 300, 1000, 30, true);
+    for (const pt of result.species[0].profile) {
+      expect(pt.activeConcentration).toBeLessThanOrEqual(pt.concentration + 1e-10);
+    }
+  });
+
+  test('active mode limits concentration at solid solubility ceiling', () => {
+    const result = computeDopantProfile(['As'], 0, 300, 1000, 30, true);
+    const peak = result.species[0].profile.reduce(
+      (best, pt) => pt.activeConcentration > best.activeConcentration ? pt : best,
+      result.species[0].profile[0],
+    );
+    expect(peak.activeConcentration).toBeLessThanOrEqual(2e20 + 1e15);
+  });
+
+  test('dose is area under profile curve', () => {
+    const result = computeDopantProfile(['B'], 0, 500, 1000, 30, false);
+    const profile = result.species[0].profile;
+    let integral = 0;
+    for (let i = 1; i < profile.length; i++) {
+      const dx = (profile[i].depth - profile[i - 1].depth) * 1e-7;
+      integral += 0.5 * (profile[i].concentration + profile[i - 1].concentration) * dx;
+    }
+    expect(integral).toBeGreaterThan(result.species[0].dose * 0.5);
+    expect(integral).toBeLessThan(result.species[0].dose * 1.5);
+  });
+
+  test('backgroundDoping defaults to 1e15', () => {
+    const result = computeDopantProfile(['B'], 0, 500, 1000, 30, false);
+    expect(result.backgroundDoping).toBe(1e15);
   });
 });

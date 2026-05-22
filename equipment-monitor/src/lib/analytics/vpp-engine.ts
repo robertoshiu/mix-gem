@@ -2,11 +2,13 @@ import type {
   PipelineStep, PipelineStepResult, PipelineResult, FilmLayer, ProcessStepId,
   SubstrateType, StressMode, StressLayerResult, StressProfileResult,
   DefectSource, DefectSourceBreakdown, DefectStepResult, DefectMapResult,
+  DopantSpeciesId, DopantProfilePoint, DopantSpeciesResult, DopantProfileResult,
 } from './types';
 import { PROCESS_STEPS, FILM_MATERIALS, DEFAULT_D0, mulberry32, hashCode } from './constants';
 import {
   SUBSTRATE_PROPERTIES, FILM_STRESS_PROPERTIES, WAFER_RADIUS_MM, WAFER_THICKNESS_UM,
   DEFECT_SOURCE_FRACTIONS, DEFECT_SOURCE_COLORS, DEFECT_SOURCES,
+  DOPANT_IMPLANT_DATA, BOLTZMANN_EV as VPP_BOLTZMANN_EV, DEFAULT_BACKGROUND_DOPING,
 } from './vpp-constants';
 
 export function createDefaultPipeline(): PipelineStep[] {
@@ -209,4 +211,70 @@ export function computeDefectMap(
   const totalYieldImpact = 1 - Math.pow(1 + (totalKillerD0 * 100) / 2, -2);
 
   return { perStep: stepResults, totalD0, totalKillerD0, totalYieldImpact, paretoPoints, waferDots };
+}
+
+export function computeDopantProfile(
+  speciesList: DopantSpeciesId[],
+  depthMin: number,
+  depthMax: number,
+  annealTempC: number,
+  annealTimeMin: number,
+  showActive: boolean,
+): DopantProfileResult {
+  const nPoints = 200;
+  const depthStep = (depthMax - depthMin) / (nPoints - 1);
+  const annealTimeSec = annealTimeMin * 60;
+  const T_K = annealTempC + 273.15;
+
+  const speciesResults: DopantSpeciesResult[] = speciesList.map((id) => {
+    const data = DOPANT_IMPLANT_DATA[id];
+    const Rp = data.rangeCoeff * data.defaultEnergy;
+    const sigma0 = data.straggleRatio * Rp;
+
+    const D_cm2s = data.D0 * Math.exp(-data.Ea / (VPP_BOLTZMANN_EV * T_K));
+    const D_nm2s = D_cm2s * 1e14;
+    const Dt = D_nm2s * annealTimeSec;
+    const sigmaEff = Math.sqrt(sigma0 * sigma0 + 2 * Dt);
+
+    const dose = data.defaultDose;
+    const doseNm = dose * 1e-14;
+    const prefactor = doseNm / (Math.sqrt(2 * Math.PI) * sigmaEff);
+
+    let peakConc = 0;
+    let junctionDepth = 0;
+    let foundJunction = false;
+
+    const profile: DopantProfilePoint[] = [];
+    for (let i = 0; i < nPoints; i++) {
+      const depth = depthMin + i * depthStep;
+      const dx = depth - Rp;
+      const concentration = prefactor * Math.exp(-(dx * dx) / (2 * sigmaEff * sigmaEff)) * 1e21;
+      const activeConcentration = showActive
+        ? Math.min(concentration, data.solidSolubilityCeiling)
+        : concentration;
+
+      profile.push({ depth, concentration, activeConcentration });
+      if (concentration > peakConc) peakConc = concentration;
+
+      if (!foundJunction && i > 0 && depth > Rp && concentration < DEFAULT_BACKGROUND_DOPING) {
+        const prev = profile[i - 1];
+        const frac = (DEFAULT_BACKGROUND_DOPING - concentration) / (prev.concentration - concentration);
+        junctionDepth = depth - frac * depthStep;
+        foundJunction = true;
+      }
+    }
+
+    if (!foundJunction) junctionDepth = depthMax;
+
+    return {
+      species: id,
+      profile,
+      peakConcentration: peakConc,
+      junctionDepth,
+      dose,
+      color: data.color,
+    };
+  });
+
+  return { species: speciesResults, backgroundDoping: DEFAULT_BACKGROUND_DOPING };
 }
