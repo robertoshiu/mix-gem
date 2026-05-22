@@ -182,3 +182,66 @@ export function generateMtbfPrediction(equipmentId: string): MtbfPrediction {
     survivalCurve,
   };
 }
+
+// ── 4. FDC Traces ──
+
+/** Box-Muller transform for Gaussian noise */
+function gaussianNoise(rng: () => number): number {
+  const u1 = rng();
+  const u2 = rng();
+  return Math.sqrt(-2 * Math.log(Math.max(u1, 1e-10))) * Math.cos(2 * Math.PI * u2);
+}
+
+export function generateFdcTraces(chamberId: string, anomalyType?: FdcAnomalyType): FdcTrace[] {
+  const rng = mulberry32(hashCode(chamberId + '-fdc-' + (anomalyType ?? 'none')));
+
+  // Pick 1-2 params to inject anomaly on
+  const anomalyParamCount = anomalyType ? (rng() < 0.5 ? 1 : 2) : 0;
+  const anomalyParamIndices = new Set<number>();
+  while (anomalyParamIndices.size < anomalyParamCount) {
+    anomalyParamIndices.add(Math.floor(rng() * 6));
+  }
+
+  return FDC_PARAM_IDS.map((paramId, paramIdx) => {
+    const param = FDC_PARAMS[paramId];
+    const sigma = param.setpoint * 0.02;
+    const injectAnomaly = anomalyType && anomalyParamIndices.has(paramIdx);
+
+    const samples: FdcTrace['samples'] = [];
+    for (let t = 0; t < FDC_TRACE_SAMPLES; t++) {
+      let value = param.setpoint + gaussianNoise(rng) * sigma;
+      let anomaly = false;
+
+      if (injectAnomaly && t >= ANOMALY_WINDOW.start && t <= ANOMALY_WINDOW.end) {
+        const windowPos = t - ANOMALY_WINDOW.start;
+        const windowLen = ANOMALY_WINDOW.end - ANOMALY_WINDOW.start;
+        const midpoint = Math.floor(windowLen / 2);
+
+        switch (anomalyType) {
+          case 'drift':
+            value += (3 * sigma * windowPos) / windowLen;
+            anomaly = true;
+            break;
+          case 'spike':
+            if (windowPos === midpoint) {
+              value += 5 * sigma * (rng() < 0.5 ? 1 : -1);
+              anomaly = true;
+            }
+            break;
+          case 'oscillation':
+            value += 2 * sigma * Math.sin((2 * Math.PI * windowPos) / 8);
+            anomaly = true;
+            break;
+          case 'step-shift':
+            value += 2.5 * sigma;
+            anomaly = true;
+            break;
+        }
+      }
+
+      samples.push({ t, value: Number(value.toFixed(2)), anomaly });
+    }
+
+    return { chamberId, paramId, samples };
+  });
+}
