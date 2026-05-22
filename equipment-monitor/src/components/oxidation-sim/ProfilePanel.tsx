@@ -33,6 +33,20 @@ const TRACE_COLORS = {
   edge: '#06B6D4',
 };
 
+function getMetricValue(step: StepState, m: OxidationMetric): number {
+  switch (m) {
+    case 'oxideThickness': return step.oxideThicknessCenter;
+    case 'temperature': return step.temperature;
+    case 'peakStress': return step.peakStress;
+    case 'birdBeakLength': return step.birdBeakLength;
+    case 'oxidationRate': return step.oxidationRate;
+    case 'oxideUniformity': return step.oxideUniformity;
+    case 'trenchCornerStress': return step.trenchCornerStress;
+    case 'thermalBudget': return step.thermalBudget;
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function ProfilePanel({ steps, currentStep, params, metric, onMetricChange }: ProfilePanelProps) {
   const profileRef = useRef<HTMLCanvasElement>(null);
   const tempRef = useRef<HTMLCanvasElement>(null);
@@ -180,7 +194,7 @@ export function ProfilePanel({ steps, currentStep, params, metric, onMetricChang
     const plotW = w - pad.left - pad.right;
     const plotH = h - pad.top - pad.bottom;
 
-    const values = steps.map(s => s[metric] as number);
+    const values = steps.map(s => getMetricValue(s, metric));
     const minV = Math.min(...values);
     const maxV = Math.max(...values, minV + 0.001);
 
@@ -222,7 +236,7 @@ export function ProfilePanel({ steps, currentStep, params, metric, onMetricChang
         <div className="mb-2 grid grid-cols-4 gap-1 text-center font-mono text-[9px]">
           {METRICS.map((m) => {
             const cfg = METRIC_CFG[m];
-            const val = currentStep[m] as number;
+            const val = getMetricValue(currentStep, m);
             return (
               <div key={m} className="rounded bg-white/5 px-1 py-0.5">
                 <div className="text-[var(--sf-text-muted)]">{cfg.label}</div>

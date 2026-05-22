@@ -53,6 +53,7 @@ export function thermalStress(
  * sigma = -E_SiO2 * MISMATCH_STRAIN * (newOxideNm / (newOxideNm + 100))
  * The saturation term (newOxideNm + 100) prevents unbounded stress for thick oxides.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function volumeExpansionStress(newOxideNm: number, T_celsius: number): number {
   if (newOxideNm <= 0) return 0;
 
