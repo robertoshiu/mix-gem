@@ -4,16 +4,33 @@ import { useRef, useEffect, useCallback, useMemo, useState } from 'react';
 import {
   createDefaultPipeline, runFederatedSim, computePipelineYield,
 } from '@/lib/analytics/vpp-engine';
-import {
-  STEP_SHORT_NAMES,
-} from '@/lib/analytics/constants';
-import type { PipelineStep } from '@/lib/analytics/types';
+import { STEP_SHORT_NAMES } from '@/lib/analytics/constants';
+import { DEFAULT_PROCESS_TEMPS, DEFAULT_PROCESS_TIMES, DEFAULT_THERMAL_BUDGET_CEILING } from '@/lib/analytics/vpp-constants';
+import type { PipelineStep, ThermalBudgetStep } from '@/lib/analytics/types';
+import { AccordionPanel } from './vpp-panels/AccordionPanel';
+import { FilmStackPanel } from './vpp-panels/FilmStackPanel';
+import { ThermalBudgetPanel } from './vpp-panels/ThermalBudgetPanel';
+import { StressPanel } from './vpp-panels/StressPanel';
+import { DefectPanel } from './vpp-panels/DefectPanel';
+import { DopantPanel } from './vpp-panels/DopantPanel';
 
 export function VppTab() {
   const [pipeline] = useState<PipelineStep[]>(createDefaultPipeline);
 
   const result = useMemo(() => runFederatedSim(pipeline), [pipeline]);
   useMemo(() => computePipelineYield(result.perStep), [result]);
+
+  // Thermal budget computed from process temps/times
+  const thermalSteps: ThermalBudgetStep[] = useMemo(() => {
+    let cumDt = 0;
+    return result.perStep.map((step) => {
+      const temp = DEFAULT_PROCESS_TEMPS[step.stepId];
+      const time = DEFAULT_PROCESS_TIMES[step.stepId];
+      const dt = temp * time;
+      cumDt += dt;
+      return { stepId: step.stepId, temperature: temp, time, dt, cumulativeDt: cumDt };
+    });
+  }, [result]);
 
   const waterfallRef = useRef<HTMLCanvasElement>(null);
   const metricRef = useRef<HTMLCanvasElement>(null);
@@ -46,17 +63,6 @@ export function VppTab() {
               </span>
             </div>
           ))}
-
-          <div className="text-xs font-semibold text-[var(--smartfactory-text-primary)] mt-4">Film Stack</div>
-          <div className="flex flex-col gap-0">
-            {result.filmStack.map((layer, i) => (
-              <div key={i} className="flex items-center gap-2 text-xs"
-                style={{ borderLeft: `4px solid ${layer.color}`, paddingLeft: '8px' }}>
-                <span className="text-[var(--smartfactory-text-secondary)]">{layer.material}</span>
-                <span className="text-[var(--smartfactory-text-muted)]">{layer.thickness.toFixed(0)} nm</span>
-              </div>
-            ))}
-          </div>
         </div>
 
         <div className="space-y-4">
@@ -65,6 +71,28 @@ export function VppTab() {
           <canvas ref={metricRef} data-testid="vpp-chart-metric" width={500} height={220}
             className="w-full bg-[var(--smartfactory-surface-card)] border border-[var(--smartfactory-border-default)] rounded" />
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <AccordionPanel title="Film Stack" summary={`${result.filmStack.length} layers, ${result.filmStack.reduce((s, l) => s + l.thickness, 0).toFixed(0)} nm`} defaultOpen={true}>
+          <FilmStackPanel filmStack={result.filmStack} />
+        </AccordionPanel>
+
+        <AccordionPanel title="Thermal Budget" summary={`${thermalSteps.length > 0 ? thermalSteps[thermalSteps.length - 1].cumulativeDt.toExponential(2) : '0'} °C·s`} defaultOpen={false}>
+          <ThermalBudgetPanel steps={thermalSteps} ceiling={DEFAULT_THERMAL_BUDGET_CEILING} />
+        </AccordionPanel>
+
+        <AccordionPanel title="Stress / Strain" summary="CTE + intrinsic stress analysis" defaultOpen={false}>
+          <StressPanel perStep={result.perStep} />
+        </AccordionPanel>
+
+        <AccordionPanel title="Defect Density" summary="Source breakdown + wafer map" defaultOpen={false}>
+          <DefectPanel perStep={result.perStep} />
+        </AccordionPanel>
+
+        <AccordionPanel title="Dopant Profile" summary="Implant + diffusion depth profiles" defaultOpen={false}>
+          <DopantPanel />
+        </AccordionPanel>
       </div>
     </div>
   );
