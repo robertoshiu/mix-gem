@@ -143,7 +143,7 @@ function drawParetoScatter(
     ctx.beginPath();
     nonDom.forEach((p, i) => {
       const x = toX(p.objectives[obj1]); const y = toY(p.objectives[obj2]);
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     });
     ctx.stroke();
   }

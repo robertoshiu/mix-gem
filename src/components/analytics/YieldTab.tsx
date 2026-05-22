@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import {
   computeLineYield, generateYieldWaterfall, generateYieldCurve,
 } from '@/lib/analytics/yield-engine';
@@ -38,13 +38,11 @@ export function YieldTab() {
   const curveRef = useRef<HTMLCanvasElement>(null);
   const waterfallRef = useRef<HTMLCanvasElement>(null);
 
-  const drawCharts = useCallback(() => {
+  useEffect(() => {
     drawStackedBar(barRef.current, result);
     drawYieldCurve(curveRef.current, curve, d0Values[selectedStep]);
     drawWaterfall(waterfallRef.current, waterfall);
-  }, [result, curve, waterfall, d0Values, selectedStep]);
-
-  useEffect(() => { drawCharts(); }, [drawCharts]);
+  });
 
   const worstStep = result.worstStep;
   const worstYield = result.perStep.find((s) => s.stepId === worstStep);
@@ -156,7 +154,7 @@ function drawYieldCurve(canvas: HTMLCanvasElement | null, curve: { d0: number; y
   curve.forEach((pt, i) => {
     const x = pad + (i / (curve.length - 1)) * (W - 2 * pad);
     const y = H - pad - pt.yield * (H - 2 * pad);
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
   });
   ctx.stroke();
   const idx = curve.findIndex((pt) => pt.d0 >= currentD0);

@@ -183,7 +183,7 @@ function drawLifeProjection(
   ctx.beginPath();
   points.forEach((p, i) => {
     const y = toY(Math.log10(Math.max(1, p.arrhenius)));
-    i === 0 ? ctx.moveTo(toX(i), y) : ctx.lineTo(toX(i), y);
+    if (i === 0) ctx.moveTo(toX(i), y); else ctx.lineTo(toX(i), y);
   });
   ctx.stroke();
 
@@ -192,7 +192,7 @@ function drawLifeProjection(
   ctx.beginPath();
   points.forEach((p, i) => {
     const y = toY(Math.log10(Math.max(1, p.eyring)));
-    i === 0 ? ctx.moveTo(toX(i), y) : ctx.lineTo(toX(i), y);
+    if (i === 0) ctx.moveTo(toX(i), y); else ctx.lineTo(toX(i), y);
   });
   ctx.stroke();
 

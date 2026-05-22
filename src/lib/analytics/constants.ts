@@ -1,7 +1,7 @@
 // src/lib/analytics/constants.ts
 import type {
   AnalyticsTab, ProcessStepId, FabId, FabConfig, RecipeKnob,
-  Objective, ObjectiveId, ReplicationParam, Subsystem,
+  Objective, ReplicationParam, Subsystem,
 } from './types';
 
 export const ANALYTICS_TABS: { id: AnalyticsTab; label: string }[] = [

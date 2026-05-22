@@ -201,7 +201,7 @@ function drawDistributions(
     curve.forEach((p, i) => {
       const x = toX(p.x);
       const y = H - pad - (p.pdf / maxPdf) * (H - 2 * pad) * 0.8;
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     });
     ctx.stroke();
   }

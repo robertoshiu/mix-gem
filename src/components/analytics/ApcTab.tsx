@@ -153,12 +153,12 @@ function drawTraceChart(canvas: HTMLCanvasElement | null, runs: { run: number; c
   ctx.strokeStyle = '#EF4444';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  runs.forEach((r, i) => { i === 0 ? ctx.moveTo(toX(i), toY(r.uncontrolled)) : ctx.lineTo(toX(i), toY(r.uncontrolled)); });
+  runs.forEach((r, i) => { if (i === 0) ctx.moveTo(toX(i), toY(r.uncontrolled)); else ctx.lineTo(toX(i), toY(r.uncontrolled)); });
   ctx.stroke();
   ctx.strokeStyle = '#3B82F6';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  runs.forEach((r, i) => { i === 0 ? ctx.moveTo(toX(i), toY(r.controlled)) : ctx.lineTo(toX(i), toY(r.controlled)); });
+  runs.forEach((r, i) => { if (i === 0) ctx.moveTo(toX(i), toY(r.controlled)); else ctx.lineTo(toX(i), toY(r.controlled)); });
   ctx.stroke();
 }
 
@@ -180,7 +180,7 @@ function drawEwmaChart(canvas: HTMLCanvasElement | null, runs: { ewmaLevel: numb
   runs.forEach((r, i) => {
     const x = pad + (i / (runs.length - 1)) * (W - 2 * pad);
     const y = H - pad - ((r.ewmaLevel - yMin) / yRange) * (H - 2 * pad);
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
   });
   ctx.stroke();
 }
