@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { href: '/mes/lots', label: 'Lot Tracker' },
   { href: '/mes/recipes', label: 'Recipe Manager' },
   { href: '/mes/spc', label: 'SPC Dashboard' },
+  { href: '/mes/analytics', label: 'Analytics', icon: Activity },
   { href: '/mes/secs-gem', label: 'SECS/GEM Sim', icon: Activity },
 ];
 
