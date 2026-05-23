@@ -146,7 +146,14 @@ export default function WarRoomPage() {
           <ModeSelector mode={mode} onModeChange={setMode} />
         </div>
 
-        <div className="pointer-events-none fixed inset-x-4 bottom-4 z-30 flex flex-col items-center gap-3">
+        <div
+          className="pointer-events-none fixed bottom-4 left-4 right-4 z-[45] flex flex-col items-center gap-3 transition-[right] duration-300 ease-in-out"
+          style={{
+            right: openPanel
+              ? 'calc(max(var(--sf-overlay-width), var(--sf-overlay-min-width, 360px)) + 1rem)'
+              : '1rem',
+          }}
+        >
           <FaultBanner faultId={faultId} dismissed={faultBannerDismissed} onDismiss={() => setFaultBannerDismissed(true)} />
           <SubsystemDetailOverlay activeSubsystem={activeSubsystem} onClose={() => setActiveSubsystem(null)} onFlyToAsset={handleFlyToAsset} />
         </div>

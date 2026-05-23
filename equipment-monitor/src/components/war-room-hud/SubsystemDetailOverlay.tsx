@@ -17,7 +17,7 @@ export function SubsystemDetailOverlay({ activeSubsystem, onClose, onFlyToAsset 
   const gauges = equipment[0]?.gauges ?? [];
 
   return (
-    <section role="dialog" aria-modal="false" aria-label={`${meta.label} subsystem details`} className="pointer-events-auto w-[min(920px,calc(100vw-32px))] rounded-3xl border bg-[rgba(2,6,23,0.82)] p-4 shadow-[0_0_44px_rgba(0,0,0,0.35)] backdrop-blur-xl" style={{ borderColor: meta.color }}>
+    <section role="dialog" aria-modal="false" aria-label={`${meta.label} subsystem details`} className="pointer-events-auto w-full max-w-[920px] rounded-3xl border bg-[rgba(2,6,23,0.82)] p-4 shadow-[0_0_44px_rgba(0,0,0,0.35)] backdrop-blur-xl" style={{ borderColor: meta.color }}>
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
           <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--sf-text-muted)]">Layer Isolation Active</p>
