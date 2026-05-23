@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type {
   Lot, Recipe, SpcMeasurement, SpcViolation, SecsEvent, FaultConfig,
   AiRecommendation, Notification, Equipment,
+  AiRecommendationEngineConfig, ConfidenceSnapshot,
 } from '@/lib/mes-types';
 import { MOCK_LOTS, MOCK_RECIPES } from '@/lib/mes-mock-data';
 
@@ -22,6 +23,13 @@ interface MesSpcState {
   addRecommendation: (r: AiRecommendation) => void;
   applyRecommendation: (id: string) => void;
   overrideRecommendation: (id: string) => void;
+  updateRecommendationConfidence: (id: string, confidence: number) => void;
+  supersedeRecommendation: (supersededId: string, newRecId: string) => void;
+  clearStaleRecommendations: (maxAgeMs?: number) => void;
+  aiEngineConfig: AiRecommendationEngineConfig;
+  setAiEngineConfig: (patch: Partial<AiRecommendationEngineConfig>) => void;
+  lastAnalysisTimestamp: number | null;
+  setLastAnalysisTimestamp: (ts: number) => void;
 
   // ui slice
   notifications: Notification[];
@@ -62,6 +70,8 @@ export const INITIAL_MES_SPC_STATE: Omit<MesSpcState,
   | 'resumeEquipment' | 'addEvent' | 'injectFault' | 'clearFault'
   | 'incrementWafer'
   | 'addRecommendation' | 'applyRecommendation' | 'overrideRecommendation'
+  | 'updateRecommendationConfidence' | 'supersedeRecommendation' | 'clearStaleRecommendations'
+  | 'setAiEngineConfig' | 'setLastAnalysisTimestamp'
   | 'toggleNotificationPanel' | 'toggleSettingsPanel' | 'toggleUserDropdown'
   | 'closeAllPanels' | 'addNotification' | 'dismissNotification'
   | 'markAllNotificationsRead' | 'updateSettings' | 'setSelectedEquipment'
@@ -84,6 +94,14 @@ export const INITIAL_MES_SPC_STATE: Omit<MesSpcState,
   settings: { refreshInterval: 2000, showAnimations: true, compactMode: false },
   equipments: [],
   selectedEquipmentId: null,
+  aiEngineConfig: {
+    driftThreshold: 0.3,
+    minDataPoints: 5,
+    confidenceDecayRate: 0.5,
+    maxRecommendations: 10,
+    analysisInterval: 3,
+  },
+  lastAnalysisTimestamp: null,
 };
 
 export const useMesSpcStore = create<MesSpcState>((set) => ({
@@ -132,9 +150,38 @@ export const useMesSpcStore = create<MesSpcState>((set) => ({
   incrementWafer: () =>
     set((s) => ({ waferNumber: s.waferNumber + 1 })),
 
-  addRecommendation: (r) => set((s) => ({ recommendations: [...s.recommendations, r] })),
+  addRecommendation: (r) => set((s) => {
+    if (s.recommendations.length >= s.aiEngineConfig.maxRecommendations) {
+      return s; // Don't exceed max
+    }
+    return { recommendations: [...s.recommendations, r] };
+  }),
   applyRecommendation: (id) => set((s) => ({ recommendations: s.recommendations.map(r => r.id === id ? { ...r, status: 'applied' as const } : r) })),
   overrideRecommendation: (id) => set((s) => ({ recommendations: s.recommendations.map(r => r.id === id ? { ...r, status: 'overridden' as const } : r) })),
+  updateRecommendationConfidence: (id, confidence) => set((s) => ({
+    recommendations: s.recommendations.map(r => {
+      if (r.id !== id) return r;
+      const snapshot: ConfidenceSnapshot = { timestamp: new Date(), confidence };
+      return {
+        ...r,
+        confidence,
+        confidenceHistory: [...r.confidenceHistory, snapshot].slice(-20),
+      };
+    }),
+  })),
+  supersedeRecommendation: (supersededId, newRecId) => set((s) => ({
+    recommendations: s.recommendations.map(r =>
+      r.id === supersededId ? { ...r, status: 'superseded' as const, supersededById: newRecId } : r
+    ),
+  })),
+  clearStaleRecommendations: (maxAgeMs = 3600000) => set((s) => ({
+    recommendations: s.recommendations.filter(r => {
+      const age = Date.now() - r.createdAt.getTime();
+      return r.status === 'pending' || age < maxAgeMs;
+    }),
+  })),
+  setAiEngineConfig: (patch) => set((s) => ({ aiEngineConfig: { ...s.aiEngineConfig, ...patch } })),
+  setLastAnalysisTimestamp: (ts) => set({ lastAnalysisTimestamp: ts }),
   toggleNotificationPanel: () => set((s) => ({ isNotificationPanelOpen: !s.isNotificationPanelOpen, isSettingsPanelOpen: false, isUserDropdownOpen: false })),
   toggleSettingsPanel: () => set((s) => ({ isSettingsPanelOpen: !s.isSettingsPanelOpen, isNotificationPanelOpen: false, isUserDropdownOpen: false })),
   toggleUserDropdown: () => set((s) => ({ isUserDropdownOpen: !s.isUserDropdownOpen, isNotificationPanelOpen: false, isSettingsPanelOpen: false })),

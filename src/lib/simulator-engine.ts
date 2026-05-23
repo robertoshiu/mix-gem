@@ -1,6 +1,7 @@
 import { useMesSpcStore } from '@/stores/mes-spc-store';
 import { generateMeasurement } from './metrology-generator';
 import { evaluateSpc } from './spc-engine';
+import { generateRecommendations, shouldAnalyze } from './ai-recommendation-engine';
 import { makeS6F11, makeS2F41Stop, makeS2F42Ack } from './secs-message-log';
 import { SPC_PARAM_KEYS } from './spc-parameters';
 import type { SpcMeasurement, SpcViolation } from './mes-types';
@@ -83,6 +84,28 @@ export class SimulatorEngine {
       store.updateLot(activeLotId, { status: 'completed' });
       store.stopProcessing();
       this.stop();
+      return;
+    }
+
+    // AI Recommendation Analysis — run every N ticks
+    const aiConfig = store.aiEngineConfig;
+    if (waferNumber % aiConfig.analysisInterval === 0) {
+      const state = useMesSpcStore.getState();
+      const ctx = {
+        measurements: state.measurements.filter((m) => m.lotId === activeLotId),
+        violations: state.violations,
+        equipmentState: state.equipmentState,
+        waferNumber: state.waferNumber,
+        activeFault: state.activeFault ? { type: state.activeFault.type, parameter: state.activeFault.parameter } : null,
+      };
+
+      if (shouldAnalyze(ctx, aiConfig, state.lastAnalysisTimestamp)) {
+        const newRecs = generateRecommendations(ctx, state.recommendations, aiConfig);
+        for (const rec of newRecs) {
+          store.addRecommendation(rec);
+        }
+        store.setLastAnalysisTimestamp(Date.now());
+      }
     }
   }
 }

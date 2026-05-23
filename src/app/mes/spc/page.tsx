@@ -17,6 +17,8 @@ import { ProcessFlow } from '@/components/spc/ProcessFlow';
 import { AiRecommendations } from '@/components/spc/AiRecommendations';
 import { WaferBinMap } from '@/components/spc/WaferBinMap';
 import { HeatmapTable } from '@/components/spc/HeatmapTable';
+import { FdcTraceViewer } from '@/components/spc/FdcTraceViewer';
+import { ChamberMatchPanel } from '@/components/spc/ChamberMatchPanel';
 import FooterStatusBar from '@/components/spc/FooterStatusBar';
 import type { SpcParameter } from '@/lib/mes-types';
 
@@ -145,6 +147,12 @@ export default function SpcPage() {
           {violations.map((v) => (
             <ViolationCard key={v.id} violation={v} onAcknowledge={handleAcknowledge} />
           ))}
+        </div>
+
+        {/* FDC & Chamber Matching Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <FdcTraceViewer />
+          <ChamberMatchPanel />
         </div>
 
         {/* Footer */}

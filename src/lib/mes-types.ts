@@ -88,7 +88,14 @@ export interface FaultConfig {
 
 // AI Recommendation
 export type AiRecommendationType = 'energy' | 'predictive-maintenance' | 'production-optimization' | 'carbon-reduction' | 'quality' | 'scheduling';
-export type AiRecommendationStatus = 'pending' | 'applied' | 'overridden';
+export type AiRecommendationStatus = 'pending' | 'applied' | 'overridden' | 'superseded';
+export type AiRecommendationSource = 'spc-violation' | 'trend-drift' | 'equipment-inhibited' | 'yield-prediction' | 'process-optimization';
+export type TrendDirection = 'improving' | 'stable' | 'degrading';
+
+export interface ConfidenceSnapshot {
+  timestamp: Date;
+  confidence: number;
+}
 
 export interface AiRecommendation {
   id: string;
@@ -99,6 +106,19 @@ export interface AiRecommendation {
   impact: string;
   status: AiRecommendationStatus;
   createdAt: Date;
+  source: AiRecommendationSource;
+  relatedParameter?: SpcParameter;
+  trendDirection?: TrendDirection;
+  confidenceHistory: ConfidenceSnapshot[];
+  supersededById?: string;
+}
+
+export interface AiRecommendationEngineConfig {
+  driftThreshold: number;      // sigma multiplier for drift detection
+  minDataPoints: number;       // minimum measurements before analysis
+  confidenceDecayRate: number; // how fast confidence decays per tick without new data
+  maxRecommendations: number;   // cap on active recommendations
+  analysisInterval: number;     // run analysis every N ticks
 }
 
 // Notification
