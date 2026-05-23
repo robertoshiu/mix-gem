@@ -4,7 +4,7 @@ import {
   getGasCoupledOutputs,
   computeGasAlarms,
 } from '../gas-engine';
-import { INITIAL_COUPLED, GAS_SENSOR_CONFIGS, GAS_BASELINES, SCRUBBER_ETA_MAX } from '../facility-constants';
+import { INITIAL_COUPLED, GAS_BASELINES, SCRUBBER_ETA_MAX } from '../facility-constants';
 import type { CoupledVariables, GasEngineState } from '../facility-types';
 
 /** Helper: run N ticks with default coupled + scenario */
@@ -90,7 +90,6 @@ describe('Gas & Chemical Delivery Engine', () => {
   // ── Temperature coupling ──
 
   test('high temperature (35 C) from HVAC increases leak rate vs 22 C', () => {
-    const initial = createInitialGasState();
     const hotCoupled: CoupledVariables = { ...INITIAL_COUPLED, hvac_zone_cr_temp: 35 };
     const coldCoupled: CoupledVariables = { ...INITIAL_COUPLED, hvac_zone_cr_temp: 22 };
 

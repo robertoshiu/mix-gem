@@ -1,7 +1,6 @@
 import {
   createInitialPowerState,
   stepPower,
-  getPowerCoupledOutputs,
   computePowerAlarms,
 } from '../power-engine';
 import { INITIAL_COUPLED } from '../facility-constants';

@@ -4,7 +4,7 @@ import {
   getHvacCoupledOutputs,
   computeHvacAlarms,
 } from '../hvac-engine';
-import { INITIAL_COUPLED, ISO5_LIMIT, ZONE_CR_PRESSURE_PA } from '../facility-constants';
+import { INITIAL_COUPLED, ISO5_LIMIT } from '../facility-constants';
 import type { CoupledVariables, HvacEngineState } from '../facility-types';
 
 /** Helper: run N ticks with default coupled + scenario */
