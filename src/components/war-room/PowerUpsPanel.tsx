@@ -204,7 +204,7 @@ export function PowerUpsPanel({
   ];
 
   // --- Network Schematic ---
-  const nodeIds: (PowerNodeId | "ups")[] = [
+  const nodeIds: PowerNodeId[] = [
     "utility",
     "transformer-t1",
     "transformer-t2",
