@@ -11,6 +11,11 @@ import { TopBar } from '@/components/war-room-hud/TopBar';
 import { ViewpointSelector } from '@/components/war-room-hud/ViewpointSelector';
 import type { FabTwinFaultId, FabTwinMode, FabTwinView, Subsystem } from '@/lib/fab-twin-data';
 import { SUBSYSTEM_EQUIPMENT } from '@/lib/fab-twin-data';
+import { HvacPanel } from '@/components/war-room/HvacPanel';
+import { GasChemicalPanel } from '@/components/war-room/GasChemicalPanel';
+import { PowerUpsPanel } from '@/components/war-room/PowerUpsPanel';
+import { useFacilitySimStore } from '@/stores/facility-sim-store';
+import type { FacilityScenarioId } from '@/lib/engines/facility-types';
 
 const WarRoomBabylonScene = dynamic(
   () => import('@/components/babylon/WarRoomBabylonScene').then((mod) => ({ default: mod.WarRoomBabylonScene })),
@@ -36,13 +41,29 @@ export default function WarRoomPage() {
   const [viewSelectorExpanded, setViewSelectorExpanded] = useState(true);
   const [faultBannerDismissed, setFaultBannerDismissed] = useState(false);
   const [focusAssetId, setFocusAssetId] = useState<string | null>(null);
+  const [openPanel, setOpenPanel] = useState<'hvac' | 'gas' | 'power' | null>(null);
+
+  // Facility simulation tick loop (1 Hz)
+  const tick = useFacilitySimStore((s) => s.tick_);
+  const setFacilityScenario = useFacilitySimStore((s) => s.setScenario);
+  const facilityScenario = useFacilitySimStore((s) => s.scenario);
 
   const selectedEquipment = useMemo(
     () => SUBSYSTEM_EQUIPMENT.find((item) => item.id === focusAssetId) ?? null,
     [focusAssetId],
   );
 
+  // Start 1 Hz tick loop
+  useEffect(() => {
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [tick]);
+
   const handleSubsystemToggle = useCallback((subsystem: Subsystem) => {
+    const panelMap: Record<Subsystem, 'hvac' | 'gas' | 'power' | null> = {
+      bas: 'hvac', gas: 'gas', power: 'power', fire: null,
+    };
+    setOpenPanel((prev) => (prev === panelMap[subsystem] ? null : panelMap[subsystem]));
     setActiveSubsystem((current) => (current === subsystem ? null : subsystem));
     setPickedAsset(null);
     setPickScreenPos(null);
@@ -53,6 +74,10 @@ export default function WarRoomPage() {
     setFaultBannerDismissed(false);
     if (nextFaultId !== 'nominal') setMode('alarm');
   }, []);
+
+  const handleFacilityScenarioChange = useCallback((id: FacilityScenarioId) => {
+    setFacilityScenario(id);
+  }, [setFacilityScenario]);
 
   const handleAssetPick = useCallback((asset: WarRoomPickedAsset, screenPos: { x: number; y: number }) => {
     setPickedAsset(asset);
@@ -94,6 +119,8 @@ export default function WarRoomPage() {
         activeSubsystem={activeSubsystem}
         onFaultChange={handleFaultChange}
         onSubsystemToggle={handleSubsystemToggle}
+        facilityScenario={facilityScenario}
+        onFacilityScenarioChange={handleFacilityScenarioChange}
       />
 
       <main className="relative min-h-[calc(100dvh-104px)] overflow-hidden pt-[148px] xl:pt-[72px]">
@@ -144,6 +171,10 @@ export default function WarRoomPage() {
           {activeSubsystem ? `${activeSubsystem} subsystem layer isolated` : 'War room all layers visible'}
         </div>
       </main>
+
+      <HvacPanel isOpen={openPanel === 'hvac'} onClose={() => setOpenPanel(null)} />
+      <GasChemicalPanel isOpen={openPanel === 'gas'} onClose={() => setOpenPanel(null)} />
+      <PowerUpsPanel isOpen={openPanel === 'power'} onClose={() => setOpenPanel(null)} />
     </div>
   );
 }

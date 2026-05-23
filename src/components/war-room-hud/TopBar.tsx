@@ -2,6 +2,8 @@ import { Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { FabTwinFaultId, Subsystem } from '@/lib/fab-twin-data';
 import { FAB_TWIN_FAULT_SCENES, SUBSYSTEM_META, getKpisForFault } from '@/lib/fab-twin-data';
+import type { FacilityScenarioId } from '@/lib/engines/facility-types';
+import { FACILITY_SCENARIOS } from '@/lib/engines/facility-constants';
 
 const KPI_ROWS = [
   ['OEE', 'oee'],
@@ -24,11 +26,15 @@ export function TopBar({
   activeSubsystem,
   onFaultChange,
   onSubsystemToggle,
+  facilityScenario,
+  onFacilityScenarioChange,
 }: {
   faultId: FabTwinFaultId;
   activeSubsystem: Subsystem | null;
   onFaultChange: (faultId: FabTwinFaultId) => void;
   onSubsystemToggle: (subsystem: Subsystem) => void;
+  facilityScenario?: FacilityScenarioId;
+  onFacilityScenarioChange?: (id: FacilityScenarioId) => void;
 }) {
   const kpis = getKpisForFault(faultId);
 
@@ -85,6 +91,21 @@ export function TopBar({
               <option key={fault.id} value={fault.id}>{fault.label}</option>
             ))}
           </select>
+          {facilityScenario !== undefined && onFacilityScenarioChange && (
+            <>
+              <label className="sr-only" htmlFor="war-room-facility-scenario">Facility fault scenario</label>
+              <select
+                id="war-room-facility-scenario"
+                value={facilityScenario}
+                onChange={(event) => onFacilityScenarioChange(event.target.value as FacilityScenarioId)}
+                className="min-h-[44px] rounded-full border border-white/10 bg-slate-950 px-3 font-mono text-xs text-[var(--sf-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sf-border-active)]"
+              >
+                {FACILITY_SCENARIOS.map((s) => (
+                  <option key={s.id} value={s.id}>{s.label}</option>
+                ))}
+              </select>
+            </>
+          )}
         </div>
       </div>
     </header>
