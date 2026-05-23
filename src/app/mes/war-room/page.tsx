@@ -84,7 +84,7 @@ export default function WarRoomPage() {
     setPickScreenPos(screenPos);
   }, []);
 
-  const handleFacilityPanelOpen = useCallback((panel: 'hvac' | 'gas' | 'power', _nodeId: string) => {
+  const handleFacilityPanelOpen = useCallback((panel: 'hvac' | 'gas' | 'power') => {
     setOpenPanel(panel);
   }, []);
 

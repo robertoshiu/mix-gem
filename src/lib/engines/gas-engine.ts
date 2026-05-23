@@ -9,7 +9,6 @@ import type {
   CoupledVariables,
   FacilityScenarioId,
   FacilityAlarm,
-  GasSpecies,
 } from './facility-types';
 
 import {

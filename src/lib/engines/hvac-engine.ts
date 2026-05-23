@@ -6,7 +6,6 @@ import type {
   HvacEngineState,
   HvacNetworkState,
   HvacNodeId,
-  HvacNodeState,
   CoupledVariables,
   FacilityScenarioId,
   FacilityAlarm,
