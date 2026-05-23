@@ -102,7 +102,7 @@ export const SCRUBBER_ETA_MAX = 0.98;
 export const SCRUBBER_POWER_BASE = 5; // kW
 export const SCRUBBER_POWER_K = 40; // kW/(m3/s)^2
 export const CABINET_PRESSURE_PA = 300000; // ~3 atm
-export const LEAK_RATE_K = 1e-10; // baseline leak coefficient
+export const LEAK_RATE_K = 5e-6; // baseline leak coefficient (tuned for turbulent cleanroom transport)
 export const LEAK_TEMP_ALPHA = 0.02; // per degree C above 22
 
 export const INITIAL_SCRUBBER: ScrubberState = {

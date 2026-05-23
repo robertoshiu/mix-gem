@@ -14,6 +14,9 @@ import {
   getFaultScene,
 } from '@/lib/fab-twin-data';
 import { loadInfrastructureAssets, SUBSYSTEM_ASSET_MAP } from '@/lib/infrastructure-assets';
+import { useFacilitySimStore } from '@/stores/facility-sim-store';
+import type { EquipmentHealth, CascadeLine, HealthLevel } from '@/lib/engines/facility-types';
+import { SUBSYSTEM_EQUIPMENT_MAP } from '@/lib/engines/facility-constants';
 
 export interface WarRoomPickedAsset {
   id: string;
@@ -29,6 +32,7 @@ interface WarRoomBabylonSceneProps {
   activeSubsystem: Subsystem | null;
   focusAssetId: string | null;
   onAssetPick: (asset: WarRoomPickedAsset, screenPos: { x: number; y: number }) => void;
+  onFacilityPanelOpen?: (panel: 'hvac' | 'gas' | 'power', nodeId: string) => void;
 }
 
 type CameraPose = { alpha: number; beta: number; radius: number; target: BABYLON.Vector3 };
@@ -49,6 +53,19 @@ const SUBSYSTEM_VIEWS: Record<Subsystem, FabTwinView> = {
 };
 
 const ZONE_COLORS = ['#38bdf8', '#22c55e', '#f59e0b', '#a78bfa'];
+
+// ── Equipment health coloring constants ──
+
+const HEALTH_HEX: Record<HealthLevel, string> = {
+  normal: '#10B981',
+  warning: '#F59E0B',
+  alarm: '#EF4444',
+};
+
+const HEALTH_INTENSITY: Record<HealthLevel, number> = { normal: 0.12, warning: 0.3, alarm: 0.5 };
+const PULSE_RATE: Record<HealthLevel, number> = { normal: 0, warning: 1, alarm: 2 };
+
+const CASCADE_TUBE_POOL_SIZE = 6;
 
 function createPbr(scene: BABYLON.Scene, name: string, color: string, roughness = 0.45, metalness = 0.28) {
   const material = new BABYLON.PBRMaterial(name, scene);
@@ -416,7 +433,12 @@ function projectToScreen(scene: BABYLON.Scene, camera: BABYLON.Camera, point: BA
   return { x: projected.x, y: projected.y };
 }
 
-function createScene(canvas: HTMLCanvasElement, props: WarRoomBabylonSceneProps) {
+function createScene(
+  canvas: HTMLCanvasElement,
+  props: WarRoomBabylonSceneProps,
+  healthRef: React.RefObject<EquipmentHealth[]>,
+  cascadeLinesRef: React.RefObject<CascadeLine[]>,
+) {
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const engine = new BABYLON.Engine(canvas, true, { stencil: true, antialias: true });
   engine.setHardwareScalingLevel(window.devicePixelRatio > 1 ? 1.2 : 1);
@@ -474,16 +496,116 @@ function createScene(canvas: HTMLCanvasElement, props: WarRoomBabylonSceneProps)
     const picked = pointerInfo.pickInfo?.pickedMesh;
     if (!picked?.metadata) return;
     const metadata = picked.metadata as { id?: string; path?: string; type?: string };
+    const meshId = metadata.id ?? picked.id;
+
+    // Check if this is a facility subsystem equipment — open SCADA panel
+    const facilityPanel = SUBSYSTEM_EQUIPMENT_MAP[meshId];
+    if (facilityPanel && props.onFacilityPanelOpen) {
+      props.onFacilityPanelOpen(facilityPanel, meshId);
+      return;
+    }
+
     const screenPos = projectToScreen(scene, camera, picked.getAbsolutePosition());
     props.onAssetPick(
       {
-        id: metadata.id ?? picked.id,
+        id: meshId,
         path: metadata.path ?? '/FAB1/UNKNOWN',
         type: metadata.type ?? 'asset',
         metadata: picked.metadata,
       },
       screenPos,
     );
+  });
+
+  // ── Cascade tube pool (reusable tube meshes for fault connection lines) ──
+  const cascadeTubePool: BABYLON.Mesh[] = [];
+  const cascadeTubeMaterials: BABYLON.StandardMaterial[] = [];
+
+  for (let i = 0; i < CASCADE_TUBE_POOL_SIZE; i++) {
+    const mat = new BABYLON.StandardMaterial(`cascade-mat-${i}`, scene);
+    mat.diffuseColor = BABYLON.Color3.FromHexString('#F59E0B');
+    mat.emissiveColor = BABYLON.Color3.FromHexString('#F59E0B').scale(0.5);
+    mat.alpha = 0;
+    mat.backFaceCulling = false;
+    cascadeTubeMaterials.push(mat);
+
+    const tube = BABYLON.MeshBuilder.CreateTube(`cascade-tube-${i}`, {
+      path: [BABYLON.Vector3.Zero(), new BABYLON.Vector3(0, 0, 0.01)],
+      radius: 0.06,
+      tessellation: 8,
+      updatable: true,
+    }, scene);
+    tube.material = mat;
+    tube.isPickable = false;
+    cascadeTubePool.push(tube);
+  }
+
+  // Lazily built Color3 cache (avoids per-frame hex parsing)
+  const healthColorCache: Record<HealthLevel, BABYLON.Color3> = {
+    normal: BABYLON.Color3.FromHexString(HEALTH_HEX.normal),
+    warning: BABYLON.Color3.FromHexString(HEALTH_HEX.warning),
+    alarm: BABYLON.Color3.FromHexString(HEALTH_HEX.alarm),
+  };
+
+  // ── Render-loop: equipment health coloring + cascade lines ──
+  scene.onBeforeRenderObservable.add(() => {
+    // --- Equipment health emissive coloring ---
+    const health = healthRef.current;
+    for (const eh of health) {
+      const mesh = scene.getMeshByName(eh.id);
+      if (!mesh?.material || !(mesh.material instanceof BABYLON.PBRMaterial)) continue;
+      const mat = mesh.material as BABYLON.PBRMaterial;
+      const color = healthColorCache[eh.health];
+      const intensity = HEALTH_INTENSITY[eh.health];
+      const rate = PULSE_RATE[eh.health];
+      const pulse = rate > 0
+        ? intensity * (0.7 + 0.3 * Math.sin(performance.now() * 0.001 * rate * Math.PI * 2))
+        : intensity;
+      mat.emissiveColor = color.scale(pulse);
+    }
+
+    // --- Cascade connection lines ---
+    const cascadeLines = cascadeLinesRef.current;
+    for (let i = 0; i < cascadeTubePool.length; i++) {
+      const tube = cascadeTubePool[i];
+      const mat = cascadeTubeMaterials[i];
+
+      if (i >= cascadeLines.length) {
+        mat.alpha = 0;
+        continue;
+      }
+
+      const line = cascadeLines[i];
+      const fromMesh = scene.getMeshByName(line.fromId);
+      const toMesh = scene.getMeshByName(line.toId);
+
+      if (!fromMesh || !toMesh) {
+        mat.alpha = 0;
+        continue;
+      }
+
+      const from = fromMesh.getAbsolutePosition();
+      const to = toMesh.getAbsolutePosition();
+      const mid = BABYLON.Vector3.Lerp(from, to, 0.5);
+      mid.y += 1.5; // Arc upward
+
+      const points = BABYLON.Curve3.CreateQuadraticBezier(from, mid, to, 12).getPoints();
+
+      // Update tube geometry in-place
+      BABYLON.MeshBuilder.CreateTube(`cascade-tube-${i}`, {
+        path: points,
+        radius: 0.06,
+        tessellation: 8,
+        updatable: true,
+        instance: tube,
+      }, scene);
+
+      // Color based on severity
+      const sevColor = line.severity === 'alarm' ? '#EF4444' : line.severity === 'warning' ? '#F59E0B' : '#10B981';
+      mat.emissiveColor = BABYLON.Color3.FromHexString(sevColor).scale(0.6);
+      mat.diffuseColor = BABYLON.Color3.FromHexString(sevColor);
+      mat.alpha = line.progress * 0.7;
+    }
   });
 
   const resize = () => engine.resize();
@@ -647,12 +769,23 @@ function createAlarmBeacons(scene: BABYLON.Scene) {
 export function WarRoomBabylonScene(props: WarRoomBabylonSceneProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const sceneRef = useRef<{ scene: BABYLON.Scene; camera: BABYLON.ArcRotateCamera; dispose: () => void } | null>(null);
+  const healthRef = useRef<EquipmentHealth[]>([]);
+  const cascadeLinesRef = useRef<CascadeLine[]>([]);
   const webgl = useWebGLSupport();
+
+  // Subscribe to facility sim store (Zustand external subscription — no React re-renders)
+  useEffect(() => {
+    const unsub = useFacilitySimStore.subscribe((state) => {
+      healthRef.current = state.equipmentHealth;
+      cascadeLinesRef.current = state.cascadeLines;
+    });
+    return unsub;
+  }, []);
 
   // Create scene once on mount
   useEffect(() => {
     if (!canvasRef.current || !webgl.supported) return undefined;
-    const dispose = createScene(canvasRef.current, props);
+    const dispose = createScene(canvasRef.current, props, healthRef, cascadeLinesRef);
     // Capture scene and camera refs from the engine
     const canvas = canvasRef.current;
     const engine = BABYLON.Engine.Instances.find((e) => e.getRenderingCanvas() === canvas);
