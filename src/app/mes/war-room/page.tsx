@@ -84,6 +84,10 @@ export default function WarRoomPage() {
     setPickScreenPos(screenPos);
   }, []);
 
+  const handleFacilityPanelOpen = useCallback((panel: 'hvac' | 'gas' | 'power', _nodeId: string) => {
+    setOpenPanel(panel);
+  }, []);
+
   const handleFlyToAsset = useCallback((assetId: string) => {
     const equipment = SUBSYSTEM_EQUIPMENT.find((item) => item.id === assetId);
     if (!equipment) return;
@@ -131,6 +135,7 @@ export default function WarRoomPage() {
           activeSubsystem={activeSubsystem}
           focusAssetId={focusAssetId}
           onAssetPick={handleAssetPick}
+          onFacilityPanelOpen={handleFacilityPanelOpen}
         />
 
         <div className="pointer-events-none fixed left-4 top-[273px] z-30 xl:top-[193px]">
