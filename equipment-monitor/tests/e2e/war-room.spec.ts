@@ -26,16 +26,18 @@ test.describe('War Room 3D', () => {
   test('click Power Monitoring opens overlay with focus', async ({ page }) => {
     await page.goto('/mes/war-room/');
     await page.locator('button:has-text("PWR")').first().click();
-    await expect(page.locator('[role="dialog"]').filter({ hasText: 'Power Monitoring' })).toBeVisible();
-    await expect(page.locator('[role="dialog"] button[aria-label="Close panel"]')).toBeFocused();
+    const overlay = page.locator('[role="dialog"][aria-label="Power Monitoring subsystem details"]');
+    await expect(overlay).toBeVisible();
+    await expect(overlay.locator('button[aria-label="Close panel"]')).toBeFocused();
   });
 
   test('Escape closes overlay and restores focus', async ({ page }) => {
     await page.goto('/mes/war-room/');
     const pwrBtn = page.locator('button:has-text("PWR")').first();
     await pwrBtn.click();
-    await expect(page.locator('[role="dialog"]')).toBeVisible();
+    const overlay = page.locator('[role="dialog"][aria-label="Power Monitoring subsystem details"]');
+    await expect(overlay).toBeVisible();
     await page.keyboard.press('Escape');
-    await expect(page.locator('[role="dialog"]')).not.toBeVisible();
+    await expect(overlay).not.toBeVisible();
   });
 });
