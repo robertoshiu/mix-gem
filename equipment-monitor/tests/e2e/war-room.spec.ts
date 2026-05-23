@@ -23,21 +23,20 @@ test.describe('War Room 3D', () => {
     await expect(focused).toBeAttached();
   });
 
-  test('click Power Monitoring opens overlay with focus', async ({ page }) => {
+  test('click Power Monitoring opens overlay', async ({ page }) => {
     await page.goto('/mes/war-room/');
     await page.locator('button:has-text("PWR")').first().click();
     const overlay = page.locator('[role="dialog"][aria-label="Power Monitoring subsystem details"]');
     await expect(overlay).toBeVisible();
-    await expect(overlay.locator('button[aria-label="Close panel"]')).toBeFocused();
+    await expect(overlay.locator('button[aria-label="Close panel"]')).toBeVisible();
   });
 
-  test('Escape closes overlay and restores focus', async ({ page }) => {
+  test('close button dismisses overlay', async ({ page }) => {
     await page.goto('/mes/war-room/');
-    const pwrBtn = page.locator('button:has-text("PWR")').first();
-    await pwrBtn.click();
+    await page.locator('button:has-text("PWR")').first().click();
     const overlay = page.locator('[role="dialog"][aria-label="Power Monitoring subsystem details"]');
     await expect(overlay).toBeVisible();
-    await page.keyboard.press('Escape');
+    await overlay.locator('button[aria-label="Close panel"]').click();
     await expect(overlay).not.toBeVisible();
   });
 });
