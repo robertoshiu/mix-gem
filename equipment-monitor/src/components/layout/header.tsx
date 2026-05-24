@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useMesSpcStore } from "@/stores/mes-spc-store";
+import { NotificationPanel } from "@/components/spc/NotificationPanel";
 
 export function Header({ className }: { className?: string }) {
   const [clock, setClock] = useState("--:--:--");
@@ -72,9 +73,9 @@ export function Header({ className }: { className?: string }) {
         <div className="flex items-center gap-3">
           <Image
             src="/mix-gem/better-logo.png"
-            width={192}
+            width={48}
             height={48}
-            className="h-12 w-auto shrink-0"
+            className="shrink-0"
             alt="Better SmartFactory Logo"
             priority
           />
@@ -97,7 +98,7 @@ export function Header({ className }: { className?: string }) {
         </div>
 
         {/* Right: Icon buttons */}
-        <div ref={iconAreaRef} className="flex items-center gap-1">
+        <div ref={iconAreaRef} className="relative flex items-center gap-1">
           {/* Bell / Notifications */}
           <Button
             variant="ghost"
@@ -160,29 +161,21 @@ export function Header({ className }: { className?: string }) {
               AC
             </div>
           </Button>
+
+          {isNotificationPanelOpen && <NotificationPanel />}
+          {isSettingsPanelOpen && (
+            <div className="absolute top-full right-12 mt-2 w-80 border border-[var(--smartfactory-border-default)] bg-[var(--smartfactory-surface-card)] rounded-b-lg shadow-lg p-4 z-40">
+              <p className="text-sm text-[var(--smartfactory-text-primary)] font-medium">Settings Panel</p>
+            </div>
+          )}
+          {isUserDropdownOpen && (
+            <div className="absolute top-full right-4 mt-2 w-56 border border-[var(--smartfactory-border-default)] bg-[var(--smartfactory-surface-card)] rounded-b-lg shadow-lg p-4 z-40">
+              <p className="text-sm text-[var(--smartfactory-text-primary)] font-medium">User Profile</p>
+              <p className="text-xs text-[var(--smartfactory-text-secondary)]">Admin User (AC)</p>
+            </div>
+          )}
         </div>
       </header>
-
-      {/* Placeholder panels */}
-      <div className="relative z-40">
-        {isNotificationPanelOpen && (
-          <div className="absolute top-0 right-16 w-80 border border-[var(--smartfactory-border-default)] bg-[var(--smartfactory-surface-card)] rounded-b-lg shadow-lg p-4">
-            <p className="text-sm text-[var(--smartfactory-text-primary)] font-medium">Notification Panel</p>
-            <p className="text-xs text-[var(--smartfactory-text-secondary)]">{unreadCount} unread notifications</p>
-          </div>
-        )}
-        {isSettingsPanelOpen && (
-          <div className="absolute top-0 right-12 w-80 border border-[var(--smartfactory-border-default)] bg-[var(--smartfactory-surface-card)] rounded-b-lg shadow-lg p-4">
-            <p className="text-sm text-[var(--smartfactory-text-primary)] font-medium">Settings Panel</p>
-          </div>
-        )}
-        {isUserDropdownOpen && (
-          <div className="absolute top-0 right-4 w-56 border border-[var(--smartfactory-border-default)] bg-[var(--smartfactory-surface-card)] rounded-b-lg shadow-lg p-4">
-            <p className="text-sm text-[var(--smartfactory-text-primary)] font-medium">User Profile</p>
-            <p className="text-xs text-[var(--smartfactory-text-secondary)]">Admin User (AC)</p>
-          </div>
-        )}
-      </div>
     </>
   );
 }
