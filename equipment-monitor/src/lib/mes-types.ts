@@ -33,8 +33,17 @@ export interface SpcMeasurement {
   ler: number;
 }
 
+// Aggregated Measurement — hourly rollup
+export interface AggregatedMeasurement {
+  hour: Date;
+  mean: number;
+  min: number;
+  max: number;
+  count: number;
+}
+
 // SPC Violation
-export type SpcRule = 'rule_1' | 'rule_2' | 'rule_5';
+export type SpcRule = 'rule_1' | 'rule_2' | 'rule_3' | 'rule_4' | 'rule_5' | 'rule_6' | 'rule_7' | 'rule_8';
 export type SpcParameter = 'cd' | 'cdu' | 'ovl_x' | 'ovl_y' | 'ler';
 
 export interface SpcViolation {
@@ -47,6 +56,56 @@ export interface SpcViolation {
   limit: number;
   acknowledged: boolean;
   timestamp: Date;
+}
+
+export interface SpcCapabilityResult {
+  cp: number;
+  cpk: number;
+  cpl: number;
+  cpu: number;
+  pp: number;
+  ppk: number;
+  status: 'capable' | 'marginal' | 'incapable';
+  sampleSize: number;
+}
+
+// Alarm
+export type AlarmSeverity = 'critical' | 'warning' | 'info';
+
+export interface Alarm {
+  id: string;
+  severity: AlarmSeverity;
+  parameter: SpcParameter;
+  message: string;
+  rule: SpcRule;
+  value: number;
+  limit: number;
+  acknowledged: boolean;
+  timestamp: Date;
+  acknowledgedAt?: Date;
+}
+
+// CUSUM Trend Analysis
+export interface CUSUMResult {
+  cusumPos: number[];
+  cusumNeg: number[];
+  k: number;
+  h: number;
+}
+
+// EWMA Trend Analysis
+export interface EWMAResult {
+  ewmaValues: number[];
+  ucl: number[];
+  lcl: number[];
+  lambda: number;
+}
+
+// Trend Signal Detection
+export interface TrendSignal {
+  signal: boolean;
+  index: number;
+  direction: 'up' | 'down';
 }
 
 // SECS Event (display only)
@@ -71,6 +130,14 @@ export interface SecsEvent {
   secsMessage: Record<string, unknown>;
 }
 
+// Metrology Generator Configuration
+export interface MetrologyConfig {
+  exposureDose?: number;      // mJ/cm², default 38
+  focusOffset?: number;       // nm, default 0
+  pebDriftRate?: number;      // nm/wafer, default 0
+  reticleError?: number;      // nm systematic bias, default 0
+}
+
 // Fault
 export type FaultType =
   | 'sudden_shift'
@@ -88,7 +155,14 @@ export interface FaultConfig {
 
 // AI Recommendation
 export type AiRecommendationType = 'energy' | 'predictive-maintenance' | 'production-optimization' | 'carbon-reduction' | 'quality' | 'scheduling';
-export type AiRecommendationStatus = 'pending' | 'applied' | 'overridden';
+export type AiRecommendationStatus = 'pending' | 'applied' | 'overridden' | 'superseded';
+export type AiRecommendationSource = 'spc-violation' | 'trend-drift' | 'equipment-inhibited' | 'yield-prediction' | 'process-optimization';
+export type TrendDirection = 'improving' | 'stable' | 'degrading';
+
+export interface ConfidenceSnapshot {
+  timestamp: Date;
+  confidence: number;
+}
 
 export interface AiRecommendation {
   id: string;
@@ -99,11 +173,24 @@ export interface AiRecommendation {
   impact: string;
   status: AiRecommendationStatus;
   createdAt: Date;
+  source: AiRecommendationSource;
+  relatedParameter?: SpcParameter;
+  trendDirection?: TrendDirection;
+  confidenceHistory: ConfidenceSnapshot[];
+  supersededById?: string;
+}
+
+export interface AiRecommendationEngineConfig {
+  driftThreshold: number;      // sigma multiplier for drift detection
+  minDataPoints: number;       // minimum measurements before analysis
+  confidenceDecayRate: number; // how fast confidence decays per tick without new data
+  maxRecommendations: number;   // cap on active recommendations
+  analysisInterval: number;     // run analysis every N ticks
 }
 
 // Notification
 export type NotificationSeverity = 'critical' | 'warning' | 'info';
-export type NotificationType = 'violation' | 'lot_status' | 'equipment_state' | 'recipe' | 'system';
+export type NotificationType = 'violation' | 'lot_status' | 'equipment_state' | 'recipe' | 'system' | 'alarm';
 
 export interface Notification {
   id: string;
@@ -148,6 +235,20 @@ export interface HeatmapCell {
 }
 
 export type ConfidenceLevel = number; // 0-100
+
+// GEM State Machine — SEMI E30 states
+export type GemState = 'INIT' | 'IDLE' | 'SETUP' | 'READY' | 'EXECUTING' | 'PAUSED' | 'COMPLETED' | 'ABORTED';
+
+export const GEM_VALID_TRANSITIONS: Record<GemState, GemState[]> = {
+  INIT: ['IDLE'],
+  IDLE: ['SETUP'],
+  SETUP: ['READY'],
+  READY: ['EXECUTING'],
+  EXECUTING: ['PAUSED', 'COMPLETED', 'ABORTED'],
+  PAUSED: ['EXECUTING', 'ABORTED'],
+  COMPLETED: ['IDLE'],
+  ABORTED: ['IDLE'],
+};
 
 // Equipment (for fab floor map)
 export type EquipmentType = 'lithography' | 'coater' | 'developer' | 'metrology' | 'cmp';
