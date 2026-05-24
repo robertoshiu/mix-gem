@@ -38,13 +38,13 @@ export interface SubsystemDef {
 export interface MetricSnapshot {
   key: string;
   value: number;
-  status: string;
+  status: MetricStatus;
 }
 
 export interface SubsystemSnapshot {
   id: SubsystemId;
   metrics: [MetricSnapshot, MetricSnapshot, MetricSnapshot, MetricSnapshot];
-  status: string;
+  status: MetricStatus;
 }
 
 // ---------------------------------------------------------------------------
@@ -52,6 +52,7 @@ export interface SubsystemSnapshot {
 // ---------------------------------------------------------------------------
 
 export type EventSeverity = 'info' | 'warning' | 'critical';
+export type MetricStatus = 'normal' | 'warning' | 'critical';
 
 export interface FacilityEvent {
   id: string;

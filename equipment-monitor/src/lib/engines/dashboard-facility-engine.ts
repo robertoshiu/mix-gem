@@ -7,6 +7,7 @@ import type {
   SubsystemSnapshot,
   MetricSnapshot,
   FacilityEvent,
+  MetricStatus,
 } from './dashboard-facility-types';
 import {
   SUBSYSTEM_IDS,
@@ -103,7 +104,7 @@ export function formatMetricValue(value: number, precision: number): string {
 // ---------------------------------------------------------------------------
 
 /** Determine status of a single metric based on warn thresholds. */
-function metricStatus(value: number, def: MetricDef): string {
+function metricStatus(value: number, def: MetricDef): MetricStatus {
   // Critical if more than 20% beyond warning bounds
   const warnRange = def.warnHi - def.warnLo;
   const critMargin = warnRange * 0.2;
@@ -117,16 +118,16 @@ function metricStatus(value: number, def: MetricDef): string {
 }
 
 /** Worst status wins (critical > warning > normal). */
-const STATUS_RANK: Record<string, number> = {
+const STATUS_RANK: Record<MetricStatus, number> = {
   normal: 0,
   warning: 1,
   critical: 2,
 };
 
-function worstStatus(statuses: string[]): string {
-  let worst = 'normal';
+function worstStatus(statuses: MetricStatus[]): MetricStatus {
+  let worst: MetricStatus = 'normal';
   for (const s of statuses) {
-    if ((STATUS_RANK[s] ?? 0) > (STATUS_RANK[worst] ?? 0)) {
+    if (STATUS_RANK[s] > STATUS_RANK[worst]) {
       worst = s;
     }
   }
