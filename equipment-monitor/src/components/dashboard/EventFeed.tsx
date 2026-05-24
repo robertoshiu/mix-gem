@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useCallback, useEffect } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import {
   SUBSYSTEM_DEFS,
   type FacilityEvent,
@@ -10,10 +10,10 @@ import {
 // Severity icon helpers
 // ---------------------------------------------------------------------------
 
-const SEVERITY_ICON: Record<string, string> = {
-  info: '\u2139',      // ℹ
-  warning: '\u26A0',   // ⚠
-  critical: '\uD83D\uDD34', // 🔴
+const SEVERITY_TOKEN: Record<string, string> = {
+  info: 'INFO',
+  warning: 'WARN',
+  critical: 'CRIT',
 };
 
 const SEVERITY_MSG_COLOR: Record<string, string> = {
@@ -27,7 +27,7 @@ const SEVERITY_MSG_COLOR: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 function eventOpacity(eventTick: number, currentTick: number): number {
-  const age = currentTick - eventTick;
+  const age = currentTick >= eventTick ? currentTick - eventTick : currentTick + 180 - eventTick;
   if (age > 40) return 0.4;
   if (age > 30) return 0.4 + 0.6 * ((40 - age) / 10);
   return 1;
@@ -68,9 +68,6 @@ export function EventFeed({ events, currentTick }: EventFeedProps) {
     prevLenRef.current = events.length;
   }, [events.length]);
 
-  // Display newest first
-  const reversed = [...events].reverse();
-
   return (
     <div className="rounded-2xl border border-[rgba(34,211,238,0.18)] bg-[rgba(2,6,23,0.78)] backdrop-blur-xl font-mono text-[11px] leading-5">
       {/* Header */}
@@ -99,23 +96,31 @@ export function EventFeed({ events, currentTick }: EventFeedProps) {
         ref={listRef}
         onScroll={handleScroll}
         className="h-[320px] overflow-y-auto px-3 py-1"
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions text"
+        aria-label="Facility event log"
       >
-        {reversed.length === 0 ? (
+        {events.length === 0 ? (
           <div className="flex items-center justify-center h-full text-[rgba(148,163,184,0.5)]">
             Awaiting facility events...
           </div>
         ) : (
-          reversed.map((evt) => {
+          <ul role="list">
+          {events.map((_, reversedIndex) => {
+            const originalIndex = events.length - 1 - reversedIndex;
+            const evt = events[originalIndex];
             const def = SUBSYSTEM_DEFS[evt.subsystem];
             const opacity = eventOpacity(evt.tick, currentTick);
             const isCritical = evt.severity === 'critical';
 
             return (
-              <div
-                key={evt.id}
+              <li
+                key={`${evt.id}-${originalIndex}`}
                 data-testid="event-row"
                 className="flex items-start gap-2 py-0.5"
                 style={{ opacity }}
+                aria-label={`${evt.timestamp} ${def.shortLabel} ${evt.severity}: ${evt.message}`}
               >
                 {/* Timestamp */}
                 <span
@@ -135,9 +140,10 @@ export function EventFeed({ events, currentTick }: EventFeedProps) {
 
                 {/* Severity icon */}
                 <span
-                  className={`shrink-0 w-[18px] text-center${isCritical ? ' animate-pulse' : ''}`}
+                  className={`shrink-0 w-[34px] text-center text-[9px] font-bold${isCritical ? ' animate-pulse' : ''}`}
+                  aria-hidden="true"
                 >
-                  {SEVERITY_ICON[evt.severity]}
+                  {SEVERITY_TOKEN[evt.severity]}
                 </span>
 
                 {/* Message */}
@@ -147,9 +153,10 @@ export function EventFeed({ events, currentTick }: EventFeedProps) {
                 >
                   {evt.message}
                 </span>
-              </div>
+              </li>
             );
-          })
+          })}
+          </ul>
         )}
       </div>
     </div>

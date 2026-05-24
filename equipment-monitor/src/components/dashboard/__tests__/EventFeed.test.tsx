@@ -23,6 +23,14 @@ describe('EventFeed', () => {
     expect(screen.getByText('LIVE')).toBeInTheDocument();
   });
 
+  it('exposes the event list as a polite live log', () => {
+    render(<EventFeed events={mockEvents} currentTick={10} />);
+    expect(screen.getByRole('log', { name: /facility event log/i })).toHaveAttribute(
+      'aria-live',
+      'polite',
+    );
+  });
+
   it('renders event messages', () => {
     render(<EventFeed events={mockEvents} currentTick={10} />);
     expect(screen.getByText('CR-A Zone temp 22.1C — nominal')).toBeInTheDocument();
@@ -63,5 +71,17 @@ describe('EventFeed', () => {
     expect(rows[0]).toHaveTextContent('AHU-2 fan speed adjusted to 78%');
     // Last rendered row should be the oldest event (e1, first in array)
     expect(rows[4]).toHaveTextContent('CR-A Zone temp 22.1C — nominal');
+  });
+
+  it('fades events correctly across the 180-tick wrap boundary', () => {
+    render(
+      <EventFeed
+        currentTick={5}
+        events={[
+          { id: 'wrapped-old', tick: 140, timestamp: '16:42:20', subsystem: 'ems', severity: 'info', message: 'older wrapped event' },
+        ]}
+      />,
+    );
+    expect(screen.getByTestId('event-row')).toHaveStyle({ opacity: '0.4' });
   });
 });
