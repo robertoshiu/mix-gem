@@ -1,5 +1,6 @@
 import { MOCK_LOTS, MOCK_RECIPES, generateSeedMeasurements } from './mes-mock-data';
-import { SPC_PARAMETERS } from './spc-parameters';
+import { evaluateSpc } from './spc-engine';
+import { SPC_PARAMETERS, SPC_PARAM_KEYS } from './spc-parameters';
 
 describe('MOCK_LOTS', () => {
   it('contains 3 lots', () => {
@@ -41,6 +42,13 @@ describe('generateSeedMeasurements', () => {
     measurements.forEach((m) => {
       expect(m.cd).toBeGreaterThan(lcl);
       expect(m.cd).toBeLessThan(ucl);
+    });
+  });
+
+  it('starts with an in-control SPC baseline', () => {
+    const measurements = generateSeedMeasurements('LOT-2026-001', 10);
+    SPC_PARAM_KEYS.forEach((param) => {
+      expect(evaluateSpc(measurements, param)).toBeNull();
     });
   });
 });

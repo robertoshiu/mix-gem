@@ -19,36 +19,44 @@ export const MOCK_AI_RECOMMENDATIONS: AiRecommendation[] = [
     description: 'CMP-03 currently scheduled at peak demand. Shifting to 02:00-04:00 reduces energy cost by 35% based on last 30 days pricing patterns.',
     confidence: 94, impact: 'Estimated savings: $4,200/week | Energy reduction: 18%',
     status: 'pending', createdAt: new Date('2026-05-04T08:00:00'),
+    source: 'process-optimization', confidenceHistory: [{ timestamp: new Date('2026-05-04T08:00:00'), confidence: 94 }],
   },
   {
     id: 'ai-rec-002', type: 'predictive-maintenance', title: 'LITHO-01 chiller efficiency declining',
     description: 'Chiller coolant temperature trending +0.8°C above baseline over last 48 hours. Predictive model forecasts 94% probability of thermal shutdown within 72 hours if unaddressed.',
     confidence: 89, impact: 'Prevents 4-6hr unplanned downtime | Risk: lens thermal drift',
     status: 'pending', createdAt: new Date('2026-05-04T10:00:00'),
+    source: 'trend-drift', relatedParameter: 'cd', trendDirection: 'degrading',
+    confidenceHistory: [{ timestamp: new Date('2026-05-04T10:00:00'), confidence: 89 }],
   },
   {
     id: 'ai-rec-003', type: 'production-optimization', title: 'Batch 5 lots on ETCH-05 to reduce queue time',
     description: 'Queue time at ETCH-05 exceeds 45min threshold. Batching LOT-2026-002 and LOT-2026-003 reduces total processing time by 22% based on historical throughput models.',
     confidence: 92, impact: 'Throughput increase: +22% | WIP reduction: 8 lots',
     status: 'pending', createdAt: new Date('2026-05-04T09:15:00'),
+    source: 'process-optimization', confidenceHistory: [{ timestamp: new Date('2026-05-04T09:15:00'), confidence: 92 }],
   },
   {
     id: 'ai-rec-004', type: 'carbon-reduction', title: 'Solar peak at 14:00 — schedule energy-intensive steps',
     description: 'Solar generation forecast shows 98% capacity at 14:00-16:00. Shifting exposure and bake steps to this window reduces grid draw by 42%, saving 1.2 metric tons CO₂ equivalent.',
     confidence: 91, impact: 'CO₂ reduction: 1.2t | Grid cost savings: $1,800/day',
     status: 'pending', createdAt: new Date('2026-05-04T07:30:00'),
+    source: 'process-optimization', confidenceHistory: [{ timestamp: new Date('2026-05-04T07:30:00'), confidence: 91 }],
   },
   {
     id: 'ai-rec-005', type: 'quality', title: 'CD uniformity degrading on LITHO-01 — adjust exposure dose',
     description: 'CDU trend shows +0.12nm drift per 50 wafers. Compensation model recommends exposure dose adjustment from 38 to 37.6 mJ/cm² to maintain within 3-sigma window.',
     confidence: 96, impact: 'Prevents CDU excursion | Maintains CpK > 1.33',
     status: 'pending', createdAt: new Date('2026-05-04T11:00:00'),
+    source: 'trend-drift', relatedParameter: 'cdu', trendDirection: 'degrading',
+    confidenceHistory: [{ timestamp: new Date('2026-05-04T11:00:00'), confidence: 96 }],
   },
   {
     id: 'ai-rec-006', type: 'scheduling', title: 'Optimize DEV-01 chemical refresh schedule',
     description: 'Developer concentration dropping 5% faster than baseline after LOT-2026-001. Recommend advancing chemical refresh by 3 hours to avoid pattern collapse risk on upcoming 5nm lots.',
     confidence: 87, impact: 'Eliminates 3% scrap risk on LOGIC-5NM | Refresh cost: $1,200',
     status: 'pending', createdAt: new Date('2026-05-04T06:45:00'),
+    source: 'process-optimization', confidenceHistory: [{ timestamp: new Date('2026-05-04T06:45:00'), confidence: 87 }],
   },
 ];
 
@@ -71,19 +79,9 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
   { id: 'notif-005', type: 'system', severity: 'warning', title: 'COAT-02 Equipment Down', message: 'COAT-02 reported DOWN status at 07:15. Maintenance ticket #MT-2847 created.', timestamp: new Date('2026-05-04T07:15:00'), read: false },
 ];
 
-// Deterministic pseudo-noise using a string hash — NOT Math.random()
-// Returns a value in [-1.5, 1.5]
-function stableNoise(lotId: string, wafer: number, param: string): number {
-  const str = `${lotId}:${wafer}:${param}`;
-  let hash = 2166136261; // FNV-1a offset basis
-  for (let i = 0; i < str.length; i++) {
-    hash ^= str.charCodeAt(i);
-    hash = Math.imul(hash, 16777619) >>> 0; // FNV prime, keep 32-bit unsigned
-  }
-  // Normalize to [-1.5, 1.5]
-  const t = (hash / 0xffffffff);
-  return (t - 0.5) * 3;
-}
+// Balanced deterministic offsets keep the initial baseline in control while
+// still crossing both sides of the center line and +/-1 sigma.
+const SEED_OFFSETS = [-1.2, -0.35, 0.85, 1.25, -0.75, 0.2, -1.1, 0.65, 1.1, -0.45];
 
 const SEED_ANCHOR = new Date('2026-05-02T08:00:00').getTime();
 
@@ -93,7 +91,9 @@ export function generateSeedMeasurements(lotId: string, count: number): SpcMeasu
     const base: Record<string, number> = {};
     SPC_PARAM_KEYS.forEach((param) => {
       const { target, sigma } = SPC_PARAMETERS[param];
-      base[param] = target + stableNoise(lotId, waferNumber, param) * sigma * 0.6;
+      const paramPhase = SPC_PARAM_KEYS.indexOf(param) * 2;
+      const offset = SEED_OFFSETS[(i + paramPhase) % SEED_OFFSETS.length];
+      base[param] = target + offset * sigma;
     });
 
     return {
