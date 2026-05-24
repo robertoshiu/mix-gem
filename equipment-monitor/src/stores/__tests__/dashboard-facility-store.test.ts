@@ -65,6 +65,16 @@ describe('dashboard-facility-store', () => {
       }
     });
 
+    test('tick_ replaces sparkline and event buffer references for Zustand selectors', () => {
+      const beforeSparkline = getState().sparklines.ems;
+      const beforeEvents = getState().events;
+
+      getState().tick_();
+
+      expect(getState().sparklines.ems).not.toBe(beforeSparkline);
+      expect(getState().events).not.toBe(beforeEvents);
+    });
+
     test('tick_ appends events to event buffer (some events after 20 ticks)', () => {
       for (let i = 0; i < 20; i++) {
         getState().tick_();
@@ -100,6 +110,14 @@ describe('dashboard-facility-store', () => {
         getState().tick_();
       }
       expect(getState().events.length).toBeLessThanOrEqual(200);
+    });
+
+    test('event IDs stay unique across wrapped 180-tick cycles', () => {
+      for (let i = 0; i < 300; i++) {
+        getState().tick_();
+      }
+      const eventIds = getState().events.toArray().map((event) => event.id);
+      expect(new Set(eventIds).size).toBe(eventIds.length);
     });
   });
 

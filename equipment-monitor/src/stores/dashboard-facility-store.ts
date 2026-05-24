@@ -42,12 +42,22 @@ function buildSparklines(): Record<SubsystemId, HistoryBuffer<number>> {
   return result;
 }
 
+function buildBuffer<T>(values: T[], capacity: number): HistoryBuffer<T> {
+  const buffer = new HistoryBuffer<T>(capacity);
+  for (const value of values) {
+    buffer.push(value);
+  }
+  return buffer;
+}
+
 // ---------------------------------------------------------------------------
 // State interface
 // ---------------------------------------------------------------------------
 
 export interface DashboardFacilityState {
   tick: number;
+  elapsedTicks: number;
+  eventOrdinal: number;
   subsystems: Record<SubsystemId, SubsystemSnapshot>;
   sparklines: Record<SubsystemId, HistoryBuffer<number>>;
   events: HistoryBuffer<FacilityEvent>;
@@ -63,34 +73,44 @@ export interface DashboardFacilityState {
 export const useDashboardFacilityStore = create<DashboardFacilityState>(
   (set, get) => ({
     tick: 0,
+    elapsedTicks: 0,
+    eventOrdinal: 0,
     subsystems: buildInitialSubsystems(),
     sparklines: buildSparklines(),
     events: new HistoryBuffer<FacilityEvent>(EVENT_CAPACITY),
 
     tick_: () => {
       const state = get();
-      const nextTick = (state.tick + 1) % TICK_WRAP;
+      const nextElapsedTicks = state.elapsedTicks + 1;
+      const nextTick = nextElapsedTicks % TICK_WRAP;
 
       // Generate new subsystem snapshots
       const subsystems = {} as Record<SubsystemId, SubsystemSnapshot>;
-      const sparklines = state.sparklines;
+      const sparklines = {} as Record<SubsystemId, HistoryBuffer<number>>;
 
       for (const id of SUBSYSTEM_IDS) {
         const snapshot = generateSubsystemSnapshot(nextTick, id);
         subsystems[id] = snapshot;
-        // Push primary metric (metrics[0].value) to sparkline
-        sparklines[id].push(snapshot.metrics[0].value);
+        sparklines[id] = buildBuffer(
+          [...state.sparklines[id].toArray(), snapshot.metrics[0].value],
+          SPARKLINE_CAPACITY,
+        );
       }
 
       // Generate events and push to buffer
-      const events = state.events;
       const newEvents = generateEvents(nextTick);
+      let eventOrdinal = state.eventOrdinal;
+      const eventValues = state.events.toArray();
       for (const ev of newEvents) {
-        events.push(ev);
+        eventOrdinal += 1;
+        eventValues.push({ ...ev, id: `${ev.id}-seq-${eventOrdinal}` });
       }
+      const events = buildBuffer(eventValues, EVENT_CAPACITY);
 
       set({
         tick: nextTick,
+        elapsedTicks: nextElapsedTicks,
+        eventOrdinal,
         subsystems,
         sparklines,
         events,
@@ -100,6 +120,8 @@ export const useDashboardFacilityStore = create<DashboardFacilityState>(
     reset: () => {
       set({
         tick: 0,
+        elapsedTicks: 0,
+        eventOrdinal: 0,
         subsystems: buildInitialSubsystems(),
         sparklines: buildSparklines(),
         events: new HistoryBuffer<FacilityEvent>(EVENT_CAPACITY),
