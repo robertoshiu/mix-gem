@@ -95,7 +95,7 @@ export function EventLog({ events }: EventLogProps) {
   return (
     <div
       data-testid="event-log"
-      className="bg-[var(--smartfactory-surface-card)] rounded border border-[var(--smartfactory-border-default)] p-3 flex flex-col gap-2 h-full overflow-hidden"
+      className="bg-[var(--smartfactory-surface-card)] rounded border border-[var(--smartfactory-border-default)] p-3 flex flex-col gap-2 h-[420px] min-h-[320px] overflow-hidden"
     >
       <span className="text-xs font-semibold text-[var(--smartfactory-text-secondary)] uppercase tracking-wide shrink-0">
         Event Log
@@ -136,7 +136,7 @@ export function EventLog({ events }: EventLogProps) {
       ) : (
         <div
           ref={scrollRef}
-          className="overflow-y-auto flex flex-col gap-0.5 flex-1"
+          className="overflow-y-auto flex flex-col-reverse gap-0.5 flex-1 pr-1"
         >
           {filteredEvents.map((event) => {
             const IconComponent = EVENT_ICONS[event.type];
