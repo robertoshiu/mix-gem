@@ -63,16 +63,16 @@ describe('acknowledgeViolation', () => {
 });
 
 describe('addEvent', () => {
-  it('caps events at 100', () => {
+  it('caps events at 300 for the scroll-list buffer', () => {
     const store = useMesSpcStore.getState();
-    for (let i = 0; i < 105; i++) {
+    for (let i = 0; i < 305; i++) {
       const e: SecsEvent = {
         id: `e${i}`, type: 's6f11_spc_data', label: `event ${i}`,
         timestamp: new Date(), secsMessage: {},
       };
       store.addEvent(e);
     }
-    expect(useMesSpcStore.getState().events).toHaveLength(100);
+    expect(useMesSpcStore.getState().events).toHaveLength(300);
   });
 });
 
