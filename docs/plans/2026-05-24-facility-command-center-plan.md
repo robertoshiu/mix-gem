@@ -6,7 +6,11 @@
 
 **Architecture:** Additive changes to the engine (new pure functions for KPIs + equipment status), store (new computed fields), and UI (rewrite SubsystemCard, new FacilityKpiBar, modify FacilityTab layout). EventFeed and DashboardTabs untouched.
 
-**Tech Stack:** Next.js 15, React 19, Zustand, Canvas2D, TypeScript, Jest, Tailwind CSS
+**Tech Stack:** Next.js 16, React 19, Zustand, Canvas2D, TypeScript, Jest 30, Tailwind CSS
+
+> **Review addendum (2026-05-24):** This plan has already been applied in the working tree. Treat the existing code as the source of truth; do not replay the TDD tasks blindly or overwrite existing files. Keep the review fixes captured below: correct type-module imports, reduced-motion-safe pulse classes, accessible KPI/equipment labels, `role="img"` on trend canvases, and `SUBSYSTEM_IDS.length` instead of hard-coded subsystem counts.
+
+> **Git note:** Commit commands are historical checkpoints only. Do not run them unless the user explicitly asks for commits.
 
 ---
 
@@ -24,7 +28,7 @@
 | Engine tests | `src/lib/engines/__tests__/dashboard-facility-engine.test.ts` |
 | Store tests | `src/stores/__tests__/dashboard-facility-store.test.ts` |
 | Card tests | `src/components/dashboard/__tests__/SubsystemCard.test.tsx` |
-| Design doc | `docs/plans/2026-05-24-facility-command-center-design.md` |
+| Design doc | Not present in this workspace; use this reviewed plan as the implementation source |
 
 All paths relative to `equipment-monitor/`.
 
@@ -44,7 +48,6 @@ All paths relative to `equipment-monitor/`.
 import {
   SUBSYSTEM_IDS,
   EQUIPMENT_DEFS,
-  type EquipmentDef,
   type EquipmentStatus,
 } from '../dashboard-facility-types';
 
@@ -80,7 +83,7 @@ describe('equipment definitions', () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd /mnt/e/repo/mix-gem/equipment-monitor && npx jest src/lib/engines/__tests__/dashboard-facility-types-equipment.test.ts --no-coverage`
+Run: `cd E:\repo\mix-gem\equipment-monitor; npm test -- src/lib/engines/__tests__/dashboard-facility-types-equipment.test.ts --no-coverage`
 Expected: FAIL — cannot find EQUIPMENT_DEFS
 
 **Step 3: Write implementation**
@@ -211,7 +214,7 @@ export const EQUIPMENT_DEFS: Record<SubsystemId, [EquipmentDef, EquipmentDef, Eq
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd /mnt/e/repo/mix-gem/equipment-monitor && npx jest src/lib/engines/__tests__/dashboard-facility-types-equipment.test.ts --no-coverage`
+Run: `cd E:\repo\mix-gem\equipment-monitor; npm test -- src/lib/engines/__tests__/dashboard-facility-types-equipment.test.ts --no-coverage`
 Expected: PASS — all 3 assertions
 
 **Step 5: Commit**
@@ -241,12 +244,9 @@ import {
   countActiveAlarms,
   computeSystemUptime,
   generateEquipmentStatuses,
-} from '../dashboard-facility-engine';
-import {
   generateSubsystemSnapshot,
-  SUBSYSTEM_IDS,
-  SUBSYSTEM_DEFS,
 } from '../dashboard-facility-engine';
+import { SUBSYSTEM_IDS } from '../dashboard-facility-types';
 import type { SubsystemId, SubsystemSnapshot } from '../dashboard-facility-types';
 
 // Helper: generate all 5 snapshots at a given tick
@@ -440,7 +440,7 @@ describe('generateEquipmentStatuses', () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd /mnt/e/repo/mix-gem/equipment-monitor && npx jest src/lib/engines/__tests__/dashboard-facility-kpi.test.ts --no-coverage`
+Run: `cd E:\repo\mix-gem\equipment-monitor; npm test -- src/lib/engines/__tests__/dashboard-facility-kpi.test.ts --no-coverage`
 Expected: FAIL — functions not exported from engine
 
 **Step 3: Write implementation**
@@ -451,8 +451,6 @@ Append to `src/lib/engines/dashboard-facility-engine.ts`:
 // ---------------------------------------------------------------------------
 // KPI computations (pure functions)
 // ---------------------------------------------------------------------------
-
-import { EQUIPMENT_DEFS, type EquipmentStatus } from './dashboard-facility-types';
 
 /**
  * Comfort Index: weighted compliance score for EMS.
@@ -550,7 +548,7 @@ export function countActiveAlarms(
   for (const id of SUBSYSTEM_IDS) {
     for (const metric of subsystems[id].metrics) {
       if (metric.status === 'warning') warnings++;
-      if (metric.status === 'critical') criticals++;
+      else if (metric.status === 'critical') criticals++;
     }
   }
   return { warnings, criticals };
@@ -603,16 +601,16 @@ export function generateEquipmentStatuses(
 }
 ```
 
-Note: The `EQUIPMENT_DEFS` import needs to be added to the existing imports at the top of the engine file. Update the import from `'./dashboard-facility-types'` to include `EQUIPMENT_DEFS` and `EquipmentStatus`.
+Note: The `EQUIPMENT_DEFS` value and `EquipmentStatus` type need to be added to the existing imports at the top of the engine file. Do not add a second import block for `'./dashboard-facility-types'` inside the file body.
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd /mnt/e/repo/mix-gem/equipment-monitor && npx jest src/lib/engines/__tests__/dashboard-facility-kpi.test.ts --no-coverage`
+Run: `cd E:\repo\mix-gem\equipment-monitor; npm test -- src/lib/engines/__tests__/dashboard-facility-kpi.test.ts --no-coverage`
 Expected: PASS — all tests
 
 **Step 5: Verify existing engine tests still pass**
 
-Run: `cd /mnt/e/repo/mix-gem/equipment-monitor && npx jest src/lib/engines/__tests__/dashboard-facility-engine.test.ts --no-coverage`
+Run: `cd E:\repo\mix-gem\equipment-monitor; npm test -- src/lib/engines/__tests__/dashboard-facility-engine.test.ts --no-coverage`
 Expected: PASS — no regressions
 
 **Step 6: Commit**
@@ -669,7 +667,6 @@ describe('dashboard-facility-store KPIs', () => {
   });
 
   test('tick_ updates kpis', () => {
-    const before = getState().kpis.comfortIndex;
     // Tick several times to get different values
     for (let i = 0; i < 30; i++) {
       getState().tick_();
@@ -702,7 +699,7 @@ describe('dashboard-facility-store KPIs', () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd /mnt/e/repo/mix-gem/equipment-monitor && npx jest src/stores/__tests__/dashboard-facility-store-kpi.test.ts --no-coverage`
+Run: `cd E:\repo\mix-gem\equipment-monitor; npm test -- src/stores/__tests__/dashboard-facility-store-kpi.test.ts --no-coverage`
 Expected: FAIL — kpis/equipmentStatuses undefined
 
 **Step 3: Modify store implementation**
@@ -786,12 +783,12 @@ equipmentStatuses: buildEquipmentStatuses(0),
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd /mnt/e/repo/mix-gem/equipment-monitor && npx jest src/stores/__tests__/dashboard-facility-store-kpi.test.ts --no-coverage`
+Run: `cd E:\repo\mix-gem\equipment-monitor; npm test -- src/stores/__tests__/dashboard-facility-store-kpi.test.ts --no-coverage`
 Expected: PASS
 
 **Step 5: Verify existing store tests still pass**
 
-Run: `cd /mnt/e/repo/mix-gem/equipment-monitor && npx jest src/stores/__tests__/dashboard-facility-store.test.ts --no-coverage`
+Run: `cd E:\repo\mix-gem\equipment-monitor; npm test -- src/stores/__tests__/dashboard-facility-store.test.ts --no-coverage`
 Expected: PASS
 
 **Step 6: Commit**
@@ -858,7 +855,7 @@ describe('FacilityKpiBar', () => {
   });
 
   test('renders Active Alarms', () => {
-    expect(screen.getByText(/2/)).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getByText(/Alarms/i)).toBeInTheDocument();
   });
 
@@ -871,7 +868,7 @@ describe('FacilityKpiBar', () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd /mnt/e/repo/mix-gem/equipment-monitor && npx jest src/components/dashboard/__tests__/FacilityKpiBar.test.tsx --no-coverage`
+Run: `cd E:\repo\mix-gem\equipment-monitor; npm test -- src/components/dashboard/__tests__/FacilityKpiBar.test.tsx --no-coverage`
 Expected: FAIL — module not found
 
 **Step 3: Write implementation**
@@ -935,7 +932,7 @@ const KPI_DEFS: KpiCardDef[] = [
 const STATUS_COLORS = {
   green: { dot: 'bg-emerald-400', text: 'text-emerald-400', border: 'border-emerald-400/20' },
   amber: { dot: 'bg-amber-400', text: 'text-amber-400', border: 'border-amber-400/20' },
-  red: { dot: 'bg-red-500 animate-pulse', text: 'text-red-400', border: 'border-red-400/20' },
+  red: { dot: 'bg-red-500 animate-pulse motion-reduce:animate-none', text: 'text-red-400', border: 'border-red-400/20' },
 };
 
 export function FacilityKpiBar({ kpis }: FacilityKpiBarProps) {
@@ -948,10 +945,11 @@ export function FacilityKpiBar({ kpis }: FacilityKpiBarProps) {
           <div
             key={def.label}
             data-testid="kpi-card"
+            aria-label={`${def.label}: ${def.getValue(kpis)}${def.unit ?? ''}, status ${status}`}
             className={`rounded-2xl border ${colors.border} bg-[rgba(2,6,23,0.72)] p-4 backdrop-blur-xl`}
           >
             <div className="mb-2 flex items-center gap-2">
-              <span className={`h-2 w-2 rounded-full ${colors.dot}`} />
+              <span aria-hidden="true" className={`h-2 w-2 rounded-full ${colors.dot}`} />
               <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--sf-text-muted)]">
                 {def.label}
               </span>
@@ -974,7 +972,7 @@ export function FacilityKpiBar({ kpis }: FacilityKpiBarProps) {
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd /mnt/e/repo/mix-gem/equipment-monitor && npx jest src/components/dashboard/__tests__/FacilityKpiBar.test.tsx --no-coverage`
+Run: `cd E:\repo\mix-gem\equipment-monitor; npm test -- src/components/dashboard/__tests__/FacilityKpiBar.test.tsx --no-coverage`
 Expected: PASS — all 7 assertions
 
 **Step 5: Commit**
@@ -1073,7 +1071,8 @@ describe('SubsystemCard', () => {
   });
 
   test('renders all 4 metric values with units', () => {
-    expect(screen.getByText('22.1°C')).toBeInTheDocument();
+    // 22.1°C appears in both chart header and metrics row.
+    expect(screen.getAllByText('22.1°C').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('45.2%')).toBeInTheDocument();
     expect(screen.getByText('1200/m³')).toBeInTheDocument();
     expect(screen.getByText('12.5Pa')).toBeInTheDocument();
@@ -1109,7 +1108,7 @@ describe('SubsystemCard', () => {
 
 **Step 2: Run test to verify it fails**
 
-Run: `cd /mnt/e/repo/mix-gem/equipment-monitor && npx jest src/components/dashboard/__tests__/SubsystemCard.test.tsx --no-coverage`
+Run: `cd E:\repo\mix-gem\equipment-monitor; npm test -- src/components/dashboard/__tests__/SubsystemCard.test.tsx --no-coverage`
 Expected: FAIL — new props not accepted, new elements not rendered
 
 **Step 3: Rewrite SubsystemCard**
@@ -1154,7 +1153,7 @@ export interface SubsystemCardProps {
 const STATUS_DOT_CLASSES: Record<string, string> = {
   normal: 'bg-green-400',
   warning: 'bg-amber-400',
-  critical: 'bg-red-500 animate-pulse',
+  critical: 'bg-red-500 animate-pulse motion-reduce:animate-none',
 };
 
 const EQUIP_STATUS_ICON: Record<string, string> = {
@@ -1314,6 +1313,7 @@ export function SubsystemCard({
       <div className="mb-2 flex items-center gap-2">
         <span
           data-testid="status-dot"
+          aria-label={`Subsystem status: ${snapshot.status}`}
           className={`h-2.5 w-2.5 rounded-full ${STATUS_DOT_CLASSES[snapshot.status] ?? STATUS_DOT_CLASSES.normal}`}
         />
         <span className="text-sm font-semibold text-[var(--sf-text-primary)]">
@@ -1337,6 +1337,7 @@ export function SubsystemCard({
       {/* Threshold-band chart */}
       <canvas
         ref={canvasRef}
+        role="img"
         className="mb-3 h-[140px] w-full rounded-lg bg-[rgba(255,255,255,0.02)]"
         aria-label={`${CHART_TITLES[subsystemId]} trend chart`}
       />
@@ -1364,8 +1365,12 @@ export function SubsystemCard({
       {/* Equipment status */}
       <div className="space-y-1">
         {equipmentStatuses.map((eq) => (
-          <div key={eq.name} className="flex items-center gap-2 text-[10px]">
-            <span className={`shrink-0 font-bold ${EQUIP_STATUS_COLOR[eq.status]}`}>
+          <div
+            key={eq.name}
+            className="flex items-center gap-2 text-[10px]"
+            aria-label={`${eq.name} status ${eq.status}: ${eq.detail}`}
+          >
+            <span aria-hidden="true" className={`shrink-0 font-bold ${EQUIP_STATUS_COLOR[eq.status]}`}>
               {EQUIP_STATUS_ICON[eq.status]}
             </span>
             <span className="flex-1 truncate text-[var(--sf-text-secondary)]">
@@ -1384,7 +1389,7 @@ export function SubsystemCard({
 
 **Step 4: Run test to verify it passes**
 
-Run: `cd /mnt/e/repo/mix-gem/equipment-monitor && npx jest src/components/dashboard/__tests__/SubsystemCard.test.tsx --no-coverage`
+Run: `cd E:\repo\mix-gem\equipment-monitor; npm test -- src/components/dashboard/__tests__/SubsystemCard.test.tsx --no-coverage`
 Expected: PASS — all 9 assertions
 
 **Step 5: Commit**
@@ -1488,7 +1493,7 @@ export function FacilityTab() {
 
 **Step 2: Run all dashboard tests to verify nothing broke**
 
-Run: `cd /mnt/e/repo/mix-gem/equipment-monitor && npx jest --testPathPattern="dashboard-facility|SubsystemCard|EventFeed|DashboardTabs|FacilityKpiBar" --no-coverage`
+Run: `cd E:\repo\mix-gem\equipment-monitor; npm test -- --testPathPatterns="dashboard-facility|SubsystemCard|EventFeed|DashboardTabs|FacilityKpiBar" --no-coverage`
 Expected: PASS — all tests
 
 **Step 3: Commit**
@@ -1504,12 +1509,12 @@ git commit -m "feat(dashboard): update FacilityTab with KPI bar and lg:grid-cols
 
 **Step 1: Run the full test suite**
 
-Run: `cd /mnt/e/repo/mix-gem/equipment-monitor && npx jest --no-coverage`
+Run: `cd E:\repo\mix-gem\equipment-monitor; npm test -- --no-coverage`
 Expected: All existing tests pass + all new tests pass
 
 **Step 2: Run the build**
 
-Run: `cd /mnt/e/repo/mix-gem/equipment-monitor && npx next build`
+Run: `cd E:\repo\mix-gem\equipment-monitor; npm run build`
 Expected: Build succeeds with no TypeScript errors
 
 **Step 3: Fix any issues found**
