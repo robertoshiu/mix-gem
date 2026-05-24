@@ -58,7 +58,7 @@ export function HeatmapTable() {
   const params = useMemo(() => [...new Set(allCells.map((c) => c.param))], [allCells]);
 
   return (
-    <div className="bg-[var(--smartfactory-surface-card)] rounded border border-[var(--smartfactory-border-default)] overflow-hidden">
+    <div data-testid="heatmap-table" className="bg-[var(--smartfactory-surface-card)] rounded border border-[var(--smartfactory-border-default)] overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm" aria-label="Lot parameter heatmap showing CD, CDU, and overlay values">
           <thead>
@@ -83,6 +83,7 @@ export function HeatmapTable() {
             {lots.map((lot, i) => (
               <tr
                 key={lot.lot}
+                data-testid={`heatmap-row-${lot.lot}`}
                 className={cn(
                   'border-b border-[var(--smartfactory-border-default)] last:border-0',
                   i % 2 === 0 ? '' : 'bg-[var(--smartfactory-surface-row-alt)]'
@@ -94,6 +95,7 @@ export function HeatmapTable() {
                 {lot.cells.map((cell) => (
                   <td
                     key={cell.param}
+                    data-testid={`heatmap-cell-${lot.lot}-${cell.param}`}
                     className={cn('px-4 py-3 text-center font-["Fira_Code",monospace] text-sm', CELL_BG[cell.status], CELL_TEXT[cell.status])}
                   >
                     {cell.value.toFixed(2)}
