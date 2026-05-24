@@ -6,11 +6,18 @@ import type {
   SubsystemId,
   SubsystemSnapshot,
   FacilityEvent,
+  EquipmentStatus,
 } from '@/lib/engines/dashboard-facility-types';
 import { SUBSYSTEM_IDS } from '@/lib/engines/dashboard-facility-types';
 import {
   generateSubsystemSnapshot,
   generateEvents,
+  computeComfortIndex,
+  computeGasSafetyScore,
+  computePUE,
+  countActiveAlarms,
+  computeSystemUptime,
+  generateEquipmentStatuses,
 } from '@/lib/engines/dashboard-facility-engine';
 import { HistoryBuffer } from '@/lib/engines/history-buffer';
 
@@ -51,6 +58,38 @@ function buildBuffer<T>(values: T[], capacity: number): HistoryBuffer<T> {
 }
 
 // ---------------------------------------------------------------------------
+// KPI & Equipment helpers
+// ---------------------------------------------------------------------------
+
+export interface FacilityKpis {
+  comfortIndex: number;
+  gasSafety: number;
+  pue: number;
+  systemUptime: number;
+  energyLoad: number;
+  activeAlarms: { warnings: number; criticals: number };
+}
+
+function computeKpis(subsystems: Record<SubsystemId, SubsystemSnapshot>): FacilityKpis {
+  return {
+    comfortIndex: computeComfortIndex(subsystems.ems),
+    gasSafety: computeGasSafetyScore(subsystems.gas),
+    pue: computePUE(subsystems.power),
+    systemUptime: computeSystemUptime(subsystems),
+    energyLoad: subsystems.power.metrics[1].value,
+    activeAlarms: countActiveAlarms(subsystems),
+  };
+}
+
+function buildEquipmentStatuses(tick: number): Record<SubsystemId, [EquipmentStatus, EquipmentStatus, EquipmentStatus]> {
+  const result = {} as Record<SubsystemId, [EquipmentStatus, EquipmentStatus, EquipmentStatus]>;
+  for (const id of SUBSYSTEM_IDS) {
+    result[id] = generateEquipmentStatuses(tick, id);
+  }
+  return result;
+}
+
+// ---------------------------------------------------------------------------
 // State interface
 // ---------------------------------------------------------------------------
 
@@ -61,6 +100,8 @@ export interface DashboardFacilityState {
   subsystems: Record<SubsystemId, SubsystemSnapshot>;
   sparklines: Record<SubsystemId, HistoryBuffer<number>>;
   events: HistoryBuffer<FacilityEvent>;
+  kpis: FacilityKpis;
+  equipmentStatuses: Record<SubsystemId, [EquipmentStatus, EquipmentStatus, EquipmentStatus]>;
 
   tick_: () => void;
   reset: () => void;
@@ -78,6 +119,8 @@ export const useDashboardFacilityStore = create<DashboardFacilityState>(
     subsystems: buildInitialSubsystems(),
     sparklines: buildSparklines(),
     events: new HistoryBuffer<FacilityEvent>(EVENT_CAPACITY),
+    kpis: computeKpis(buildInitialSubsystems()),
+    equipmentStatuses: buildEquipmentStatuses(0),
 
     tick_: () => {
       const state = get();
@@ -97,6 +140,10 @@ export const useDashboardFacilityStore = create<DashboardFacilityState>(
         );
       }
 
+      // Compute KPIs and equipment statuses
+      const kpis = computeKpis(subsystems);
+      const equipmentStatuses = buildEquipmentStatuses(nextTick);
+
       // Generate events and push to buffer
       const newEvents = generateEvents(nextTick);
       let eventOrdinal = state.eventOrdinal;
@@ -114,6 +161,8 @@ export const useDashboardFacilityStore = create<DashboardFacilityState>(
         subsystems,
         sparklines,
         events,
+        kpis,
+        equipmentStatuses,
       });
     },
 
@@ -125,6 +174,8 @@ export const useDashboardFacilityStore = create<DashboardFacilityState>(
         subsystems: buildInitialSubsystems(),
         sparklines: buildSparklines(),
         events: new HistoryBuffer<FacilityEvent>(EVENT_CAPACITY),
+        kpis: computeKpis(buildInitialSubsystems()),
+        equipmentStatuses: buildEquipmentStatuses(0),
       });
     },
   }),
