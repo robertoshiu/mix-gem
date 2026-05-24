@@ -8,11 +8,13 @@ import type {
   MetricSnapshot,
   FacilityEvent,
   MetricStatus,
+  EquipmentStatus,
 } from './dashboard-facility-types';
 import {
   SUBSYSTEM_IDS,
   SUBSYSTEM_DEFS,
   ALL_TEMPLATES,
+  EQUIPMENT_DEFS,
 } from './dashboard-facility-types';
 
 // ---------------------------------------------------------------------------
@@ -246,4 +248,152 @@ export function generateEvents(tick: number): FacilityEvent[] {
   }
 
   return events;
+}
+
+// ---------------------------------------------------------------------------
+// KPI computation functions
+// ---------------------------------------------------------------------------
+
+/**
+ * Compute comfort index (0-100) from EMS subsystem snapshot.
+ * Weighted: 40% temp, 30% RH, 20% particles, 10% ΔP.
+ */
+export function computeComfortIndex(emsSnapshot: SubsystemSnapshot): number {
+  const weights = [0.4, 0.3, 0.2, 0.1];
+  const defs = SUBSYSTEM_DEFS.ems.metrics;
+  let score = 0;
+
+  for (let i = 0; i < 4; i++) {
+    const value = emsSnapshot.metrics[i].value;
+    const def = defs[i];
+    const range = def.warnHi - def.warnLo;
+
+    if (value >= def.warnLo && value <= def.warnHi) {
+      // Within spec — full score for this weight
+      score += weights[i] * 100;
+    } else {
+      // Outside spec — compute overshoot penalty
+      const overshoot = value < def.warnLo
+        ? def.warnLo - value
+        : value - def.warnHi;
+      const penalty = Math.min((overshoot / range) * 50, 100);
+      score += weights[i] * Math.max(0, 100 - penalty);
+    }
+  }
+
+  return Math.round(score * 10) / 10;
+}
+
+/**
+ * Compute gas safety score (0-100) from GAS subsystem snapshot.
+ * Weights: NH₃ 30%, Cl₂ 30%, H₂ 20%, Scrubber 20%.
+ */
+export function computeGasSafetyScore(gasSnapshot: SubsystemSnapshot): number {
+  const weights = [0.3, 0.3, 0.2, 0.2];
+  const defs = SUBSYSTEM_DEFS.gas.metrics;
+  let score = 0;
+
+  for (let i = 0; i < 4; i++) {
+    const value = gasSnapshot.metrics[i].value;
+
+    if (i < 3) {
+      // Gas metrics (NH₃, Cl₂, H₂): score = (1 - value/warnHi) * 100, clamped 0-100
+      const warnHi = defs[i].warnHi;
+      const metricScore = Math.max(0, Math.min(100, (1 - value / warnHi) * 100));
+      score += weights[i] * metricScore;
+    } else {
+      // Scrubber: score = value, clamped 0-100
+      const metricScore = Math.max(0, Math.min(100, value));
+      score += weights[i] * metricScore;
+    }
+  }
+
+  return Math.round(score * 10) / 10;
+}
+
+/**
+ * Compute Power Usage Effectiveness from power subsystem snapshot.
+ * PUE = 1.2 + (load/capacity) * 0.4, where capacity = warnHi of load metric.
+ */
+export function computePUE(powerSnapshot: SubsystemSnapshot): number {
+  const load = powerSnapshot.metrics[1].value;
+  const capacity = SUBSYSTEM_DEFS.power.metrics[1].warnHi;
+  const ratio = Math.max(0, Math.min(1, load / capacity));
+  const pue = 1.2 + ratio * 0.4;
+  return Math.round(pue * 100) / 100;
+}
+
+/**
+ * Count metrics in warning or critical status across all subsystems.
+ */
+export function countActiveAlarms(
+  subsystems: Record<SubsystemId, SubsystemSnapshot>,
+): { warnings: number; criticals: number } {
+  let warnings = 0;
+  let criticals = 0;
+
+  for (const id of SUBSYSTEM_IDS) {
+    const snap = subsystems[id];
+    for (const metric of snap.metrics) {
+      if (metric.status === 'warning') warnings++;
+      else if (metric.status === 'critical') criticals++;
+    }
+  }
+
+  return { warnings, criticals };
+}
+
+/**
+ * Compute system uptime as percentage of subsystems in 'normal' status.
+ */
+export function computeSystemUptime(
+  subsystems: Record<SubsystemId, SubsystemSnapshot>,
+): number {
+  let normalCount = 0;
+  for (const id of SUBSYSTEM_IDS) {
+    if (subsystems[id].status === 'normal') normalCount++;
+  }
+  return (normalCount / SUBSYSTEM_IDS.length) * 100;
+}
+
+// ---------------------------------------------------------------------------
+// Equipment status generation
+// ---------------------------------------------------------------------------
+
+/**
+ * Generate deterministic equipment statuses for a subsystem at a given tick.
+ * Distribution: ~80% running, ~15% maintenance, ~5% fault.
+ */
+export function generateEquipmentStatuses(
+  tick: number,
+  subsystemId: SubsystemId,
+): [EquipmentStatus, EquipmentStatus, EquipmentStatus] {
+  const defs = EQUIPMENT_DEFS[subsystemId];
+
+  const result = defs.map((def, i) => {
+    const seed = hashSeed(tick, `equip_${subsystemId}_${i}`);
+    const rng = mulberry32(seed);
+    const r = rng();
+
+    let status: EquipmentStatus['status'];
+    let details: string[];
+
+    if (r < 0.80) {
+      status = 'running';
+      details = def.runningDetails;
+    } else if (r < 0.95) {
+      status = 'maintenance';
+      details = def.maintenanceDetails;
+    } else {
+      status = 'fault';
+      details = def.faultDetails;
+    }
+
+    const detailIdx = Math.floor(rng() * details.length);
+    const detail = details[detailIdx];
+
+    return { name: def.name, status, detail };
+  });
+
+  return result as [EquipmentStatus, EquipmentStatus, EquipmentStatus];
 }

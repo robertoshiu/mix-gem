@@ -323,3 +323,123 @@ export const ALL_TEMPLATES: Record<SubsystemId, EventTemplate[]> = {
   fire: FIRE_TEMPLATES,
   power: POWER_TEMPLATES,
 };
+
+// ---------------------------------------------------------------------------
+// Equipment status types & definitions
+// ---------------------------------------------------------------------------
+
+export interface EquipmentStatus {
+  name: string;
+  status: 'running' | 'maintenance' | 'fault';
+  detail: string;
+}
+
+export interface EquipmentDef {
+  name: string;
+  runningDetails: string[];
+  maintenanceDetails: string[];
+  faultDetails: string[];
+}
+
+export const EQUIPMENT_DEFS: Record<SubsystemId, [EquipmentDef, EquipmentDef, EquipmentDef]> = {
+  ems: [
+    {
+      name: 'HEPA Filter Bank',
+      runningDetails: ['ΔP 11.2Pa', 'ΔP 12.0Pa', 'ΔP 10.8Pa', 'Flow 3200 CFM'],
+      maintenanceDetails: ['Filter life 12%', 'Scheduled swap', 'ΔP high 18Pa'],
+      faultDetails: ['ΔP exceeded limit', 'Fan overload'],
+    },
+    {
+      name: 'Particle Monitor',
+      runningDetails: ['Sampling OK', 'Count 450/m³', 'Count 620/m³', 'Self-test pass'],
+      maintenanceDetails: ['Cal due 3 days', 'Sensor drift', 'Cal overdue'],
+      faultDetails: ['Laser failure', 'Comm lost'],
+    },
+    {
+      name: 'Makeup Air Damper',
+      runningDetails: ['Auto 78%', 'Auto 82%', 'Auto 65%', 'Tracking setpoint'],
+      maintenanceDetails: ['Actuator slow', 'Linkage wear', 'Response lag 4s'],
+      faultDetails: ['Stuck closed', 'Actuator fault'],
+    },
+  ],
+  bas: [
+    {
+      name: 'Chiller-1',
+      runningDetails: ['COP 5.8', 'COP 6.1', 'Load 72%', 'Evap 6.2°C'],
+      maintenanceDetails: ['Oil change due', 'Condenser fouled', 'Vibration elevated'],
+      faultDetails: ['Compressor trip', 'Low refrigerant'],
+    },
+    {
+      name: 'AHU-3',
+      runningDetails: ['Fan 1420 RPM', 'Fan 1380 RPM', 'Supply 14°C', 'Filter OK'],
+      maintenanceDetails: ['Filter ΔP high', 'Belt wear 80%', 'VFD alarm pending'],
+      faultDetails: ['Fan failure', 'VFD fault'],
+    },
+    {
+      name: 'Coolant Pump P-2',
+      runningDetails: ['Flow 42 L/min', 'Flow 44 L/min', '1450 RPM', 'Pressure 3.2 bar'],
+      maintenanceDetails: ['Seal drip', 'Bearing temp 68°C', 'Impeller cavitation'],
+      faultDetails: ['Motor overload', 'No flow'],
+    },
+  ],
+  gas: [
+    {
+      name: 'Scrubber',
+      runningDetails: ['Eff 97.2%', 'Eff 96.8%', 'Inlet 320°C', 'Outlet clear'],
+      maintenanceDetails: ['Media 15% life', 'Pressure drop high', 'Regen needed'],
+      faultDetails: ['Bypass active', 'Heater fault'],
+    },
+    {
+      name: 'Gas Cabinet A',
+      runningDetails: ['Sealed OK', 'N₂ purge active', 'Pressure 45 kPa', 'Interlocks armed'],
+      maintenanceDetails: ['Regulator drift', 'Valve cycle 90%', 'Leak test due'],
+      faultDetails: ['Leak detected', 'Valve stuck'],
+    },
+    {
+      name: 'VMB Valve Panel',
+      runningDetails: ['All closed', 'Standby OK', 'Pneumatic 5.5 bar', 'Sensors online'],
+      maintenanceDetails: ['Actuator slow V3', 'Position sensor drift', 'Cycle count high'],
+      faultDetails: ['V2 open stuck', 'Pneumatic loss'],
+    },
+  ],
+  fire: [
+    {
+      name: 'Fire Panel FP-1',
+      runningDetails: ['All zones clear', 'Network OK', 'Battery 100%', 'Supervision OK'],
+      maintenanceDetails: ['Loop fault zone C', 'Battery aging', 'Sounder test due'],
+      faultDetails: ['Comm failure', 'Power fault'],
+    },
+    {
+      name: 'FM-200 Zone A',
+      runningDetails: ['Armed 25.1 bar', 'Armed 24.8 bar', 'Hold active', 'Integrity OK'],
+      maintenanceDetails: ['Cylinder weight low', 'Nozzle inspect due', 'Door seal worn'],
+      faultDetails: ['Pressure lost', 'Abort switch open'],
+    },
+    {
+      name: 'VESDA Detector',
+      runningDetails: ['Alert 0.02%/m', 'Sampling OK', 'Flow 3.2 L/min', 'Normal'],
+      maintenanceDetails: ['Filter dirty', 'Pipe clean due', 'Sensitivity drift'],
+      faultDetails: ['Aspirator fault', 'Chamber dirty'],
+    },
+  ],
+  power: [
+    {
+      name: 'UPS Battery',
+      runningDetails: ['SoC 96%', 'SoC 94%', 'Float 54.2V', 'Healthy'],
+      maintenanceDetails: ['Cell imbalance', 'Capacity test due', 'Temp 32°C high'],
+      faultDetails: ['String fault', 'Charger fail'],
+    },
+    {
+      name: 'PDU-A',
+      runningDetails: ['Load 78%', 'Load 82%', 'Balanced ±2%', 'Breakers OK'],
+      maintenanceDetails: ['Phase C high', 'Thermal scan due', 'Branch near trip'],
+      faultDetails: ['Breaker tripped', 'Overload'],
+    },
+    {
+      name: 'Generator G-1',
+      runningDetails: ['Standby OK', 'Fuel 88%', 'Block heater 42°C', 'Battery 12.8V'],
+      maintenanceDetails: ['Fuel filter due', 'Coolant low', 'Test run failed'],
+      faultDetails: ['Start failure', 'Oil pressure low'],
+    },
+  ],
+};
