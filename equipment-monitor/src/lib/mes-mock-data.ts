@@ -1,5 +1,6 @@
 import type { Lot, Recipe, SpcMeasurement, AiRecommendation, Equipment, Notification, YieldTrendPoint, DefectRecord, WaferDie, ProcessStepYield, HeatmapCell } from './mes-types';
 import { SPC_PARAMETERS, SPC_PARAM_KEYS } from './spc-parameters';
+import { generatePlaybackSeedMeasurements } from './spc-playback-data';
 
 export const MOCK_RECIPES: Recipe[] = [
   { id: 'LITHO-193nm-v4',  name: 'LITHO-193nm-v4',  process: 'Lithography', chamber: 'LITHO01', exposure: 38, focus: 0 },
@@ -86,6 +87,8 @@ const SEED_OFFSETS = [-1.2, -0.35, 0.85, 1.25, -0.75, 0.2, -1.1, 0.65, 1.1, -0.4
 const SEED_ANCHOR = new Date('2026-05-02T08:00:00').getTime();
 
 export function generateSeedMeasurements(lotId: string, count: number): SpcMeasurement[] {
+  if (count > 0) return generatePlaybackSeedMeasurements(lotId, count);
+
   return Array.from({ length: count }, (_, i) => {
     const waferNumber = i + 1;
     const base: Record<string, number> = {};

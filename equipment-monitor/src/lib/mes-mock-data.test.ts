@@ -36,13 +36,19 @@ describe('generateSeedMeasurements', () => {
     expect(measurements.map((m) => m.waferNumber)).toEqual([1, 2, 3, 4, 5]);
   });
 
-  it('all CD values are within UCL/LCL', () => {
+  it('initial CD baseline values are within UCL/LCL', () => {
     const { ucl, lcl } = SPC_PARAMETERS.cd;
-    const measurements = generateSeedMeasurements('LOT-2026-001', 20);
+    const measurements = generateSeedMeasurements('LOT-2026-001', 10);
     measurements.forEach((m) => {
       expect(m.cd).toBeGreaterThan(lcl);
       expect(m.cd).toBeLessThan(ucl);
     });
+  });
+
+  it('includes scheduled excursions in the extended playback set', () => {
+    const { ucl, lcl } = SPC_PARAMETERS.cd;
+    const measurements = generateSeedMeasurements('LOT-2026-001', 20);
+    expect(measurements.some((m) => m.cd > ucl || m.cd < lcl)).toBe(true);
   });
 
   it('starts with an in-control SPC baseline', () => {
