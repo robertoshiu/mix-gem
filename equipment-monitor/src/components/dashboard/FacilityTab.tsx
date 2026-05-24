@@ -1,3 +1,5 @@
+// src/components/dashboard/FacilityTab.tsx
+
 'use client';
 
 import { useEffect } from 'react';
@@ -5,10 +7,7 @@ import { useDashboardFacilityStore } from '@/stores/dashboard-facility-store';
 import { SUBSYSTEM_IDS } from '@/lib/engines/dashboard-facility-types';
 import { SubsystemCard } from '@/components/dashboard/SubsystemCard';
 import { EventFeed } from '@/components/dashboard/EventFeed';
-
-// ---------------------------------------------------------------------------
-// FacilityTab — live synthetic monitoring for 5 facility subsystems
-// ---------------------------------------------------------------------------
+import { FacilityKpiBar } from '@/components/dashboard/FacilityKpiBar';
 
 export function FacilityTab() {
   const tick_ = useDashboardFacilityStore((s) => s.tick_);
@@ -16,6 +15,8 @@ export function FacilityTab() {
   const subsystems = useDashboardFacilityStore((s) => s.subsystems);
   const sparklines = useDashboardFacilityStore((s) => s.sparklines);
   const events = useDashboardFacilityStore((s) => s.events);
+  const kpis = useDashboardFacilityStore((s) => s.kpis);
+  const equipmentStatuses = useDashboardFacilityStore((s) => s.equipmentStatuses);
 
   // 1 Hz tick loop — only while mounted
   useEffect(() => {
@@ -30,29 +31,34 @@ export function FacilityTab() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--sf-accent-cyan)]">
-              Facility Subsystem Monitor
+              Facility Command Center
             </p>
             <h1 className="mt-2 text-3xl font-semibold uppercase tracking-[0.16em] md:text-4xl">
               Facility Systems
             </h1>
             <p className="mt-2 max-w-4xl text-sm text-[var(--sf-text-secondary)]">
-              Live synthetic monitoring across EMS, BAS, Gas, Fire, and Power
-              EMS &mdash; 3-minute deterministic cycle at 1&nbsp;Hz.
+              Real-time BMS monitoring across EMS, BAS, Gas, Fire, and Power
+              subsystems &mdash; threshold-band trend charts with equipment status.
             </p>
           </div>
           <div
             className="rounded-full border border-[rgba(34,211,238,0.35)] px-4 py-2 font-mono text-xs uppercase tracking-[0.18em] text-[var(--sf-accent-cyan)]"
             aria-live="polite"
           >
-            Tick {tick}/180 &middot; 1Hz hash-mix
+            Tick {tick}/180 &middot; 1Hz
           </div>
         </div>
       </header>
 
+      {/* KPI Summary Bar */}
+      <section aria-label="Facility KPIs">
+        <FacilityKpiBar kpis={kpis} />
+      </section>
+
       {/* Subsystem cards grid */}
       <section
-        className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
-        aria-label="Facility subsystem cards"
+        className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3"
+        aria-label="Facility subsystem panels"
       >
         {SUBSYSTEM_IDS.map((id) => (
           <SubsystemCard
@@ -60,6 +66,7 @@ export function FacilityTab() {
             subsystemId={id}
             snapshot={subsystems[id]}
             sparklineData={sparklines[id].toArray()}
+            equipmentStatuses={equipmentStatuses[id]}
           />
         ))}
       </section>
