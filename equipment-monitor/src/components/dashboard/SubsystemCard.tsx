@@ -35,7 +35,7 @@ export interface SubsystemCardProps {
 const STATUS_DOT_CLASSES: Record<string, string> = {
   normal: 'bg-green-400',
   warning: 'bg-amber-400',
-  critical: 'bg-red-500 animate-pulse',
+  critical: 'bg-red-500 animate-pulse motion-reduce:animate-none',
 };
 
 const EQUIP_STATUS_ICON: Record<string, string> = {
@@ -193,6 +193,7 @@ export function SubsystemCard({
       <div className="mb-2 flex items-center gap-2">
         <span
           data-testid="status-dot"
+          aria-label={`Subsystem status: ${snapshot.status}`}
           className={`h-2.5 w-2.5 rounded-full ${STATUS_DOT_CLASSES[snapshot.status] ?? STATUS_DOT_CLASSES.normal}`}
         />
         <span className="text-sm font-semibold text-[var(--sf-text-primary)]">
@@ -216,6 +217,7 @@ export function SubsystemCard({
       {/* Threshold-band chart */}
       <canvas
         ref={canvasRef}
+        role="img"
         className="mb-3 h-[140px] w-full rounded-lg bg-[rgba(255,255,255,0.02)]"
         aria-label={`${CHART_TITLES[subsystemId]} trend chart`}
       />
@@ -243,8 +245,12 @@ export function SubsystemCard({
       {/* Equipment status */}
       <div className="space-y-1">
         {equipmentStatuses.map((eq) => (
-          <div key={eq.name} className="flex items-center gap-2 text-[10px]">
-            <span className={`shrink-0 font-bold ${EQUIP_STATUS_COLOR[eq.status]}`}>
+          <div
+            key={eq.name}
+            className="flex items-center gap-2 text-[10px]"
+            aria-label={`${eq.name} status ${eq.status}: ${eq.detail}`}
+          >
+            <span aria-hidden="true" className={`shrink-0 font-bold ${EQUIP_STATUS_COLOR[eq.status]}`}>
               {EQUIP_STATUS_ICON[eq.status]}
             </span>
             <span className="flex-1 truncate text-[var(--sf-text-secondary)]">

@@ -53,7 +53,7 @@ const KPI_DEFS: KpiCardDef[] = [
 const STATUS_COLORS = {
   green: { dot: 'bg-emerald-400', text: 'text-emerald-400', border: 'border-emerald-400/20' },
   amber: { dot: 'bg-amber-400', text: 'text-amber-400', border: 'border-amber-400/20' },
-  red: { dot: 'bg-red-500 animate-pulse', text: 'text-red-400', border: 'border-red-400/20' },
+  red: { dot: 'bg-red-500 animate-pulse motion-reduce:animate-none', text: 'text-red-400', border: 'border-red-400/20' },
 };
 
 export function FacilityKpiBar({ kpis }: FacilityKpiBarProps) {
@@ -66,10 +66,11 @@ export function FacilityKpiBar({ kpis }: FacilityKpiBarProps) {
           <div
             key={def.label}
             data-testid="kpi-card"
+            aria-label={`${def.label}: ${def.getValue(kpis)}${def.unit ?? ''}, status ${status}`}
             className={`rounded-2xl border ${colors.border} bg-[rgba(2,6,23,0.72)] p-4 backdrop-blur-xl`}
           >
             <div className="mb-2 flex items-center gap-2">
-              <span className={`h-2 w-2 rounded-full ${colors.dot}`} />
+              <span aria-hidden="true" className={`h-2 w-2 rounded-full ${colors.dot}`} />
               <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--sf-text-muted)]">
                 {def.label}
               </span>
