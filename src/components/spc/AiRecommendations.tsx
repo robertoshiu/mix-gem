@@ -20,8 +20,9 @@ import {
   makeS2F50ApplyAck,
   makeS2F49OverrideRecommendation,
   makeS2F50OverrideAck,
+  makeS6F11Notification,
 } from '@/lib/secs-message-log';
-import type { AiRecommendationType, TrendDirection } from '@/lib/mes-types';
+import type { AiRecommendation, AiRecommendationType, TrendDirection } from '@/lib/mes-types';
 import { fadeInUp, useReducedMotion } from '@/lib/animation';
 
 const TYPE_LABELS: Record<AiRecommendationType, string> = {
@@ -76,6 +77,13 @@ const SOURCE_COLOR: Record<string, string> = {
 };
 
 type ActionDef = { label: string; icon?: React.FC<React.SVGProps<SVGSVGElement>>; variant: 'primary' | 'secondary' };
+
+type ActionView = {
+  title: string;
+  subtitle: string;
+  metric: string;
+  steps: string[];
+};
 
 const TYPE_ACTIONS: Record<AiRecommendationType, ActionDef[]> = {
   energy: [
@@ -168,9 +176,72 @@ function RelativeTime({ date }: { date: Date }) {
   return <span className="text-[10px]" style={{ color: 'var(--smartfactory-text-muted)' }}>{diffHours}h ago</span>;
 }
 
+function buildActionView(rec: AiRecommendation, action: ActionDef): ActionView {
+  const parameter = rec.relatedParameter ? rec.relatedParameter.toUpperCase() : 'SPC';
+  const baseSteps = [
+    `Insight: ${rec.title}`,
+    `Evidence source: ${SOURCE_LABELS[rec.source] || rec.source}`,
+    `Confidence gate: ${rec.confidence}%`,
+  ];
+
+  switch (action.label) {
+    case 'Apply':
+      return {
+        title: 'Applied Control Action',
+        subtitle: `${parameter} control plan was sent to equipment via S2F49/S2F50.`,
+        metric: rec.impact,
+        steps: [...baseSteps, 'MES command accepted; monitor the next SPC frames for recovery.'],
+      };
+    case 'Override':
+      return {
+        title: 'Manual Override Review',
+        subtitle: 'Operator override recorded with full recommendation context.',
+        metric: 'Override requires engineer sign-off before the next lot release.',
+        steps: [...baseSteps, 'Hold automation for this insight and route decision to shift lead.'],
+      };
+    case 'Schedule':
+    case 'Auto-schedule':
+      return {
+        title: 'Schedule Preview',
+        subtitle: 'Candidate dispatch window generated from queue, recipe, and SPC risk.',
+        metric: action.label === 'Auto-schedule' ? 'Auto slot: next low-risk 14:00-16:00 window' : 'Proposed slot: next PM-safe window within 3 hours',
+        steps: [...baseSteps, 'Reserve chamber time, notify lots in queue, and re-score after the next 10 wafers.'],
+      };
+    case 'View Details':
+      return {
+        title: 'Insight Detail View',
+        subtitle: 'Evidence chain, affected equipment, and SPC traces are ready for review.',
+        metric: `${parameter} is the primary monitored signal for this insight.`,
+        steps: [...baseSteps, 'Compare confidence history against CUSUM/EWMA and event log evidence.'],
+      };
+    case 'Create WO':
+      return {
+        title: 'Work Order Draft',
+        subtitle: 'Maintenance work order prepared from the predictive recommendation.',
+        metric: 'Draft WO: LITHO-01 inspection, priority P2, due within 24 hours',
+        steps: [...baseSteps, 'Attach trend snapshot, reserve maintenance kit, and assign equipment owner.'],
+      };
+    case 'Optimize Now':
+      return {
+        title: 'Optimization Scenario',
+        subtitle: 'Throughput and WIP scenario generated for immediate dispatcher review.',
+        metric: rec.impact,
+        steps: [...baseSteps, 'Simulate queue change, confirm no SPC rule is worsened, then apply dispatch update.'],
+      };
+    default:
+      return {
+        title: `${action.label} Detail`,
+        subtitle: 'Action context generated from the selected AI insight.',
+        metric: rec.impact,
+        steps: baseSteps,
+      };
+  }
+}
+
 export function AiRecommendations() {
   const store = useMesSpcStore();
   const recommendations = store.recommendations;
+  const [actionView, setActionView] = React.useState<ActionView | null>(null);
   const reduced = useReducedMotion();
   const fadeInUpProps = reduced ? {} : { variants: fadeInUp, initial: 'initial' as const, animate: 'animate' as const };
 
@@ -186,13 +257,19 @@ export function AiRecommendations() {
     store.addEvent(makeS2F50OverrideAck(rec.id));
   };
 
-  const handleAction = (rec: { id: string }, action: ActionDef) => {
+  const handleAction = (rec: AiRecommendation, action: ActionDef) => {
     if (action.label === 'Apply') {
       handleApply(rec);
     } else if (action.label === 'Override') {
       handleOverride(rec);
+    } else {
+      store.addEvent(makeS6F11Notification('AI_INSIGHT_ACTION', {
+        recommendationId: rec.id,
+        action: action.label,
+        type: rec.type,
+      }));
     }
-    // Other actions are UI-only placeholders
+    setActionView(buildActionView(rec, action));
   };
 
   const pendingCount = recommendations.filter((r) => r.status === 'pending').length;
@@ -239,6 +316,48 @@ export function AiRecommendations() {
           </div>
         )}
       </div>
+
+      {actionView && (
+        <motion.div
+          className="mb-3 rounded-lg border p-3"
+          style={{
+            backgroundColor: 'var(--smartfactory-surface-card)',
+            borderColor: 'var(--smartfactory-border-active)',
+          }}
+          {...fadeInUpProps}
+          data-testid="ai-action-panel"
+        >
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <div>
+              <div className="text-xs font-semibold" style={{ color: 'var(--smartfactory-text-primary)' }}>
+                {actionView.title}
+              </div>
+              <div className="text-[11px] mt-0.5" style={{ color: 'var(--smartfactory-text-secondary)' }}>
+                {actionView.subtitle}
+              </div>
+            </div>
+            <button
+              type="button"
+              className="text-[10px] rounded border px-2 py-0.5 cursor-pointer hover:opacity-80"
+              style={{ borderColor: 'var(--smartfactory-border-default)', color: 'var(--smartfactory-text-muted)' }}
+              onClick={() => setActionView(null)}
+            >
+              Close
+            </button>
+          </div>
+          <div className="text-[11px] rounded px-2 py-1 mb-2" style={{ backgroundColor: 'var(--smartfactory-surface-base)', color: 'var(--smartfactory-accent-electric-blue)' }}>
+            {actionView.metric}
+          </div>
+          <div className="grid gap-1">
+            {actionView.steps.map((step) => (
+              <div key={step} className="flex items-start gap-2 text-[11px]" style={{ color: 'var(--smartfactory-text-muted)' }}>
+                <span className="mt-1 h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: 'var(--smartfactory-accent-electric-blue)' }} />
+                <span>{step}</span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* Recommendations list or empty state */}
       {!hasData ? (
