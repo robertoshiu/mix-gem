@@ -21,6 +21,8 @@ export function ThumbnailChart({ label, unit, data, ucl, lcl, isActive, onClick 
     <button
       type="button"
       onClick={onClick}
+      aria-label={`Select ${label} parameter${latest !== undefined ? `, current value ${latest.toFixed(2)} ${unit}` : ''}`}
+      data-testid={`thumbnail-chart-${label.toLowerCase()}`}
       className={cn(
         'flex flex-col gap-1 p-2 rounded border cursor-pointer transition-colors w-full text-left',
         isActive
@@ -36,7 +38,7 @@ export function ThumbnailChart({ label, unit, data, ucl, lcl, isActive, onClick 
       </div>
 
       <div className="h-10">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 1, height: 40 }}>
           <LineChart data={data}>
             <ReferenceLine y={ucl} stroke="var(--smartfactory-status-red)" strokeDasharray="3 3" strokeOpacity={0.5} />
             <ReferenceLine y={lcl} stroke="var(--smartfactory-status-red)" strokeDasharray="3 3" strokeOpacity={0.5} />

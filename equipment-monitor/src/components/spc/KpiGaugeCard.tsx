@@ -103,7 +103,7 @@ export function KpiGaugeCard({
                 </span>
                 <div className="flex flex-col flex-1 min-w-0">
               <div className="h-[24px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 1, height: 24 }}>
                   <LineChart data={last10}>
                     <YAxis domain={['dataMin', 'dataMax']} hide />
                     <Line

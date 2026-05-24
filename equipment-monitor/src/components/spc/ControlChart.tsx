@@ -53,7 +53,7 @@ export function ControlChart({ paramLabel, config, data }: ControlChartProps) {
       </div>
 
       <div className="h-48">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} initialDimension={{ width: 1, height: 192 }}>
           <ComposedChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--smartfactory-border-default)" />
             <XAxis dataKey="waferNumber" tick={{ fill: 'var(--smartfactory-text-muted)', fontSize: 10 }} />
