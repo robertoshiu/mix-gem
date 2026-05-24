@@ -100,7 +100,7 @@ export const createSpcSlice = (
 
   addEvent: (e) =>
     set((s: SpcSliceState) => ({
-      events: [e, ...s.events].slice(0, 100),
+      events: [e, ...s.events].slice(0, 300),
     })),
 
   injectFault: (fault) => set(() => ({ activeFault: fault })),
