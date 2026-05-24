@@ -1,5 +1,6 @@
 import type { Lot, Recipe, SpcMeasurement, AiRecommendation, Equipment, Notification, YieldTrendPoint, DefectRecord, WaferDie, ProcessStepYield, HeatmapCell } from './mes-types';
 import { SPC_PARAMETERS, SPC_PARAM_KEYS } from './spc-parameters';
+import { generatePlaybackSeedMeasurements } from './spc-playback-data';
 
 export const MOCK_RECIPES: Recipe[] = [
   { id: 'LITHO-193nm-v4',  name: 'LITHO-193nm-v4',  process: 'Lithography', chamber: 'LITHO01', exposure: 38, focus: 0 },
@@ -79,29 +80,23 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
   { id: 'notif-005', type: 'system', severity: 'warning', title: 'COAT-02 Equipment Down', message: 'COAT-02 reported DOWN status at 07:15. Maintenance ticket #MT-2847 created.', timestamp: new Date('2026-05-04T07:15:00'), read: false },
 ];
 
-// Deterministic pseudo-noise using a string hash — NOT Math.random()
-// Returns a value in [-1.5, 1.5]
-function stableNoise(lotId: string, wafer: number, param: string): number {
-  const str = `${lotId}:${wafer}:${param}`;
-  let hash = 2166136261; // FNV-1a offset basis
-  for (let i = 0; i < str.length; i++) {
-    hash ^= str.charCodeAt(i);
-    hash = Math.imul(hash, 16777619) >>> 0; // FNV prime, keep 32-bit unsigned
-  }
-  // Normalize to [-1.5, 1.5]
-  const t = (hash / 0xffffffff);
-  return (t - 0.5) * 3;
-}
+// Balanced deterministic offsets keep the initial baseline in control while
+// still crossing both sides of the center line and +/-1 sigma.
+const SEED_OFFSETS = [-1.2, -0.35, 0.85, 1.25, -0.75, 0.2, -1.1, 0.65, 1.1, -0.45];
 
 const SEED_ANCHOR = new Date('2026-05-02T08:00:00').getTime();
 
 export function generateSeedMeasurements(lotId: string, count: number): SpcMeasurement[] {
+  if (count > 0) return generatePlaybackSeedMeasurements(lotId, count);
+
   return Array.from({ length: count }, (_, i) => {
     const waferNumber = i + 1;
     const base: Record<string, number> = {};
     SPC_PARAM_KEYS.forEach((param) => {
       const { target, sigma } = SPC_PARAMETERS[param];
-      base[param] = target + stableNoise(lotId, waferNumber, param) * sigma * 0.6;
+      const paramPhase = SPC_PARAM_KEYS.indexOf(param) * 2;
+      const offset = SEED_OFFSETS[(i + paramPhase) % SEED_OFFSETS.length];
+      base[param] = target + offset * sigma;
     });
 
     return {
