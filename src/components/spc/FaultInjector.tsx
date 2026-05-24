@@ -28,7 +28,7 @@ export function FaultInjector({ activeFault, currentWafer = 1, onInject, onClear
   }
 
   return (
-    <div className="bg-[var(--smartfactory-surface-card)] rounded border border-[var(--smartfactory-border-default)] p-3 flex flex-col gap-2">
+    <div data-testid="fault-injector" className="bg-[var(--smartfactory-surface-card)] rounded border border-[var(--smartfactory-border-default)] p-3 flex flex-col gap-2">
       <span className="text-xs font-semibold text-[var(--smartfactory-text-secondary)] uppercase tracking-wide">Fault Injection</span>
 
       <select
@@ -36,6 +36,8 @@ export function FaultInjector({ activeFault, currentWafer = 1, onInject, onClear
         value={selected}
         onChange={(e) => setSelected(e.target.value as FaultType)}
         disabled={!!activeFault}
+        aria-label="Select fault type"
+        data-testid="fault-select"
       >
         {FAULT_OPTIONS.map((o) => (
           <option key={o.value} value={o.value}>{o.label}</option>
@@ -48,6 +50,7 @@ export function FaultInjector({ activeFault, currentWafer = 1, onInject, onClear
           onClick={onClear}
           className="flex items-center justify-center gap-1.5 min-h-[44px] px-3 py-2 rounded text-sm font-semibold bg-slate-700 hover:bg-slate-600 text-[var(--smartfactory-text-primary)] cursor-pointer transition-colors"
           aria-label="Clear fault"
+          data-testid="fault-clear-button"
         >
           <X className="w-4 h-4" />
           Clear Fault
@@ -58,6 +61,7 @@ export function FaultInjector({ activeFault, currentWafer = 1, onInject, onClear
           onClick={handleInject}
           className="flex items-center justify-center gap-1.5 min-h-[44px] px-3 py-2 rounded text-sm font-semibold bg-[var(--smartfactory-accent-orange)] hover:bg-[#e06a18] text-white cursor-pointer transition-colors"
           aria-label="Inject fault"
+          data-testid="fault-inject-button"
         >
           <Zap className="w-4 h-4" />
           Inject Fault

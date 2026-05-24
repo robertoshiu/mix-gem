@@ -86,6 +86,7 @@ export function WaferBinMap({ lotId = 'A03' }: WaferBinMapProps) {
                 return (
                   <rect
                     key={`${die.row}-${die.col}`}
+                    data-testid={`wafer-die-${die.row}-${die.col}`}
                     x={x}
                     y={y}
                     width={CELL_SIZE}

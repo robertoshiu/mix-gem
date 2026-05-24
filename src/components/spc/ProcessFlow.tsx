@@ -82,6 +82,7 @@ export function ProcessFlow() {
         return (
         <motion.div key={step.id} className="flex items-center gap-0" {...fadeInProps}>
           <div
+            data-testid={`process-step-${step.id}`}
             className={cn(
               'min-w-[90px] p-2 text-center rounded-lg border bg-[var(--smartfactory-surface-card)] border-[var(--smartfactory-border-default)]',
               display.isActive && 'border-l-2 border-l-[var(--smartfactory-border-active)]'

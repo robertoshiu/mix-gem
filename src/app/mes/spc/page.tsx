@@ -6,7 +6,7 @@ import { useMesSpcStore } from '@/stores/mes-spc-store';
 import { SimulatorEngine } from '@/lib/simulator-engine';
 import { generateSeedMeasurements } from '@/lib/mes-mock-data';
 import { SPC_PARAMETERS, SPC_PARAM_KEYS } from '@/lib/spc-parameters';
-import { makeS2F41Resume, makeS2F42Ack } from '@/lib/secs-message-log';
+import { makeS2F42Ack } from '@/lib/secs-message-log';
 import { KpiGaugeCard } from '@/components/spc/KpiGaugeCard';
 import { ControlChart } from '@/components/spc/ControlChart';
 import { ThumbnailChart } from '@/components/spc/ThumbnailChart';
@@ -20,6 +20,10 @@ import { HeatmapTable } from '@/components/spc/HeatmapTable';
 import { FdcTraceViewer } from '@/components/spc/FdcTraceViewer';
 import { ChamberMatchPanel } from '@/components/spc/ChamberMatchPanel';
 import FooterStatusBar from '@/components/spc/FooterStatusBar';
+import { CpkPanel } from '@/components/spc/CpkPanel';
+import { AlarmBanner } from '@/components/spc/AlarmBanner';
+import { TrendChart } from '@/components/spc/TrendChart';
+import { GemStateIndicator } from '@/components/spc/GemStateIndicator';
 import type { SpcParameter } from '@/lib/mes-types';
 
 export default function SpcPage() {
@@ -32,12 +36,12 @@ export default function SpcPage() {
     const { lots, startProcessing, addMeasurement } = useMesSpcStore.getState();
     const activeLot = lots.find((l) => l.status === 'in_process') ?? lots[0];
 
-    // Seed 10 pre-existing wafers
+    startProcessing(activeLot.id, activeLot.recipeId);
+
+    // Seed 10 pre-existing wafers, then continue with the next wafer.
     const seeds = generateSeedMeasurements(activeLot.id, 10);
     seeds.forEach(addMeasurement);
     useMesSpcStore.setState({ waferNumber: 11 });
-
-    startProcessing(activeLot.id, activeLot.recipeId);
 
     engineRef.current = new SimulatorEngine();
     engineRef.current.start();
@@ -60,9 +64,14 @@ export default function SpcPage() {
   }));
 
   function handleAcknowledge(violationId: string) {
+    const violation = store.violations.find((v) => v.id === violationId);
     store.acknowledgeViolation(violationId);
+    if (violation) {
+      store.activeAlarms
+        .filter((alarm) => alarm.parameter === violation.parameter && alarm.rule === violation.rule)
+        .forEach((alarm) => store.acknowledgeAlarm(alarm.id));
+    }
     store.clearFault();
-    store.addEvent(makeS2F41Resume());
     store.addEvent(makeS2F42Ack());
     engineRef.current?.start();
   }
@@ -70,6 +79,7 @@ export default function SpcPage() {
   return (
     <AnimatePresence mode="wait">
       <div className="p-4 space-y-4" data-testid="spc-dashboard">
+        <AlarmBanner />
         {/* Top Row: KPI Speedometer Gauges (5 cards) */}
         <KpiGaugeCard
           latest={latest}
@@ -79,6 +89,10 @@ export default function SpcPage() {
           violatedParam={activeViolation?.parameter}
           history={lotMeasurements}
         />
+
+        <CpkPanel />
+
+        <GemStateIndicator />
 
         {/* Middle Row 1: Wafer Bin Map + Process Flow */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -126,6 +140,8 @@ export default function SpcPage() {
             </div>
           </div>
         </div>
+
+        <TrendChart />
 
         {/* Bottom Row: AI Recommendations + Event Log */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
