@@ -1,9 +1,20 @@
 import { useMesSpcStore } from '@/stores/mes-spc-store';
-import { generateMeasurementWithConfig } from './metrology-generator';
 import { evaluateSpc } from './spc-engine';
 import { generateRecommendations, shouldAnalyze } from './ai-recommendation-engine';
-import { makeS6F11, makeS2F42Ack } from './secs-message-log';
+import {
+  makeS6F11,
+  makeS2F42Ack,
+  makeS2F49,
+  makeS2F50,
+  makeS6F11Notification,
+} from './secs-message-log';
 import { SPC_PARAM_KEYS, SPC_PARAMETERS } from './spc-parameters';
+import {
+  PLAYBACK_FRAME_COUNT,
+  PLAYBACK_TICK_MS,
+  generatePlaybackMeasurement,
+  playbackFrameFromWafer,
+} from './spc-playback-data';
 import {
   calculateCUSUM,
   calculateEWMA,
@@ -14,14 +25,12 @@ import { calculateCapability } from './spc-capability';
 import { trimMeasurements, createRollingWindow, aggregateToHourly } from './data-retention';
 import { GemStateMachine } from './gem-state-machine';
 import type {
-  SpcMeasurement, SpcViolation,
+  SpcViolation,
   SpcParameter,
   AiRecommendation, SecsEvent,
   SpcRule, AlarmSeverity, MetrologyConfig,
 } from './mes-types';
 
-const TICK_MS = 2000;
-const MAX_WAFERS = 25;
 const SPC_WINDOW = 20;
 const RECOVERY_CONSECUTIVE_TICKS = 3;
 
@@ -42,13 +51,13 @@ function ruleToSeverity(rule: SpcRule): AlarmSeverity {
 export class SimulatorEngine {
   private intervalId: ReturnType<typeof setInterval> | null = null;
   private tickCount: number = 0;
+  private playbackCycle: number = 0;
   private consecutiveGoodTicks = 0;
   private gem: GemStateMachine = new GemStateMachine();
   private _wasRunning = false;
 
   start() {
     if (this.intervalId !== null) return;
-    this.tickCount = 0;
     this.consecutiveGoodTicks = 0;
 
     // GEM state transitions: ensure machine reaches EXECUTING
@@ -64,7 +73,7 @@ export class SimulatorEngine {
       this._applyGemTransition(this.gem.transitionTo('EXECUTING'));
     }
 
-    this.intervalId = setInterval(() => this.tick(), TICK_MS);
+    this.intervalId = setInterval(() => this.tick(), PLAYBACK_TICK_MS);
     document.addEventListener('visibilitychange', this._handleVisibility);
   }
 
@@ -84,20 +93,10 @@ export class SimulatorEngine {
     const store = useMesSpcStore.getState();
     const { activeLotId, waferNumber, activeFault, equipmentState, activeRecipeId, recipes } = store;
 
-    if (!activeLotId || equipmentState === 'inhibited' || equipmentState === 'idle') return;
+    if (!activeLotId || equipmentState === 'idle') return;
 
     this.tickCount++;
-
-    // Complete lot
-    if (waferNumber > MAX_WAFERS) {
-      // GEM state: COMPLETED → IDLE
-      this._applyGemTransition(this.gem.transitionTo('COMPLETED'));
-      this._applyGemTransition(this.gem.transitionTo('IDLE'));
-      store.updateLot(activeLotId, { status: 'completed' });
-      store.stopProcessing();
-      this.stop();
-      return;
-    }
+    const playbackFrame = playbackFrameFromWafer(waferNumber);
 
     // Build metrology config from active recipe (if available)
     const activeRecipe = recipes.find((r) => r.id === activeRecipeId);
@@ -106,13 +105,23 @@ export class SimulatorEngine {
       focusOffset:  activeRecipe?.focus ?? 0,
     };
 
-    // Generate measurement with recipe-aware config
-    const generated = generateMeasurementWithConfig(waferNumber, activeFault, metrologyConfig);
-    const measurement: SpcMeasurement = {
-      id: `${activeLotId}-w${waferNumber}-${Date.now()}`,
-      lotId: activeLotId,
-      timestamp: new Date(),
-      ...generated,
+    // Generate deterministic three-minute playback data. Frames do not repeat
+    // inside a cycle; values repeat after PLAYBACK_FRAME_COUNT ticks.
+    const measurement = generatePlaybackMeasurement(
+      activeLotId,
+      playbackFrame,
+      this.playbackCycle,
+      activeFault,
+      metrologyConfig,
+      new Date(),
+    );
+    const generated = {
+      waferNumber: measurement.waferNumber,
+      cd: measurement.cd,
+      cdu: measurement.cdu,
+      ovl_x: measurement.ovl_x,
+      ovl_y: measurement.ovl_y,
+      ler: measurement.ler,
     };
     store.addMeasurement(measurement);
 
@@ -121,7 +130,8 @@ export class SimulatorEngine {
     useMesSpcStore.setState({ measurements: trimMeasurements(currentMeasurements) });
 
     // Log S6F11
-    store.addEvent(makeS6F11(activeLotId, waferNumber, generated));
+    store.addEvent(makeS6F11(activeLotId, playbackFrame, generated));
+    this._emitScheduledEvents(playbackFrame, activeLotId, activeRecipeId);
 
     // Evaluate SPC — build sliding window via createRollingWindow
     const lotMeasurements = useMesSpcStore.getState().measurements
@@ -183,12 +193,16 @@ export class SimulatorEngine {
           });
         }
 
-        // Transition GEM state to PAUSED on violation
-        this._applyGemTransition(this.gem.transitionTo('PAUSED', { parameter: param, rule: violation.rule }));
-
-        store.incrementWafer();
-        this.stop();
-        return;
+        // Emit a STOP/RESUME pair for violation visibility without freezing the demo stream.
+        if (this.gem.canTransitionTo('PAUSED')) {
+          this._applyGemTransition(this.gem.transitionTo('PAUSED', { parameter: param, rule: violation.rule }));
+        }
+        if (this.gem.canTransitionTo('EXECUTING')) {
+          this._applyGemTransition(this.gem.transitionTo('EXECUTING'));
+        }
+        store.updateLot(activeLotId, { status: 'in_process' });
+        useMesSpcStore.setState({ equipmentState: 'processing' });
+        break;
       }
     }
 
@@ -271,28 +285,17 @@ export class SimulatorEngine {
     }
 
     // Increment wafer
-    store.incrementWafer();
-
-    // Check completion after increment
-    if (waferNumber >= MAX_WAFERS) {
-      // GEM state: COMPLETED → IDLE
-      this._applyGemTransition(this.gem.transitionTo('COMPLETED'));
-      this._applyGemTransition(this.gem.transitionTo('IDLE'));
-      store.updateLot(activeLotId, { status: 'completed' });
-      store.stopProcessing();
-      this.stop();
-      return;
-    }
+    this._advancePlaybackCursor(playbackFrame, activeLotId);
 
     // AI Recommendation Analysis — run every N ticks
     const aiConfig = store.aiEngineConfig;
-    if (waferNumber % aiConfig.analysisInterval === 0) {
+    if (playbackFrame % aiConfig.analysisInterval === 0) {
       const state = useMesSpcStore.getState();
       const ctx = {
         measurements: state.measurements.filter((m) => m.lotId === activeLotId),
         violations: state.violations,
         equipmentState: state.equipmentState,
-        waferNumber: state.waferNumber,
+        waferNumber: playbackFrame,
         activeFault: state.activeFault ? { type: state.activeFault.type, parameter: state.activeFault.parameter } : null,
       };
 
@@ -327,7 +330,7 @@ export class SimulatorEngine {
       // Resume: restart interval if was running
       if (this._wasRunning) {
         this._wasRunning = false;
-        this.intervalId = setInterval(() => this.tick(), TICK_MS);
+        this.intervalId = setInterval(() => this.tick(), PLAYBACK_TICK_MS);
       }
       useMesSpcStore.getState().updateSettings({ simulatorPaused: false });
     }
@@ -358,6 +361,51 @@ export class SimulatorEngine {
 
     // Map GEM state → legacy equipmentState for backward compat
     this._syncEquipmentState();
+  }
+
+  private _emitScheduledEvents(frameNumber: number, lotId: string, recipeId: string | null): void {
+    const store = useMesSpcStore.getState();
+
+    if (frameNumber % 9 === 0) {
+      store.addEvent(makeS6F11Notification('LOT_PROGRESS', {
+        lotId,
+        playbackFrame: frameNumber,
+        cycle: this.playbackCycle + 1,
+        queueDepth: 6 + (frameNumber % 5),
+      }));
+    }
+
+    if (frameNumber % 18 === 0) {
+      const recipe = recipeId ?? 'LITHO-193nm-v4';
+      store.addEvent(makeS2F49(recipe));
+      store.addEvent(makeS2F50(true));
+    }
+
+    if (frameNumber % 30 === 0) {
+      store.addEvent(makeS6F11Notification('VIRTUAL_METROLOGY_SYNC', {
+        lotId,
+        chamber: 'LITHO01',
+        sampleWindow: `${Math.max(1, frameNumber - 9)}-${frameNumber}`,
+      }));
+    }
+  }
+
+  private _advancePlaybackCursor(frameNumber: number, activeLotId: string): void {
+    if (frameNumber >= PLAYBACK_FRAME_COUNT) {
+      this.playbackCycle++;
+      useMesSpcStore.setState((state) => ({
+        waferNumber: 1,
+        measurements: [],
+        violations: state.violations.slice(-12),
+        lots: state.lots.map((lot) =>
+          lot.id === activeLotId ? { ...lot, status: 'in_process' as const } : lot,
+        ),
+        equipmentState: 'processing' as const,
+      }));
+      return;
+    }
+
+    useMesSpcStore.getState().incrementWafer();
   }
 
   /** Map GemState to legacy equipmentState. */
