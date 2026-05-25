@@ -58,7 +58,7 @@ export interface TickResult {
 
 // ── Message Factory ───────────────────────────────────
 
-let _globalSeq = 0;
+const SIMULATION_BASE_TIME = Date.UTC(2026, 4, 25, 0, 0, 0);
 
 function makeDemoMsg(
   direction: DemoDirection,
@@ -67,19 +67,21 @@ function makeDemoMsg(
   latencyMs: number,
   summary: string,
   payload: Record<string, unknown>,
-  tickSeed: number,
+  tickKey: string,
+  tickIndex: number,
+  messageIndex: number,
 ): DemoSecsMessage {
-  _globalSeq++;
+  const sequence = tickIndex * 2 + messageIndex;
   return {
-    id: `sim-${tickSeed}-${_globalSeq}`,
-    timestamp: new Date().toISOString(),
+    id: `sim-${tickKey}-${messageIndex}`,
+    timestamp: new Date(SIMULATION_BASE_TIME + tickIndex * 900 + messageIndex * 75).toISOString(),
     direction,
     sf: `S${stream}F${func}`,
     stream,
     function: func,
     wbit: func % 2 === 1,
     latencyMs,
-    systemBytes: `0x${(0x2000 + (_globalSeq & 0xFFF)).toString(16).toUpperCase()}`,
+    systemBytes: `0x${(0x2000 + (sequence & 0xFFF)).toString(16).toUpperCase()}`,
     summary,
     payload,
   };
@@ -100,7 +102,7 @@ export function generateTick(seed: number, tickIndex: number): TickResult {
   const rng = mulberry32(seed + tickIndex * 7919);
   const category = selectCategory(rng());
   const messages: DemoSecsMessage[] = [];
-  const ts = seed + tickIndex;
+  const tickKey = `${seed}-${tickIndex}`;
 
   switch (category) {
     case 'collection': {
@@ -115,12 +117,16 @@ export function generateTick(seed: number, tickIndex: number): TickResult {
       messages.push(makeDemoMsg('E2H', 6, 11, Math.floor(rng() * 30) + 10,
         `S6F11 Collection Event: ${lot.id} wafer ${wafer}`,
         { stream: 6, function: 11, ceid, reports: SPC_KEYS.map((k, i) => ({ rptid: 1001 + i, parameter: k, value: values[k] })) },
-        ts,
+        tickKey,
+        tickIndex,
+        messages.length,
       ));
       messages.push(makeDemoMsg('H2E', 6, 12, Math.floor(rng() * 8) + 2,
         'S6F12 Collection Event ACK',
         { stream: 6, function: 12, ceack: 0 },
-        ts,
+        tickKey,
+        tickIndex,
+        messages.length,
       ));
       break;
     }
@@ -128,20 +134,26 @@ export function generateTick(seed: number, tickIndex: number): TickResult {
       const count = Math.floor(rng() * 3) + 2;
       const svids: number[] = [];
       const vars: Array<{ svid: number; name: string; value: string }> = [];
-      for (let i = 0; i < count; i++) {
-        const sv = pick([...STATUS_VARIABLES], rng());
+      const statusPool = [...STATUS_VARIABLES];
+      while (svids.length < count && statusPool.length > 0) {
+        const index = Math.floor(rng() * statusPool.length);
+        const sv = statusPool.splice(index, 1)[0];
         svids.push(sv.svid);
         vars.push({ svid: sv.svid, name: sv.name, value: pick([...sv.values], rng()) });
       }
       messages.push(makeDemoMsg('H2E', 1, 3, Math.floor(rng() * 15) + 5,
         `S1F3 SV Request (${count} vars)`,
         { stream: 1, function: 3, svids },
-        ts,
+        tickKey,
+        tickIndex,
+        messages.length,
       ));
       messages.push(makeDemoMsg('E2H', 1, 4, Math.floor(rng() * 20) + 8,
         `S1F4 SV Reply (${count} vars)`,
         { stream: 1, function: 4, svs: vars },
-        ts,
+        tickKey,
+        tickIndex,
+        messages.length,
       ));
       break;
     }
@@ -152,12 +164,16 @@ export function generateTick(seed: number, tickIndex: number): TickResult {
       messages.push(makeDemoMsg('H2E', 2, 41, Math.floor(rng() * 20) + 10,
         `S2F41 ${rcmd} -> ${tool}`,
         { stream: 2, function: 41, rcmd, params: [{ cpname: 'REASON', cpval: reason }] },
-        ts,
+        tickKey,
+        tickIndex,
+        messages.length,
       ));
       messages.push(makeDemoMsg('E2H', 2, 42, Math.floor(rng() * 12) + 5,
         'S2F42 ACK (HCACK=0)',
         { stream: 2, function: 42, hcack: 0 },
-        ts,
+        tickKey,
+        tickIndex,
+        messages.length,
       ));
       break;
     }
@@ -168,12 +184,16 @@ export function generateTick(seed: number, tickIndex: number): TickResult {
       messages.push(makeDemoMsg('H2E', 2, 49, Math.floor(rng() * 25) + 12,
         `S2F49 Recipe Push: ${recipe.id} -> ${tool}`,
         { stream: 2, function: 49, rcmd: 'PP-LOAD', params: [{ cpname: 'PPID', cpval: recipe.id }] },
-        ts,
+        tickKey,
+        tickIndex,
+        messages.length,
       ));
       messages.push(makeDemoMsg('E2H', 2, 50, Math.floor(rng() * 20) + 15,
         `S2F50 Recipe ACK (${success ? 'OK' : 'FAIL'})`,
         { stream: 2, function: 50, hcack: success ? 0 : 1 },
-        ts,
+        tickKey,
+        tickIndex,
+        messages.length,
       ));
       break;
     }
@@ -183,12 +203,16 @@ export function generateTick(seed: number, tickIndex: number): TickResult {
       messages.push(makeDemoMsg('E2H', 5, 1, Math.floor(rng() * 10) + 3,
         `S5F1 Alarm: ${alarm.code} [${alarm.severity}] on ${tool}`,
         { stream: 5, function: 1, alid: alarm.alarmId, alcd: alarm.severity === 'CRITICAL' ? 1 : alarm.severity === 'MAJOR' ? 2 : 3, altx: alarm.message },
-        ts,
+        tickKey,
+        tickIndex,
+        messages.length,
       ));
       messages.push(makeDemoMsg('H2E', 5, 2, Math.floor(rng() * 8) + 2,
         `S5F2 Alarm ACK (ALID=${alarm.alarmId})`,
         { stream: 5, function: 2, ackc5: 0 },
-        ts,
+        tickKey,
+        tickIndex,
+        messages.length,
       ));
       break;
     }
@@ -197,12 +221,16 @@ export function generateTick(seed: number, tickIndex: number): TickResult {
       messages.push(makeDemoMsg('H2E', 1, 1, Math.floor(rng() * 5) + 1,
         `S1F1 Are You There -> ${tool}`,
         { stream: 1, function: 1 },
-        ts,
+        tickKey,
+        tickIndex,
+        messages.length,
       ));
       messages.push(makeDemoMsg('E2H', 1, 2, Math.floor(rng() * 8) + 3,
         `S1F2 Online (${tool} v2026.05)`,
         { stream: 1, function: 2, mdln: tool, softrev: '2026.05' },
-        ts,
+        tickKey,
+        tickIndex,
+        messages.length,
       ));
       break;
     }
@@ -224,12 +252,16 @@ export function generateTick(seed: number, tickIndex: number): TickResult {
       messages.push(makeDemoMsg('H2E', 10, 1, Math.floor(rng() * 10) + 5,
         `S10F1 Terminal: ${text.slice(0, 50)}`,
         { stream: 10, function: 1, tid, text },
-        ts,
+        tickKey,
+        tickIndex,
+        messages.length,
       ));
       messages.push(makeDemoMsg('E2H', 10, 2, Math.floor(rng() * 5) + 2,
         `S10F2 Terminal ACK (TID=${tid})`,
         { stream: 10, function: 2, tid, ackc10: 0 },
-        ts,
+        tickKey,
+        tickIndex,
+        messages.length,
       ));
       break;
     }

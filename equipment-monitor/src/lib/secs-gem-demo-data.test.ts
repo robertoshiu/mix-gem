@@ -49,6 +49,7 @@ describe('data pools', () => {
         expect(step).toHaveProperty('expected');
       }
     }
+    expect(SCENARIO_TEMPLATES[0][0]).toMatchObject({ primary: 'S1F1', expected: 'S1F2' });
   });
 
   it('ALARM_TEMPLATES has 10 entries with required fields', () => {

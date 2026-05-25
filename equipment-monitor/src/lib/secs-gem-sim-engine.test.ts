@@ -1,5 +1,4 @@
 import { mulberry32, pick, gaussian, selectCategory, generateTick, generateEquipmentUpdate, createScenarioState, advanceScenario, type MessageCategory, type ScenarioState } from './secs-gem-sim-engine';
-import { SCENARIO_TEMPLATES } from './secs-gem-demo-data';
 
 describe('mulberry32', () => {
   it('returns deterministic sequence for same seed', () => {
@@ -93,6 +92,8 @@ describe('generateTick', () => {
   it('is deterministic for same seed and tick', () => {
     const r1 = generateTick(42, 5);
     const r2 = generateTick(42, 5);
+    expect(r1.messages.map(m => m.id)).toEqual(r2.messages.map(m => m.id));
+    expect(r1.messages.map(m => m.timestamp)).toEqual(r2.messages.map(m => m.timestamp));
     expect(r1.messages.map(m => m.sf)).toEqual(r2.messages.map(m => m.sf));
     expect(r1.messages.map(m => m.summary)).toEqual(r2.messages.map(m => m.summary));
   });
@@ -164,6 +165,19 @@ describe('generateTick', () => {
     }
     expect(foundPair).toBe(true);
   });
+
+  it('does not duplicate SVIDs in status requests', () => {
+    for (let i = 0; i < 200; i++) {
+      const result = generateTick(42, i);
+      for (const msg of result.messages) {
+        if (msg.sf !== 'S1F3') continue;
+        const payload = msg.payload as { svids?: number[] };
+        const svids = payload.svids ?? [];
+        expect(svids.length).toBeGreaterThan(0);
+        expect(new Set(svids).size).toBe(svids.length);
+      }
+    }
+  });
 });
 
 describe('generateEquipmentUpdate', () => {
@@ -204,8 +218,8 @@ describe('scenario cycling', () => {
 
   it('advanceScenario moves to next step when matching sf arrives', () => {
     const state = createScenarioState();
-    // Step 0 primary is S1F13
-    const result = advanceScenario(state, 'S1F13');
+    // Step 0 primary is S1F1 so generated heartbeat traffic can advance it.
+    const result = advanceScenario(state, 'S1F1');
     expect(result.stepIndex).toBe(1);
   });
 
@@ -217,8 +231,8 @@ describe('scenario cycling', () => {
 
   it('cycles to next template when all steps complete', () => {
     let state = createScenarioState();
-    // SPC violation template: S1F13, S6F11, S2F41, S2F49
-    state = advanceScenario(state, 'S1F13');
+    // SPC violation template: S1F1, S6F11, S2F41, S2F49
+    state = advanceScenario(state, 'S1F1');
     state = advanceScenario(state, 'S6F11');
     state = advanceScenario(state, 'S2F41');
     state = advanceScenario(state, 'S2F49');

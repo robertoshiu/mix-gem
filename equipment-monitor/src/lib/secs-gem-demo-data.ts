@@ -293,7 +293,7 @@ export const STATUS_VARIABLES = [
 
 export const SCENARIO_TEMPLATES: DemoScenarioStep[][] = [
   [ // SPC Violation Flow
-    { id: 'spc-establish', label: 'Establish communications', actor: 'Host',      action: 'Open communication channel and select equipment',  primary: 'S1F13', expected: 'S1F14', status: 'pending' },
+    { id: 'spc-heartbeat', label: 'Verify online heartbeat', actor: 'Host',      action: 'Confirm equipment is present and online',           primary: 'S1F1',  expected: 'S1F2',  status: 'pending' },
     { id: 'spc-collect',   label: 'Collect SPC report',      actor: 'Equipment', action: 'Publish wafer metrology collection event',          primary: 'S6F11', expected: 'S6F12', status: 'pending' },
     { id: 'spc-inhibit',   label: 'Inhibit on violation',    actor: 'Host',      action: 'Send remote STOP after SPC rule breach',            primary: 'S2F41', expected: 'S2F42', status: 'pending' },
     { id: 'spc-recipe',    label: 'Push corrected recipe',   actor: 'Host',      action: 'Load updated process program',                      primary: 'S2F49', expected: 'S2F50', status: 'pending' },
