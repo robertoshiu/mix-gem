@@ -120,7 +120,16 @@ export type SecsEventType =
   | 's2f50_apply_ack'
   | 's2f49_override'
   | 's2f50_override_ack'
-  | 's6f11_notification';
+  | 's6f11_notification'
+  | 's5f1_alarm'
+  | 's5f2_alarm_ack'
+  | 's1f1_online'
+  | 's1f2_online_ack'
+  | 's1f3_status_request'
+  | 's1f4_status_reply'
+  | 's10f1_terminal'
+  | 's10f2_terminal_ack'
+  | 's6f12_collection_ack';
 
 export interface SecsEvent {
   id: string;

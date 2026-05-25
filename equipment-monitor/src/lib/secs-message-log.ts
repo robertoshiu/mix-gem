@@ -158,3 +158,97 @@ export function makeS6F11Notification(eventType: string, data: Record<string, un
     },
   };
 }
+
+export function makeS5F1(alarmId: number, alarmCode: string, message: string, severity: string): SecsEvent {
+  return {
+    id: nextId('s5f1_alarm'),
+    type: 's5f1_alarm',
+    label: `S5F1 Alarm: ${alarmCode} [${severity}]`,
+    timestamp: new Date(),
+    secsMessage: {
+      stream: 5, function: 1, alid: alarmId,
+      alcd: severity === 'CRITICAL' ? 1 : severity === 'MAJOR' ? 2 : 3,
+      altx: message,
+    },
+  };
+}
+
+export function makeS5F2(alarmId: number): SecsEvent {
+  return {
+    id: nextId('s5f2_alarm_ack'),
+    type: 's5f2_alarm_ack',
+    label: `S5F2 Alarm ACK (ALID=${alarmId})`,
+    timestamp: new Date(),
+    secsMessage: { stream: 5, function: 2, ackc5: 0 },
+  };
+}
+
+export function makeS1F1(): SecsEvent {
+  return {
+    id: nextId('s1f1_online'),
+    type: 's1f1_online',
+    label: 'S1F1 Are You There',
+    timestamp: new Date(),
+    secsMessage: { stream: 1, function: 1 },
+  };
+}
+
+export function makeS1F2(mdln: string, softrev: string): SecsEvent {
+  return {
+    id: nextId('s1f2_online_ack'),
+    type: 's1f2_online_ack',
+    label: `S1F2 Online (${mdln})`,
+    timestamp: new Date(),
+    secsMessage: { stream: 1, function: 2, mdln, softrev },
+  };
+}
+
+export function makeS1F3(svids: number[]): SecsEvent {
+  return {
+    id: nextId('s1f3_status_request'),
+    type: 's1f3_status_request',
+    label: `S1F3 SV Request (${svids.length} vars)`,
+    timestamp: new Date(),
+    secsMessage: { stream: 1, function: 3, svids },
+  };
+}
+
+export function makeS1F4(variables: Array<{ svid: number; name: string; value: string | number }>): SecsEvent {
+  return {
+    id: nextId('s1f4_status_reply'),
+    type: 's1f4_status_reply',
+    label: `S1F4 SV Reply (${variables.length} vars)`,
+    timestamp: new Date(),
+    secsMessage: { stream: 1, function: 4, svs: variables },
+  };
+}
+
+export function makeS10F1(terminalId: number, text: string): SecsEvent {
+  return {
+    id: nextId('s10f1_terminal'),
+    type: 's10f1_terminal',
+    label: `S10F1 Terminal: ${text.slice(0, 40)}`,
+    timestamp: new Date(),
+    secsMessage: { stream: 10, function: 1, tid: terminalId, text },
+  };
+}
+
+export function makeS10F2(terminalId: number): SecsEvent {
+  return {
+    id: nextId('s10f2_terminal_ack'),
+    type: 's10f2_terminal_ack',
+    label: `S10F2 Terminal ACK (TID=${terminalId})`,
+    timestamp: new Date(),
+    secsMessage: { stream: 10, function: 2, tid: terminalId, ackc10: 0 },
+  };
+}
+
+export function makeS6F12(): SecsEvent {
+  return {
+    id: nextId('s6f12_collection_ack'),
+    type: 's6f12_collection_ack',
+    label: 'S6F12 Collection Event ACK',
+    timestamp: new Date(),
+    secsMessage: { stream: 6, function: 12, ceack: 0 },
+  };
+}
