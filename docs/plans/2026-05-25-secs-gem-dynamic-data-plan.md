@@ -10,6 +10,13 @@
 
 **Design doc:** `docs/plans/2026-05-25-secs-gem-dynamic-data-design.md`
 
+**Review corrections applied (2026-05-25):**
+- The generated feed emits S1F1/S1F2 heartbeat traffic, not S1F13/S1F14, so the first SPC scenario step must use S1F1/S1F2 or it will never advance from live messages.
+- `generateTick(seed, tickIndex)` must be pure from its inputs: no module-level sequence counter and no `Date.now()` timestamps inside generated messages.
+- S1F3 status requests must pick SVIDs without replacement; duplicate SVIDs are invalid and confuse host/equipment displays.
+- The page tick callback must not depend on the mutable `equipment` array; mirror equipment into a ref to avoid interval teardown/rebuild on every equipment update.
+- Adding `SecsEventType` members requires updating all exhaustive icon/color maps such as `src/components/spc/EventLog.tsx`.
+
 ---
 
 ## Task 1: Extend SecsEventType + Add Message Builders
@@ -412,7 +419,7 @@ export type ScenarioTemplateId = 'spc-violation' | 'lot-changeover' | 'alarm-res
 
 export const SCENARIO_TEMPLATES: DemoScenarioStep[][] = [
   [ // SPC Violation Flow
-    { id: 'spc-establish', label: 'Establish communications', actor: 'Host',      action: 'Open communication channel and select equipment',  primary: 'S1F13', expected: 'S1F14', status: 'pending' },
+    { id: 'spc-heartbeat', label: 'Verify online heartbeat', actor: 'Host',      action: 'Confirm equipment is present and online',           primary: 'S1F1',  expected: 'S1F2',  status: 'pending' },
     { id: 'spc-collect',   label: 'Collect SPC report',      actor: 'Equipment', action: 'Publish wafer metrology collection event',          primary: 'S6F11', expected: 'S6F12', status: 'pending' },
     { id: 'spc-inhibit',   label: 'Inhibit on violation',    actor: 'Host',      action: 'Send remote STOP after SPC rule breach',            primary: 'S2F41', expected: 'S2F42', status: 'pending' },
     { id: 'spc-recipe',    label: 'Push corrected recipe',   actor: 'Host',      action: 'Load updated process program',                      primary: 'S2F49', expected: 'S2F50', status: 'pending' },
@@ -742,7 +749,7 @@ import {
   ALARM_TEMPLATES, TERMINAL_MESSAGES, STATUS_VARIABLES, SPC_NOMINAL,
   type DemoDirection, type DemoSecsMessage,
 } from './secs-gem-demo-data';
-import { MOCK_LOTS, MOCK_RECIPES, MOCK_EQUIPMENT } from './mes-mock-data';
+import { MOCK_LOTS, MOCK_RECIPES } from './mes-mock-data';
 
 // ── Types ─────────────────────────────────────────────
 
@@ -752,7 +759,7 @@ export interface TickResult {
 
 // ── Message Factory ───────────────────────────────────
 
-let _globalSeq = 0;
+const SIMULATION_BASE_TIME = Date.UTC(2026, 4, 25, 0, 0, 0);
 
 function makeDemoMsg(
   direction: DemoDirection,
@@ -761,19 +768,21 @@ function makeDemoMsg(
   latencyMs: number,
   summary: string,
   payload: Record<string, unknown>,
-  tickSeed: number,
+  tickKey: string,
+  tickIndex: number,
+  messageIndex: number,
 ): DemoSecsMessage {
-  _globalSeq++;
+  const sequence = tickIndex * 2 + messageIndex;
   return {
-    id: `sim-${tickSeed}-${_globalSeq}`,
-    timestamp: new Date().toISOString(),
+    id: `sim-${tickKey}-${messageIndex}`,
+    timestamp: new Date(SIMULATION_BASE_TIME + tickIndex * 900 + messageIndex * 75).toISOString(),
     direction,
     sf: `S${stream}F${func}`,
     stream,
     function: func,
     wbit: func % 2 === 1,
     latencyMs,
-    systemBytes: `0x${(0x2000 + (_globalSeq & 0xFFF)).toString(16).toUpperCase()}`,
+    systemBytes: `0x${(0x2000 + (sequence & 0xFFF)).toString(16).toUpperCase()}`,
     summary,
     payload,
   };
@@ -794,7 +803,7 @@ export function generateTick(seed: number, tickIndex: number): TickResult {
   const rng = mulberry32(seed + tickIndex * 7919);
   const category = selectCategory(rng());
   const messages: DemoSecsMessage[] = [];
-  const ts = seed + tickIndex;
+  const tickKey = `${seed}-${tickIndex}`;
 
   switch (category) {
     case 'collection': {
@@ -809,12 +818,16 @@ export function generateTick(seed: number, tickIndex: number): TickResult {
       messages.push(makeDemoMsg('E2H', 6, 11, Math.floor(rng() * 30) + 10,
         `S6F11 Collection Event: ${lot.id} wafer ${wafer}`,
         { stream: 6, function: 11, ceid, reports: SPC_KEYS.map((k, i) => ({ rptid: 1001 + i, parameter: k, value: values[k] })) },
-        ts,
+        tickKey,
+        tickIndex,
+        messages.length,
       ));
       messages.push(makeDemoMsg('H2E', 6, 12, Math.floor(rng() * 8) + 2,
         'S6F12 Collection Event ACK',
         { stream: 6, function: 12, ceack: 0 },
-        ts,
+        tickKey,
+        tickIndex,
+        messages.length,
       ));
       break;
     }
@@ -822,20 +835,26 @@ export function generateTick(seed: number, tickIndex: number): TickResult {
       const count = Math.floor(rng() * 3) + 2;
       const svids: number[] = [];
       const vars: Array<{ svid: number; name: string; value: string }> = [];
-      for (let i = 0; i < count; i++) {
-        const sv = pick(STATUS_VARIABLES, rng());
+      const statusPool = [...STATUS_VARIABLES];
+      while (svids.length < count && statusPool.length > 0) {
+        const index = Math.floor(rng() * statusPool.length);
+        const sv = statusPool.splice(index, 1)[0];
         svids.push(sv.svid);
         vars.push({ svid: sv.svid, name: sv.name, value: pick(sv.values, rng()) });
       }
       messages.push(makeDemoMsg('H2E', 1, 3, Math.floor(rng() * 15) + 5,
         `S1F3 SV Request (${count} vars)`,
         { stream: 1, function: 3, svids },
-        ts,
+        tickKey,
+        tickIndex,
+        messages.length,
       ));
       messages.push(makeDemoMsg('E2H', 1, 4, Math.floor(rng() * 20) + 8,
         `S1F4 SV Reply (${count} vars)`,
         { stream: 1, function: 4, svs: vars },
-        ts,
+        tickKey,
+        tickIndex,
+        messages.length,
       ));
       break;
     }
@@ -846,12 +865,16 @@ export function generateTick(seed: number, tickIndex: number): TickResult {
       messages.push(makeDemoMsg('H2E', 2, 41, Math.floor(rng() * 20) + 10,
         `S2F41 ${rcmd} -> ${tool}`,
         { stream: 2, function: 41, rcmd, params: [{ cpname: 'REASON', cpval: reason }] },
-        ts,
+        tickKey,
+        tickIndex,
+        messages.length,
       ));
       messages.push(makeDemoMsg('E2H', 2, 42, Math.floor(rng() * 12) + 5,
         `S2F42 ACK (HCACK=0)`,
         { stream: 2, function: 42, hcack: 0 },
-        ts,
+        tickKey,
+        tickIndex,
+        messages.length,
       ));
       break;
     }
@@ -862,12 +885,16 @@ export function generateTick(seed: number, tickIndex: number): TickResult {
       messages.push(makeDemoMsg('H2E', 2, 49, Math.floor(rng() * 25) + 12,
         `S2F49 Recipe Push: ${recipe.id} -> ${tool}`,
         { stream: 2, function: 49, rcmd: 'PP-LOAD', params: [{ cpname: 'PPID', cpval: recipe.id }] },
-        ts,
+        tickKey,
+        tickIndex,
+        messages.length,
       ));
       messages.push(makeDemoMsg('E2H', 2, 50, Math.floor(rng() * 20) + 15,
         `S2F50 Recipe ACK (${success ? 'OK' : 'FAIL'})`,
         { stream: 2, function: 50, hcack: success ? 0 : 1 },
-        ts,
+        tickKey,
+        tickIndex,
+        messages.length,
       ));
       break;
     }
@@ -877,12 +904,16 @@ export function generateTick(seed: number, tickIndex: number): TickResult {
       messages.push(makeDemoMsg('E2H', 5, 1, Math.floor(rng() * 10) + 3,
         `S5F1 Alarm: ${alarm.code} [${alarm.severity}] on ${tool}`,
         { stream: 5, function: 1, alid: alarm.alarmId, alcd: alarm.severity === 'CRITICAL' ? 1 : alarm.severity === 'MAJOR' ? 2 : 3, altx: alarm.message },
-        ts,
+        tickKey,
+        tickIndex,
+        messages.length,
       ));
       messages.push(makeDemoMsg('H2E', 5, 2, Math.floor(rng() * 8) + 2,
         `S5F2 Alarm ACK (ALID=${alarm.alarmId})`,
         { stream: 5, function: 2, ackc5: 0 },
-        ts,
+        tickKey,
+        tickIndex,
+        messages.length,
       ));
       break;
     }
@@ -891,12 +922,16 @@ export function generateTick(seed: number, tickIndex: number): TickResult {
       messages.push(makeDemoMsg('H2E', 1, 1, Math.floor(rng() * 5) + 1,
         `S1F1 Are You There -> ${tool}`,
         { stream: 1, function: 1 },
-        ts,
+        tickKey,
+        tickIndex,
+        messages.length,
       ));
       messages.push(makeDemoMsg('E2H', 1, 2, Math.floor(rng() * 8) + 3,
         `S1F2 Online (${tool} v2026.05)`,
         { stream: 1, function: 2, mdln: tool, softrev: '2026.05' },
-        ts,
+        tickKey,
+        tickIndex,
+        messages.length,
       ));
       break;
     }
@@ -918,12 +953,16 @@ export function generateTick(seed: number, tickIndex: number): TickResult {
       messages.push(makeDemoMsg('H2E', 10, 1, Math.floor(rng() * 10) + 5,
         `S10F1 Terminal: ${text.slice(0, 50)}`,
         { stream: 10, function: 1, tid, text },
-        ts,
+        tickKey,
+        tickIndex,
+        messages.length,
       ));
       messages.push(makeDemoMsg('E2H', 10, 2, Math.floor(rng() * 5) + 2,
         `S10F2 Terminal ACK (TID=${tid})`,
         { stream: 10, function: 2, tid, ackc10: 0 },
-        ts,
+        tickKey,
+        tickIndex,
+        messages.length,
       ));
       break;
     }
@@ -1017,8 +1056,8 @@ describe('scenario cycling', () => {
   it('advanceScenario moves to next step when matching sf arrives', () => {
     const state = createScenarioState();
     const template = SCENARIO_TEMPLATES[0]; // SPC violation
-    // Step 0 primary is S1F13
-    const result = advanceScenario(state, 'S1F13');
+    // Step 0 primary is S1F1 so generated heartbeat traffic can advance it.
+    const result = advanceScenario(state, 'S1F1');
     expect(result.stepIndex).toBe(1);
   });
 
@@ -1030,8 +1069,8 @@ describe('scenario cycling', () => {
 
   it('cycles to next template when all steps complete', () => {
     let state = createScenarioState();
-    // SPC violation template: S1F13, S6F11, S2F41, S2F49
-    state = advanceScenario(state, 'S1F13');
+    // SPC violation template: S1F1, S6F11, S2F41, S2F49
+    state = advanceScenario(state, 'S1F1');
     state = advanceScenario(state, 'S6F11');
     state = advanceScenario(state, 'S2F41');
     state = advanceScenario(state, 'S2F49');
@@ -1289,7 +1328,8 @@ export default function SecsGemPage() {
   // Rolling message buffer
   const [messages, setMessages] = useState<DemoSecsMessage[]>([]);
   const tickRef = useRef(0);
-  const seedRef = useRef(Math.floor(Date.now() / CYCLE_DURATION));
+  const seedRef = useRef(0);
+  const equipmentRef = useRef(equipment);
 
   // Scenario state
   const scenarioRef = useRef<ScenarioState>(createScenarioState());
@@ -1327,12 +1367,13 @@ export default function SecsGemPage() {
   const visibleFeedMessages = messages.slice(-3);
   const traceMessages = messages.slice(-MAX_VISIBLE_PACKETS);
   const latestMessage = messages[messages.length - 1];
+  const messagesNewestFirst = useMemo(() => [...messages].reverse(), [messages]);
 
   // Snapshot for current scenario step
   const activeSnapshot: DemoSnapshot = {
     id: `snapshot-${scenarioState.stepIndex}`,
     sequence: scenarioState.stepIndex + 1,
-    timestamp: new Date().toISOString(),
+    timestamp: latestMessage?.timestamp ?? '2026-05-25T00:00:00.000Z',
     stepId: template[scenarioState.stepIndex]?.id ?? '',
     label: template[scenarioState.stepIndex]?.label ?? '',
     pendingTransactions: 1,
@@ -1345,8 +1386,8 @@ export default function SecsGemPage() {
   };
 
   // Find latest recipe-related messages for Recipe Detail panel
-  const s2f49Message = messages.findLast((m) => m.stream === 2 && m.function === 49);
-  const s2f50Message = messages.findLast((m) => m.stream === 2 && m.function === 50);
+  const s2f49Message = messagesNewestFirst.find((m) => m.stream === 2 && m.function === 49);
+  const s2f50Message = messagesNewestFirst.find((m) => m.stream === 2 && m.function === 50);
   const hasS2F49 = !!s2f49Message;
   const s2f49Payload = s2f49Message?.payload as { params?: Array<{ cpval?: unknown }> } | undefined;
   const recipeId = s2f49Payload?.params?.[0]?.cpval;
@@ -1370,7 +1411,7 @@ export default function SecsGemPage() {
     const tickResult = generateTick(currentSeed, currentTick);
 
     // Generate equipment updates
-    const eqSnapshots = equipment.map((eq) => ({
+    const eqSnapshots = equipmentRef.current.map((eq) => ({
       id: eq.id,
       connectionState: eq.connectionState,
       status: eq.status,
@@ -1395,7 +1436,7 @@ export default function SecsGemPage() {
       setActiveAlarm({
         id: `alarm-${currentTick}`,
         severity: alarmTemplate?.severity ?? 'MAJOR',
-        equipmentId: selectedEquipment.id,
+        equipmentId: selectedEquipmentId ?? '',
         message: alarmPayload.altx ?? 'Unknown alarm',
         rootCause: alarmTemplate?.rootCause ?? 'Investigating root cause',
         action: alarmTemplate?.action ?? 'Review equipment state',
@@ -1419,7 +1460,11 @@ export default function SecsGemPage() {
         }),
       );
     }
-  }, [equipment, selectedEquipment.id]);
+  }, [selectedEquipmentId]);
+
+  useEffect(() => {
+    equipmentRef.current = equipment;
+  }, [equipment]);
 
   useEffect(() => {
     if (!isRunning) return undefined;
@@ -1454,7 +1499,7 @@ export default function SecsGemPage() {
   const resetFeed = () => {
     setMessages([]);
     tickRef.current = 0;
-    seedRef.current = Math.floor(Date.now() / CYCLE_DURATION);
+    seedRef.current = 0;
     scenarioRef.current = createScenarioState();
     setScenarioState(createScenarioState());
     setTotalGenerated(0);
@@ -1466,7 +1511,7 @@ export default function SecsGemPage() {
   const scenarioStepCards = scenarioSteps.map((step, index) => {
     const isComplete = index < scenarioState.stepIndex;
     const isActive = index === scenarioState.stepIndex || (isComplete && overrideStepId === step.id);
-    const message = messages.findLast((m) => m.sf === step.primary);
+    const message = messagesNewestFirst.find((m) => m.sf === step.primary);
 
     return (
       <ScenarioStepCard
