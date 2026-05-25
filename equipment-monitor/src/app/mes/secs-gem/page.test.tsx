@@ -20,7 +20,7 @@ describe('SecsGemPage', () => {
       .getByRole('heading', { name: /Scenario Console/i })
       .closest('section') as HTMLElement;
 
-    expect(within(scenarioSection).getAllByText('Establish communications').length).toBeGreaterThan(0);
+    expect(within(scenarioSection).getAllByText('Verify online heartbeat').length).toBeGreaterThan(0);
     expect(within(scenarioSection).getAllByText('Collect SPC report').length).toBeGreaterThan(0);
     expect(within(scenarioSection).getAllByText('Inhibit on violation').length).toBeGreaterThan(0);
     expect(within(scenarioSection).getAllByText('Push corrected recipe').length).toBeGreaterThan(0);

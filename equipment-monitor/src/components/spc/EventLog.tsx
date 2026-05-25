@@ -17,7 +17,7 @@ import {
   Bell,
 } from 'lucide-react';
 
-const EVENT_COLORS: Record<string, string> = {
+const EVENT_COLORS: Record<SecsEventType, string> = {
   s6f11_spc_data:    'text-[var(--smartfactory-accent-teal)]',
   s2f41_stop:        'text-[var(--smartfactory-status-red)]',
   s2f42_ack:         'text-[var(--smartfactory-text-secondary)]',
@@ -29,6 +29,15 @@ const EVENT_COLORS: Record<string, string> = {
   s2f49_override:    'text-[var(--smartfactory-accent-blue)]',
   s2f50_override_ack: 'text-[var(--smartfactory-text-secondary)]',
   s6f11_notification: 'text-[var(--smartfactory-status-warning)]',
+  s5f1_alarm:        'text-[var(--smartfactory-status-red)]',
+  s5f2_alarm_ack:    'text-[var(--smartfactory-text-secondary)]',
+  s1f1_online:       'text-[var(--smartfactory-accent-teal)]',
+  s1f2_online_ack:   'text-[var(--smartfactory-text-secondary)]',
+  s1f3_status_request: 'text-[var(--smartfactory-accent-blue)]',
+  s1f4_status_reply: 'text-[var(--smartfactory-text-secondary)]',
+  s10f1_terminal:    'text-[var(--smartfactory-status-warning)]',
+  s10f2_terminal_ack: 'text-[var(--smartfactory-text-secondary)]',
+  s6f12_collection_ack: 'text-[var(--smartfactory-text-secondary)]',
 };
 
 const EVENT_ICONS: Record<SecsEventType, React.ComponentType<{ className?: string; size?: number }>> = {
@@ -43,6 +52,15 @@ const EVENT_ICONS: Record<SecsEventType, React.ComponentType<{ className?: strin
   s2f49_override:      XCircle,
   s2f50_override_ack:  Shield,
   s6f11_notification:  Bell,
+  s5f1_alarm:          AlertTriangle,
+  s5f2_alarm_ack:      CheckCircle,
+  s1f1_online:         Activity,
+  s1f2_online_ack:     CheckCircle,
+  s1f3_status_request: Activity,
+  s1f4_status_reply:   Check,
+  s10f1_terminal:      Bell,
+  s10f2_terminal_ack:  CheckCircle,
+  s6f12_collection_ack: CheckCircle,
 };
 
 type Filter = 'All' | 'SPC' | 'Violations' | 'Commands';

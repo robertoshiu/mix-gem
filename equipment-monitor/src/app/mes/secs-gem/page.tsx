@@ -44,6 +44,7 @@ const SPEED_INTERVALS: Record<string, number> = {
 };
 
 const TEMPLATE_NAMES = ['SPC Violation', 'Lot Changeover', 'Alarm Response', 'Preventive Maintenance'];
+const INITIAL_SEED = 0;
 
 export default function SecsGemPage() {
   const initialData = useMemo(() => getSecsGemDemoData(), []);
@@ -55,7 +56,8 @@ export default function SecsGemPage() {
     initialData.equipment[0]?.id ?? null,
   );
   const tickRef = useRef(0);
-  const seedRef = useRef(Math.floor(Date.now() / 180_000));
+  const seedRef = useRef(INITIAL_SEED);
+  const equipmentRef = useRef(equipment);
   const scenarioRef = useRef<ScenarioState>(createScenarioState());
   const [scenarioState, setScenarioState] = useState<ScenarioState>(createScenarioState());
   const [activeAlarm, setActiveAlarm] = useState<DemoAlarm | null>(initialData.alarms[0] ?? null);
@@ -81,8 +83,9 @@ export default function SecsGemPage() {
   const visibleFeedMessages = messages.slice(-3);
   const traceMessages = messages.slice(-MAX_VISIBLE_PACKETS);
   const latestMessage = messages[messages.length - 1];
-  const s2f49Message = [...messages].reverse().find((m) => m.stream === 2 && m.function === 49);
-  const s2f50Message = [...messages].reverse().find((m) => m.stream === 2 && m.function === 50);
+  const messagesNewestFirst = useMemo(() => [...messages].reverse(), [messages]);
+  const s2f49Message = messagesNewestFirst.find((m) => m.stream === 2 && m.function === 49);
+  const s2f50Message = messagesNewestFirst.find((m) => m.stream === 2 && m.function === 50);
   const hasS2F49 = !!s2f49Message;
   const s2f49Payload = s2f49Message?.payload as { params?: Array<{ cpval?: unknown }> } | undefined;
   const recipeId = s2f49Payload?.params?.[0]?.cpval;
@@ -97,7 +100,7 @@ export default function SecsGemPage() {
     return {
       id: `snap-${scenarioState.templateIndex}-${scenarioState.stepIndex}`,
       sequence: scenarioState.stepIndex + 1,
-      timestamp: new Date().toISOString(),
+      timestamp: latestMessage?.timestamp ?? '2026-05-25T00:00:00.000Z',
       stepId: step?.id ?? 'unknown',
       label: step?.label ?? 'Unknown',
       stateVariables: [
@@ -109,7 +112,7 @@ export default function SecsGemPage() {
       ],
       pendingTransactions: messages.length > 0 ? messages.length % 3 : 0,
     };
-  }, [scenarioState, template, selectedEquipment, messages.length]);
+  }, [scenarioState, template, selectedEquipment, messages.length, latestMessage?.timestamp]);
 
   // doTick: generate messages, update equipment, advance scenario
   const doTick = useCallback(() => {
@@ -125,7 +128,7 @@ export default function SecsGemPage() {
     const eqUpdates = generateEquipmentUpdate(
       currentSeed,
       currentTick,
-      equipment.map((eq) => ({
+      equipmentRef.current.map((eq) => ({
         id: eq.id,
         connectionState: eq.connectionState,
         status: eq.status,
@@ -179,7 +182,11 @@ export default function SecsGemPage() {
     }
 
     tickRef.current = currentTick + 1;
-  }, [equipment, selectedEquipmentId]);
+  }, [selectedEquipmentId]);
+
+  useEffect(() => {
+    equipmentRef.current = equipment;
+  }, [equipment]);
 
   // Tick loop
   useEffect(() => {
@@ -231,7 +238,7 @@ export default function SecsGemPage() {
   const handleReset = () => {
     setMessages([]);
     tickRef.current = 0;
-    seedRef.current = Math.floor(Date.now() / 180_000);
+    seedRef.current = INITIAL_SEED;
     scenarioRef.current = createScenarioState();
     setScenarioState(createScenarioState());
     setTotalGenerated(0);
@@ -243,7 +250,7 @@ export default function SecsGemPage() {
   const scenarioStepCards = scenarioSteps.map((step, index) => {
     const isComplete = index < scenarioState.stepIndex;
     const isActive = index === scenarioState.stepIndex || (isComplete && overrideStepId === step.id);
-    const message = messages.find((candidate) => candidate.sf === step.primary);
+    const message = messagesNewestFirst.find((candidate) => candidate.sf === step.primary);
 
     return (
       <ScenarioStepCard
