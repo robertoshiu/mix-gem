@@ -245,3 +245,75 @@ export function resolveDemoEquipment(
 ): DemoEquipment {
   return data.equipment.find((equipment) => equipment.id === equipmentId) ?? getDefaultDemoEquipment(data);
 }
+
+// ── Data Pools for Dynamic Simulation Engine ──────────────────
+
+export const SPC_NOMINAL: Record<string, { mean: number; stddev: number }> = {
+  cd:    { mean: 50.0, stddev: 1.5 },
+  cdu:   { mean: 3.5,  stddev: 0.8 },
+  ovl_x: { mean: 0.0,  stddev: 1.2 },
+  ovl_y: { mean: 0.0,  stddev: 1.2 },
+  ler:   { mean: 2.8,  stddev: 0.5 },
+};
+
+export const ALARM_TEMPLATES = [
+  { alarmId: 7042, code: 'CH_PRESS_OOS',  message: 'Chamber pressure out of spec',        severity: 'CRITICAL', rootCause: 'Throttle valve drift causing pressure regulation failure',   action: 'Hold current wafer and lot for inspection' },
+  { alarmId: 3021, code: 'WS_FOCUS_WARN', message: 'Focus offset approaching limit',       severity: 'MAJOR',    rootCause: 'Wafer stage leveling correction drifting',                   action: 'Run focus calibration sequence' },
+  { alarmId: 5003, code: 'TEMP_HIGH',     message: 'Chiller temperature above threshold',  severity: 'MAJOR',    rootCause: 'Coolant flow restriction in recirculation loop',             action: 'Check coolant lines and filter condition' },
+  { alarmId: 1015, code: 'GAS_FLOW_LOW',  message: 'Process gas flow below minimum',       severity: 'CRITICAL', rootCause: 'MFC calibration drift or supply pressure drop',              action: 'Verify gas supply pressure and MFC zero' },
+  { alarmId: 2088, code: 'RF_REFLECT',    message: 'RF reflected power exceeds limit',     severity: 'MAJOR',    rootCause: 'Impedance mismatch from process drift or arcing',            action: 'Check matching network and clean chamber' },
+  { alarmId: 4055, code: 'VACUUM_LEAK',   message: 'Base pressure not reached in time',    severity: 'CRITICAL', rootCause: 'O-ring seal degradation or chamber crack',                   action: 'Perform helium leak check on all ports' },
+  { alarmId: 6012, code: 'WFR_MISALIGN',  message: 'Wafer pre-alignment failed',           severity: 'MINOR',    rootCause: 'Wafer notch detection sensor contaminated',                  action: 'Clean notch sensor and retry alignment' },
+  { alarmId: 8077, code: 'PUMP_VIB',      message: 'Turbo pump vibration above threshold', severity: 'MAJOR',    rootCause: 'Bearing wear or rotor imbalance',                            action: 'Schedule pump replacement within 48h' },
+  { alarmId: 9001, code: 'INTLK_TRIP',    message: 'Safety interlock triggered',           severity: 'CRITICAL', rootCause: 'Door sensor or emergency stop activated',                    action: 'Inspect interlocks and reset when safe' },
+  { alarmId: 1234, code: 'DOSE_DRIFT',    message: 'Exposure dose uniformity degrading',   severity: 'MINOR',    rootCause: 'Lamp aging or pulse energy variance',                        action: 'Monitor and schedule lamp replacement' },
+] as const;
+
+export const TERMINAL_MESSAGES = [
+  'LOT {lot} COMPLETE — UNLOAD FOUP',
+  'PM CYCLE {n} STARTED ON {tool}',
+  'OPERATOR: CHECK ALIGNMENT ON {tool}',
+  'RECIPE {recipe} DOWNLOADED TO {tool}',
+  'WAFER {wafer} OF {total} PROCESSED',
+  'MAINTENANCE WINDOW IN {mins} MIN',
+  'QUAL WAFER RUN INITIATED ON {tool}',
+  'SHIFT CHANGE: B-SHIFT STARTING',
+] as const;
+
+export const STATUS_VARIABLES = [
+  { svid: 1,   name: 'ControlState',     values: ['Online Remote', 'Online Local', 'Offline'] },
+  { svid: 2,   name: 'ProcessState',     values: ['Processing', 'Idle', 'Setup', 'Ready'] },
+  { svid: 3,   name: 'PPExecName',       values: ['LITHO-193nm-v4', 'COAT-std-v2', 'DEV-alkaline-v1'] },
+  { svid: 4,   name: 'PrevProcessState', values: ['Processing', 'Idle', 'Paused'] },
+  { svid: 100, name: 'Temperature',      values: ['23.4', '24.1', '22.8', '23.9', '24.5'] },
+  { svid: 101, name: 'ChamberPressure',  values: ['800', '812', '795', '808', '821'] },
+  { svid: 102, name: 'GasFlowRate',      values: ['150.2', '149.8', '151.0', '148.5', '150.8'] },
+  { svid: 103, name: 'WaferCount',       values: ['0', '5', '12', '18', '24', '25'] },
+] as const;
+
+export const SCENARIO_TEMPLATES: DemoScenarioStep[][] = [
+  [ // SPC Violation Flow
+    { id: 'spc-establish', label: 'Establish communications', actor: 'Host',      action: 'Open communication channel and select equipment',  primary: 'S1F13', expected: 'S1F14', status: 'pending' },
+    { id: 'spc-collect',   label: 'Collect SPC report',      actor: 'Equipment', action: 'Publish wafer metrology collection event',          primary: 'S6F11', expected: 'S6F12', status: 'pending' },
+    { id: 'spc-inhibit',   label: 'Inhibit on violation',    actor: 'Host',      action: 'Send remote STOP after SPC rule breach',            primary: 'S2F41', expected: 'S2F42', status: 'pending' },
+    { id: 'spc-recipe',    label: 'Push corrected recipe',   actor: 'Host',      action: 'Load updated process program',                      primary: 'S2F49', expected: 'S2F50', status: 'pending' },
+  ],
+  [ // Lot Changeover
+    { id: 'lot-unload',  label: 'Unload current lot', actor: 'Equipment', action: 'Complete lot processing and unload FOUP',        primary: 'S6F11', expected: 'S6F12', status: 'pending' },
+    { id: 'lot-load',    label: 'Load new lot',       actor: 'Host',      action: 'Issue lot start command',                        primary: 'S2F41', expected: 'S2F42', status: 'pending' },
+    { id: 'lot-verify',  label: 'Verify recipe',      actor: 'Host',      action: 'Confirm process program loaded',                 primary: 'S1F3',  expected: 'S1F4',  status: 'pending' },
+    { id: 'lot-start',   label: 'Start process',      actor: 'Host',      action: 'Begin wafer processing sequence',                primary: 'S2F49', expected: 'S2F50', status: 'pending' },
+  ],
+  [ // Alarm Response
+    { id: 'alarm-report', label: 'Alarm report',        actor: 'Equipment', action: 'Equipment reports fault condition',                primary: 'S5F1',  expected: 'S5F2',  status: 'pending' },
+    { id: 'alarm-ack',    label: 'Operator acknowledge', actor: 'Host',      action: 'Operator acknowledges alarm and inspects state',  primary: 'S1F3',  expected: 'S1F4',  status: 'pending' },
+    { id: 'alarm-clear',  label: 'Clear alarm',          actor: 'Host',      action: 'Issue resume after condition resolved',           primary: 'S2F41', expected: 'S2F42', status: 'pending' },
+    { id: 'alarm-resume', label: 'Resume processing',    actor: 'Host',      action: 'Restart process with verified parameters',        primary: 'S2F49', expected: 'S2F50', status: 'pending' },
+  ],
+  [ // Preventive Maintenance
+    { id: 'pm-pause',  label: 'Pause tool',           actor: 'Host',      action: 'Suspend processing for scheduled maintenance',   primary: 'S2F41', expected: 'S2F42', status: 'pending' },
+    { id: 'pm-diag',   label: 'Run diagnostics',      actor: 'Equipment', action: 'Execute self-test and report results',           primary: 'S6F11', expected: 'S6F12', status: 'pending' },
+    { id: 'pm-config', label: 'Update configuration', actor: 'Host',      action: 'Push calibrated parameters to equipment',        primary: 'S2F49', expected: 'S2F50', status: 'pending' },
+    { id: 'pm-resume', label: 'Resume tool',           actor: 'Host',      action: 'Restart process with updated calibration',       primary: 'S2F41', expected: 'S2F42', status: 'pending' },
+  ],
+];
