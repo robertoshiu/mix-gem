@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import {
   Activity,
@@ -13,7 +13,20 @@ import {
   RefreshCw,
   Shield,
 } from 'lucide-react';
-import { getSecsGemDemoData, resolveDemoEquipment } from '@/lib/secs-gem-demo-data';
+import {
+  getSecsGemDemoData,
+  resolveDemoEquipment,
+  SCENARIO_TEMPLATES,
+  ALARM_TEMPLATES,
+} from '@/lib/secs-gem-demo-data';
+import type { DemoEquipment, DemoSecsMessage, DemoAlarm } from '@/lib/secs-gem-demo-data';
+import {
+  generateTick,
+  generateEquipmentUpdate,
+  createScenarioState,
+  advanceScenario,
+} from '@/lib/secs-gem-sim-engine';
+import type { ScenarioState } from '@/lib/secs-gem-sim-engine';
 import { FeedPacketCard } from '@/components/secs-simulator/FeedPacketCard';
 import { RecipeDetailCard } from '@/components/secs-simulator/RecipeDetailCard';
 import { ScenarioStepCard } from '@/components/secs-simulator/ScenarioStepCard';
@@ -23,85 +36,162 @@ import type { Recipe } from '@/lib/mes-types';
 import { MAX_VISIBLE_PACKETS, USER_OVERRIDE_DURATION, useReducedMotion } from '@/lib/secs-simulator-animation';
 import { cn } from '@/lib/utils';
 
-const speedIntervals: Record<string, number> = {
-  '0.5x': 2400,
-  '1x': 1400,
-  '5x': 700,
-  '10x': 350,
+const SPEED_INTERVALS: Record<string, number> = {
+  '0.5x': 1800,
+  '1x': 900,
+  '5x': 180,
+  '10x': 90,
 };
 
-function scenarioIndexForFeed(messageCount: number, scenarioCount: number): number {
-  if (scenarioCount === 0) return 0;
-  if (messageCount <= 2) return 0;
-  if (messageCount <= 3) return Math.min(1, scenarioCount - 1);
-  if (messageCount <= 5) return Math.min(2, scenarioCount - 1);
-  return scenarioCount - 1;
-}
-
-function nextFeedCount(current: number, max: number): number {
-  if (max === 0) return 0;
-  return Math.min(current + 1, max);
-}
+const TEMPLATE_NAMES = ['SPC Violation', 'Lot Changeover', 'Alarm Response', 'Preventive Maintenance'];
 
 export default function SecsGemPage() {
-  const data = useMemo(() => getSecsGemDemoData(), []);
+  const initialData = useMemo(() => getSecsGemDemoData(), []);
   const reducedMotion = useReducedMotion();
-  const [selectedEquipmentId, setSelectedEquipmentId] = useState<string | null>(data.equipment[0]?.id ?? null);
-  const [selectedSnapshotId, setSelectedSnapshotId] = useState<string>(data.snapshots[0]?.id ?? '');
+
+  const [equipment, setEquipment] = useState<DemoEquipment[]>(initialData.equipment);
+  const [messages, setMessages] = useState<DemoSecsMessage[]>([]);
+  const [selectedEquipmentId, setSelectedEquipmentId] = useState<string | null>(
+    initialData.equipment[0]?.id ?? null,
+  );
+  const tickRef = useRef(0);
+  const seedRef = useRef(Math.floor(Date.now() / 180_000));
+  const scenarioRef = useRef<ScenarioState>(createScenarioState());
+  const [scenarioState, setScenarioState] = useState<ScenarioState>(createScenarioState());
+  const [activeAlarm, setActiveAlarm] = useState<DemoAlarm | null>(initialData.alarms[0] ?? null);
   const [isRunning, setIsRunning] = useState(true);
   const [speed, setSpeed] = useState('1x');
-  const [visibleMessageCount, setVisibleMessageCount] = useState(Math.min(3, data.messages.length));
+  const [totalGenerated, setTotalGenerated] = useState(0);
+
   const [overrideStepId, setOverrideStepId] = useState<string | null>(null);
   const overrideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const selectedEquipment = resolveDemoEquipment(data, selectedEquipmentId);
-  const activeScenarioIndex = scenarioIndexForFeed(visibleMessageCount, data.scenarios.length);
-  const scenarioSteps = data.scenarios.map((step, index) => ({
+  // Derived state
+  const selectedEquipment = resolveDemoEquipment({ ...initialData, equipment }, selectedEquipmentId);
+  const template = SCENARIO_TEMPLATES[scenarioState.templateIndex] ?? SCENARIO_TEMPLATES[0];
+  const scenarioSteps = template.map((step, index) => ({
     ...step,
     status:
-      index < activeScenarioIndex
+      index < scenarioState.stepIndex
         ? ('complete' as const)
-        : index === activeScenarioIndex
+        : index === scenarioState.stepIndex
           ? ('active' as const)
           : ('pending' as const),
   }));
-  const visibleMessages = data.messages.slice(0, visibleMessageCount);
-  const visibleFeedMessages = visibleMessages.slice(Math.max(0, visibleMessageCount - 3));
-  const traceMessages =
-    visibleMessages.length > MAX_VISIBLE_PACKETS ? visibleMessages.slice(-MAX_VISIBLE_PACKETS) : visibleMessages;
-  const latestMessage = visibleMessages[visibleMessages.length - 1];
-  const activeSnapshot = data.snapshots[activeScenarioIndex] ?? data.snapshots[0];
-  const selectedSnapshot =
-    (isRunning ? activeSnapshot : data.snapshots.find((snapshot) => snapshot.id === selectedSnapshotId)) ??
-    data.snapshots[0];
-  const activeStep = scenarioSteps[activeScenarioIndex] ?? scenarioSteps[0];
-  const activeAlarm = data.alarms[0];
-  const feedProgress = data.messages.length === 0 ? 0 : Math.round((visibleMessageCount / data.messages.length) * 100);
-  const feedInterval = speedIntervals[speed] ?? speedIntervals['1x'];
-  const hasS2F49 = visibleMessages.some((message) => message.stream === 2 && message.function === 49);
-  const s2f49Message = visibleMessages.find((message) => message.stream === 2 && message.function === 49);
-  const s2f50Message = visibleMessages.find((message) => message.stream === 2 && message.function === 50);
+  const visibleFeedMessages = messages.slice(-3);
+  const traceMessages = messages.slice(-MAX_VISIBLE_PACKETS);
+  const latestMessage = messages[messages.length - 1];
+  const s2f49Message = [...messages].reverse().find((m) => m.stream === 2 && m.function === 49);
+  const s2f50Message = [...messages].reverse().find((m) => m.stream === 2 && m.function === 50);
+  const hasS2F49 = !!s2f49Message;
   const s2f49Payload = s2f49Message?.payload as { params?: Array<{ cpval?: unknown }> } | undefined;
   const recipeId = s2f49Payload?.params?.[0]?.cpval;
   const matchedRecipe: Recipe | undefined =
     typeof recipeId === 'string' ? MOCK_RECIPES.find((candidate) => candidate.id === recipeId) : undefined;
 
+  const activeStep = scenarioSteps[scenarioState.stepIndex] ?? scenarioSteps[0];
+
+  // Build active snapshot from current state
+  const activeSnapshot = useMemo(() => {
+    const step = template[scenarioState.stepIndex] ?? template[0];
+    return {
+      id: `snap-${scenarioState.templateIndex}-${scenarioState.stepIndex}`,
+      sequence: scenarioState.stepIndex + 1,
+      timestamp: new Date().toISOString(),
+      stepId: step?.id ?? 'unknown',
+      label: step?.label ?? 'Unknown',
+      stateVariables: [
+        { name: 'ControlState', value: selectedEquipment.connectionState === 'selected' ? 'Online Remote' : 'Online Local' },
+        { name: 'ProcessState', value: selectedEquipment.status === 'running' ? 'Processing' : selectedEquipment.status === 'idle' ? 'Idle' : 'Down' },
+        { name: 'PPExecName', value: selectedEquipment.currentRecipe },
+        { name: 'ActiveLot', value: selectedEquipment.activeLot },
+        { name: 'WaferProgress', value: selectedEquipment.waferProgress },
+      ],
+      pendingTransactions: messages.length > 0 ? messages.length % 3 : 0,
+    };
+  }, [scenarioState, template, selectedEquipment, messages.length]);
+
+  // doTick: generate messages, update equipment, advance scenario
+  const doTick = useCallback(() => {
+    const currentTick = tickRef.current;
+    const currentSeed = seedRef.current;
+
+    // Seed cycling: every 200 ticks, increment seed
+    if (currentTick > 0 && currentTick % 200 === 0) {
+      seedRef.current = currentSeed + 1;
+    }
+
+    const tickResult = generateTick(currentSeed, currentTick);
+    const eqUpdates = generateEquipmentUpdate(
+      currentSeed,
+      currentTick,
+      equipment.map((eq) => ({
+        id: eq.id,
+        connectionState: eq.connectionState,
+        status: eq.status,
+        waferProgress: eq.waferProgress,
+        timers: eq.timers,
+      })),
+    );
+
+    // Advance scenario for each generated message
+    let nextScenario = scenarioRef.current;
+    for (const msg of tickResult.messages) {
+      nextScenario = advanceScenario(nextScenario, msg.sf);
+    }
+    scenarioRef.current = nextScenario;
+    setScenarioState(nextScenario);
+
+    // Update alarm on S5F1
+    const alarmMsg = tickResult.messages.find((m) => m.stream === 5 && m.function === 1);
+    if (alarmMsg) {
+      const payload = alarmMsg.payload as { alid?: number; altx?: string };
+      const matched = ALARM_TEMPLATES.find((t) => t.alarmId === payload.alid);
+      if (matched) {
+        setActiveAlarm({
+          id: `alarm-${payload.alid}`,
+          severity: matched.severity,
+          equipmentId: selectedEquipmentId ?? '',
+          message: matched.message,
+          rootCause: matched.rootCause,
+          action: matched.action,
+        });
+      }
+    }
+
+    // Push to rolling buffer
+    setMessages((prev) => {
+      const next = [...prev, ...tickResult.messages];
+      return next.length > MAX_VISIBLE_PACKETS ? next.slice(-MAX_VISIBLE_PACKETS) : next;
+    });
+
+    setTotalGenerated((prev) => prev + tickResult.messages.length);
+
+    // Merge equipment updates
+    if (eqUpdates.length > 0) {
+      setEquipment((prev) =>
+        prev.map((eq) => {
+          const update = eqUpdates.find((u) => u.equipmentId === eq.id);
+          if (!update) return eq;
+          return { ...eq, ...update.changes } as DemoEquipment;
+        }),
+      );
+    }
+
+    tickRef.current = currentTick + 1;
+  }, [equipment, selectedEquipmentId]);
+
+  // Tick loop
   useEffect(() => {
-    if (!isRunning || data.messages.length === 0) return undefined;
+    if (!isRunning) return undefined;
 
-    const interval = window.setInterval(() => {
-      setVisibleMessageCount((current) => {
-        const next = nextFeedCount(current, data.messages.length);
-        if (next === data.messages.length) {
-          window.setTimeout(() => setIsRunning(false), 0);
-        }
-        return next;
-      });
-    }, feedInterval);
+    const interval = SPEED_INTERVALS[speed] ?? SPEED_INTERVALS['1x'];
+    const timer = window.setInterval(doTick, interval);
 
-    return () => window.clearInterval(interval);
-  }, [data.messages.length, feedInterval, isRunning]);
+    return () => window.clearInterval(timer);
+  }, [isRunning, speed, doTick]);
 
+  // Cleanup override timer
   useEffect(() => {
     return () => {
       if (overrideTimerRef.current) {
@@ -125,21 +215,35 @@ export default function SecsGemPage() {
     }, USER_OVERRIDE_DURATION);
   };
 
-  const advanceFeed = () => {
-    setVisibleMessageCount((current) => nextFeedCount(current, data.messages.length));
+  const handleStart = () => {
+    setIsRunning(true);
+  };
+
+  const handlePause = () => {
     setIsRunning(false);
   };
 
-  const resetFeed = () => {
-    setVisibleMessageCount(Math.min(1, data.messages.length));
-    setSelectedSnapshotId(data.snapshots[0]?.id ?? '');
+  const handleStep = () => {
+    doTick();
+    setIsRunning(false);
+  };
+
+  const handleReset = () => {
+    setMessages([]);
+    tickRef.current = 0;
+    seedRef.current = Math.floor(Date.now() / 180_000);
+    scenarioRef.current = createScenarioState();
+    setScenarioState(createScenarioState());
+    setTotalGenerated(0);
+    setEquipment(initialData.equipment);
+    setActiveAlarm(initialData.alarms[0] ?? null);
     setIsRunning(false);
   };
 
   const scenarioStepCards = scenarioSteps.map((step, index) => {
-    const isComplete = index < activeScenarioIndex;
-    const isActive = index === activeScenarioIndex || (isComplete && overrideStepId === step.id);
-    const message = data.messages.find((candidate) => candidate.sf === step.primary);
+    const isComplete = index < scenarioState.stepIndex;
+    const isActive = index === scenarioState.stepIndex || (isComplete && overrideStepId === step.id);
+    const message = messages.find((candidate) => candidate.sf === step.primary);
 
     return (
       <ScenarioStepCard
@@ -148,7 +252,7 @@ export default function SecsGemPage() {
         isActive={isActive}
         isComplete={isComplete}
         message={message}
-        snapshot={data.snapshots[index]}
+        snapshot={activeSnapshot}
         onUserExpand={() => handleUserExpand(index)}
       />
     );
@@ -166,8 +270,8 @@ export default function SecsGemPage() {
               SECS/GEM Simulator
             </h1>
             <p className="mt-2 max-w-3xl text-sm text-[var(--sf-text-secondary)]">
-              Demo scenario sourced from equipment-monitor mock equipment, lots, recipes,
-              alarms, and SECS event helpers. No HSMS socket or backend service is required.
+              Dynamic simulation with 7 message categories, hash-seeded PRNG engine, and 3-minute
+              auto-cycling data. No HSMS socket or backend required.
             </p>
           </div>
 
@@ -202,30 +306,30 @@ export default function SecsGemPage() {
               <h2 className="text-sm font-semibold">HSMS Session</h2>
             </div>
             <div className="space-y-2 p-3">
-              {data.equipment.map((equipment) => (
+              {equipment.map((eq) => (
                 <button
-                  key={equipment.id}
+                  key={eq.id}
                   type="button"
-                  onClick={() => setSelectedEquipmentId(equipment.id)}
+                  onClick={() => setSelectedEquipmentId(eq.id)}
                   className={cn(
                     'min-h-16 w-full cursor-pointer rounded-md border p-3 text-left transition-colors',
                     'focus:outline-none focus:ring-2 focus:ring-[var(--sf-accent-cyan)]',
-                    selectedEquipment.id === equipment.id
+                    selectedEquipment.id === eq.id
                       ? 'border-[var(--sf-border-active)] bg-[var(--sf-surface-elevated)]'
-                      : 'border-[var(--sf-border-default)] bg-[var(--sf-surface-panel)] hover:bg-[var(--sf-surface-panel-alt)]'
+                      : 'border-[var(--sf-border-default)] bg-[var(--sf-surface-panel)] hover:bg-[var(--sf-surface-panel-alt)]',
                   )}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-sm">{equipment.name}</span>
+                    <span className="font-mono text-sm">{eq.name}</span>
                     <span className="rounded border border-[var(--sf-border-default)] px-2 py-1 text-xs uppercase text-[var(--sf-text-secondary)]">
-                      {equipment.connectionState}
+                      {eq.connectionState}
                     </span>
                   </div>
                   <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-[var(--sf-text-muted)]">
-                    <span>{equipment.host}</span>
-                    <span>:{equipment.port}</span>
-                    <span>Device {equipment.deviceId}</span>
-                    <span>{equipment.waferProgress} wafers</span>
+                    <span>{eq.host}</span>
+                    <span>:{eq.port}</span>
+                    <span>Device {eq.deviceId}</span>
+                    <span>{eq.waferProgress} wafers</span>
                   </div>
                 </button>
               ))}
@@ -238,17 +342,15 @@ export default function SecsGemPage() {
                 <div className="flex items-center gap-2">
                   <Activity className="h-4 w-4 text-[var(--sf-accent-teal)]" />
                   <h2 className="text-sm font-semibold">Scenario Console</h2>
+                  <span className="rounded-full border border-[var(--sf-border-default)] bg-[var(--sf-surface-panel)] px-2 py-0.5 text-xs text-[var(--sf-text-secondary)]">
+                    {TEMPLATE_NAMES[scenarioState.templateIndex] ?? TEMPLATE_NAMES[0]}
+                  </span>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
                     aria-pressed={isRunning}
-                    onClick={() => {
-                      if (visibleMessageCount >= data.messages.length) {
-                        setVisibleMessageCount(Math.min(1, data.messages.length));
-                      }
-                      setIsRunning(true);
-                    }}
+                    onClick={handleStart}
                     className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md bg-[var(--sf-accent-blue)] px-3 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-[var(--sf-accent-cyan)]"
                   >
                     <Play className="h-4 w-4" />
@@ -257,7 +359,7 @@ export default function SecsGemPage() {
                   <button
                     type="button"
                     aria-pressed={!isRunning}
-                    onClick={() => setIsRunning(false)}
+                    onClick={handlePause}
                     className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-[var(--sf-border-default)] px-3 text-sm text-[var(--sf-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--sf-accent-cyan)]"
                   >
                     <Pause className="h-4 w-4" />
@@ -265,7 +367,7 @@ export default function SecsGemPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={advanceFeed}
+                    onClick={handleStep}
                     className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-[var(--sf-border-default)] px-3 text-sm text-[var(--sf-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--sf-accent-cyan)]"
                   >
                     <ChevronRight className="h-4 w-4" />
@@ -273,7 +375,7 @@ export default function SecsGemPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={resetFeed}
+                    onClick={handleReset}
                     className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-[var(--sf-border-default)] px-3 text-sm text-[var(--sf-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--sf-accent-cyan)]"
                   >
                     <RefreshCw className="h-4 w-4" />
@@ -300,17 +402,11 @@ export default function SecsGemPage() {
                   <h2 className="text-sm font-semibold">Dynamic Data Feed</h2>
                 </div>
                 <div className="font-mono text-xs text-[var(--sf-text-muted)]" aria-live="polite" aria-atomic="true">
-                  {visibleMessageCount}/{data.messages.length} packets ingested · {feedProgress}% replayed
+                  {totalGenerated} packets generated · {messages.length} in buffer
                 </div>
               </div>
               <div className="p-4">
-                <div className="h-2 overflow-hidden rounded-full bg-[var(--sf-surface-panel)]">
-                  <div
-                    className="h-full rounded-full bg-[linear-gradient(90deg,var(--sf-accent-blue),var(--sf-accent-cyan),var(--sf-accent-teal))] transition-[width] duration-500 motion-reduce:transition-none"
-                    style={{ width: `${feedProgress}%` }}
-                  />
-                </div>
-                <div className="mt-3 grid gap-2 md:grid-cols-3">
+                <div className="grid gap-2 md:grid-cols-3">
                   {reducedMotion ? (
                     visibleFeedMessages.map((message, index) => (
                       <FeedPacketCard
@@ -335,12 +431,6 @@ export default function SecsGemPage() {
                     </AnimatePresence>
                   )}
                 </div>
-                {visibleMessageCount > 3 && (
-                  <div className="mt-2 text-xs text-[var(--sf-text-muted)]">
-                    Showing {Math.min(visibleMessageCount, 3)} of {data.messages.length} packets in feed ·{' '}
-                    {traceMessages.length} rows in trace
-                  </div>
-                )}
               </div>
             </section>
 
@@ -351,14 +441,9 @@ export default function SecsGemPage() {
                   <h2 className="text-sm font-semibold">Live SECS Trace</h2>
                 </div>
                 <span className="rounded-full border border-[var(--sf-border-default)] px-3 py-1 font-mono text-xs text-[var(--sf-text-secondary)]">
-                  {isRunning ? 'streaming' : 'hold'} · {speed}
+                  {isRunning ? 'streaming' : 'hold'} · {speed} · {traceMessages.length}/{MAX_VISIBLE_PACKETS} rows
                 </span>
               </div>
-              {data.messages.length > MAX_VISIBLE_PACKETS && (
-                <div className="mb-2 px-4 pt-3 text-xs text-[var(--sf-text-muted)]">
-                  Trace buffer: showing latest {MAX_VISIBLE_PACKETS} of {data.messages.length} messages
-                </div>
-              )}
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[760px] text-left text-sm">
                   <thead className="text-xs uppercase text-[var(--sf-text-muted)]">
@@ -394,7 +479,7 @@ export default function SecsGemPage() {
             <section className="rounded-lg border border-[var(--sf-border-default)] bg-[var(--sf-surface-card)]">
               <div className="flex min-h-12 items-center gap-2 border-b border-[var(--sf-border-default)] px-4">
                 <Database className="h-4 w-4 text-[var(--sf-accent-violet)]" />
-                <h2 className="text-sm font-semibold">Replay State</h2>
+                <h2 className="text-sm font-semibold">Replay Controls</h2>
               </div>
               <div className="space-y-4 p-4">
                 <div>
@@ -416,30 +501,9 @@ export default function SecsGemPage() {
                   </select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  {data.snapshots.map((snapshot) => (
-                    <button
-                      key={snapshot.id}
-                      type="button"
-                      onClick={() => setSelectedSnapshotId(snapshot.id)}
-                      className={cn(
-                        'min-h-11 cursor-pointer rounded-md border px-3 text-left text-xs',
-                        selectedSnapshot?.id === snapshot.id
-                          ? 'border-[var(--sf-border-active)] bg-[var(--sf-surface-elevated)]'
-                          : 'border-[var(--sf-border-default)] bg-[var(--sf-surface-panel)]'
-                      )}
-                    >
-                      <span className="block font-mono">#{snapshot.sequence}</span>
-                      <span className="block truncate text-[var(--sf-text-muted)]">
-                        {snapshot.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-
-                {selectedSnapshot && (
+                {activeSnapshot && (
                   <dl className="space-y-2 rounded-md border border-[var(--sf-border-default)] bg-[var(--sf-surface-panel)] p-3">
-                    {selectedSnapshot.stateVariables.map((variable) => (
+                    {activeSnapshot.stateVariables.map((variable) => (
                       <div key={variable.name} className="flex justify-between gap-3 text-sm">
                         <dt className="text-[var(--sf-text-muted)]">{variable.name}</dt>
                         <dd className="truncate font-mono">{variable.value}</dd>
@@ -447,7 +511,7 @@ export default function SecsGemPage() {
                     ))}
                     <div className="flex justify-between gap-3 border-t border-[var(--sf-border-default)] pt-2 text-sm">
                       <dt className="text-[var(--sf-text-muted)]">Pending transactions</dt>
-                      <dd className="font-mono">{selectedSnapshot.pendingTransactions}</dd>
+                      <dd className="font-mono">{activeSnapshot.pendingTransactions}</dd>
                     </div>
                   </dl>
                 )}
@@ -487,9 +551,11 @@ export default function SecsGemPage() {
 
             <section className="rounded-lg border border-[var(--sf-border-default)] bg-[var(--sf-surface-card)] p-4">
               <h2 className="text-sm font-semibold">Active Step</h2>
-              <p className="mt-2 text-sm text-[var(--sf-text-secondary)]">{activeStep.action}</p>
+              <p className="mt-2 text-sm text-[var(--sf-text-secondary)]">
+                {activeStep?.action ?? 'Waiting for scenario'}
+              </p>
               <p className="mt-3 font-mono text-xs text-[var(--sf-text-muted)]">
-                {activeStep.primary}/{activeStep.expected}
+                {activeStep?.primary ?? '--'}/{activeStep?.expected ?? '--'}
               </p>
             </section>
           </aside>
