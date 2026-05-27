@@ -14,6 +14,8 @@ import type { EngineerAgent } from '../scene/engineerAgent';
 const SUIT_INDICATOR_COLORS: Record<string, string> = {
   base: '#e8eaed',  // white suit
   blue: '#4a90d9',  // blue suit
+  casual: '#48c78e',  // green (casual walk)
+  walking: '#f5a623',  // orange (walking)
 };
 
 interface LabelEntry {

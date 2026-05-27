@@ -11,7 +11,7 @@ import { createEngineerAgent, type EngineerAgent } from './scene/engineerAgent';
 import { createAlertSystem } from './systems/alertSystem';
 import { createArHud } from './systems/arHud';
 import { createEngineerLabels } from './systems/engineerLabels';
-import { loadCharacterGLB } from './config/assets';
+import { loadCharacterGLB, loadAnimatedCharacterGLB } from './config/assets';
 import { patrolRoutes } from './config/patrol';
 
 const TARGET_FPS = 30;
@@ -60,7 +60,9 @@ export async function initSurveillanceScene(canvases: HTMLCanvasElement[]): Prom
 
   for (const route of patrolRoutes) {
     try {
-      const character = await loadCharacterGLB(scene, route.suitVariant);
+      const character = route.animatedModel
+        ? await loadAnimatedCharacterGLB(scene, route.animatedModel)
+        : await loadCharacterGLB(scene, route.suitVariant);
       const agent = createEngineerAgent(scene, character, route);
 
       // Add character meshes as shadow casters
@@ -171,9 +173,9 @@ export async function initSurveillanceScene(canvases: HTMLCanvasElement[]): Prom
       lastSim = now;
       const dt = scene.getEngine().getDeltaTime() / 1000;
 
-      // Update engineers
+      // Update engineers (pass neighbors for collision avoidance)
       for (const engineer of engineers) {
-        engineer.update(dt);
+        engineer.update(dt, engineers);
       }
 
       // Alert system checks all engineers

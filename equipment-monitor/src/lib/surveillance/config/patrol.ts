@@ -8,9 +8,10 @@ export interface Waypoint {
 export interface PatrolRoute {
   id: string;
   name: string;
-  suitVariant: 'base' | 'blue';
+  suitVariant: 'base' | 'blue' | 'casual' | 'walking';
   walkSpeed: number; // m/s
   waypoints: Waypoint[];
+  animatedModel?: 'casualWalk' | 'walking';
 }
 
 /**
@@ -79,7 +80,47 @@ const route03: PatrolRoute = {
   ],
 };
 
-export const patrolRoutes: PatrolRoute[] = [route01, route02, route03];
+// ENG-04: Casual walk (skinned). Shares ENG-01's east/north outer perimeter but
+// traverses it in the OPPOSITE direction (northbound east wall, westbound north wall)
+// for head-on meetings. All waypoints on the outer perimeter (X=±13 / Z=±9 / Z=8),
+// >=2m clear of all equipment (nearest: PVD 8,-3 / SEM-02 4,-6).
+const route04: PatrolRoute = {
+  id: 'ENG-04',
+  name: '林淑芬',
+  suitVariant: 'casual',
+  animatedModel: 'casualWalk',
+  walkSpeed: 0.95,
+  waypoints: [
+    { position: new Vector3(7, 0, -9), pauseDuration: 1.5 },
+    { position: new Vector3(13, 0, -9), pauseDuration: 2.5 },
+    { position: new Vector3(13, 0, 0), pauseDuration: 1.5 },
+    { position: new Vector3(13, 0, 8), pauseDuration: 2.5 },
+    { position: new Vector3(7, 0, 8), pauseDuration: 1.5 },
+    { position: new Vector3(0, 0, 8), pauseDuration: 2.5 },
+    { position: new Vector3(-7, 0, 8), pauseDuration: 1.5 },
+  ],
+};
+
+// ENG-05: Walking (skinned). Crosses the south Z=-3.5 corridor (shared with ENG-03,
+// traversed westbound = opposite to ENG-03's eastbound) and the central aisle shared
+// with ENG-02. Stays >=2m from equipment (nearest: PVD 8,-3 / ROBOT 2,2 / SEM row Z=-6).
+const route05: PatrolRoute = {
+  id: 'ENG-05',
+  name: '張家豪',
+  suitVariant: 'walking',
+  animatedModel: 'walking',
+  walkSpeed: 1.05,
+  waypoints: [
+    { position: new Vector3(13, 0, -3.5), pauseDuration: 2 },
+    { position: new Vector3(5, 0, -3.5), pauseDuration: 1.5 },
+    { position: new Vector3(-7, 0, -3.5), pauseDuration: 2 },
+    { position: new Vector3(-2, 0, 0), pauseDuration: 1.5 },
+    { position: new Vector3(-2, 0, 6), pauseDuration: 2 },
+    { position: new Vector3(5, 0, 0), pauseDuration: 1.5 },
+  ],
+};
+
+export const patrolRoutes: PatrolRoute[] = [route01, route02, route03, route04, route05];
 
 // Keep legacy export for compatibility
 export const patrolPath = route01.waypoints;

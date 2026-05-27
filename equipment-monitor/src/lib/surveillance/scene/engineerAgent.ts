@@ -7,6 +7,7 @@ import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { FreeCamera } from '@babylonjs/core/Cameras/freeCamera';
 import { Scene } from '@babylonjs/core/scene';
+import type { AnimationGroup } from '@babylonjs/core/Animations/animationGroup';
 import { type PatrolRoute, applyJitter } from '../config/patrol';
 import type { LoadedCharacter } from '../config/assets';
 
@@ -21,7 +22,7 @@ export interface EngineerAgent {
   heading: number; // travel direction in radians
   state: AgentState;
   currentWaypointIndex: number;
-  update(dt: number): void;
+  update(dt: number, neighbors?: EngineerAgent[]): void;
   dispose(): void;
 }
 
@@ -31,6 +32,9 @@ const BOB_FREQUENCY = 4.0;  // Hz (2 steps per second = 4 half-cycles)
 const SWING_AMPLITUDE = 0.087; // ~5 degrees in radians
 // glTF models face local -Z. After nulling rotationQuaternion, add π so -Z aligns with heading.
 const CHARACTER_FORWARD_YAW_OFFSET = Math.PI;
+// Collision avoidance between agents (applies to all agents).
+const PERSONAL_SPACE = 0.9;   // metres; repulsion radius
+const MAX_AVOID_OFFSET = 0.6; // metres; max lateral displacement from path
 
 /**
  * Create an engineer agent from a loaded character GLB and patrol route.
@@ -45,6 +49,15 @@ export function createEngineerAgent(
   // so that rotation.y (facing) and rotation.z (walk swing) actually take effect.
   root.rotationQuaternion = null;
   const groundedY = root.position.y;
+
+  // Skeletal walk: textured models drive limb motion via AnimationGroup instead of
+  // the procedural bob/swing. Playback is toggled on walking/idle state changes.
+  const animated = character.hasSkeletalWalk === true;
+  const walkGroups: AnimationGroup[] = character.animationGroups ?? [];
+
+  // Persistent smoothed avoidance offset (lateral displacement from path).
+  let avoidX = 0;
+  let avoidZ = 0;
 
   // Position at first waypoint
   const startPos = route.waypoints[0].position.clone();
@@ -66,6 +79,20 @@ export function createEngineerAgent(
   let travelHeading = 0; // radians — direction of travel
   let currentTarget: Vector3 = applyJitter(route.waypoints[1].position);
 
+  function playWalk(): void {
+    if (!animated) return;
+    for (const group of walkGroups) {
+      if (!group.isPlaying) group.play(true);
+    }
+  }
+
+  function pauseWalk(): void {
+    if (!animated) return;
+    for (const group of walkGroups) {
+      group.pause();
+    }
+  }
+
   function faceTarget(from: Vector3, target: Vector3): void {
     const dir = target.subtract(from);
     if (dir.length() > 0.01) {
@@ -86,6 +113,7 @@ export function createEngineerAgent(
     nextIndex = (currentIndex + 1) % route.waypoints.length;
     progress = 0;
     state = 'idle';
+    pauseWalk();
     pauseTimer = route.waypoints[currentIndex].pauseDuration;
     walkTime = 0;
 
@@ -99,12 +127,20 @@ export function createEngineerAgent(
     faceTarget(route.waypoints[currentIndex].position, currentTarget);
   }
 
-  function update(dt: number): void {
+  function update(dt: number, neighbors?: EngineerAgent[]): void {
+    // Base path position for this frame (idle: current waypoint; walking: lerped).
+    let bx = root.position.x;
+    let bz = root.position.z;
+
     if (state === 'idle') {
       pauseTimer -= dt;
+      bx = route.waypoints[currentIndex].position.x;
+      bz = route.waypoints[currentIndex].position.z;
+      root.position.y = groundedY;
       // Idle: slowly face nearest direction
       if (pauseTimer <= 0) {
         state = 'walking';
+        playWalk();
         nextIndex = (currentIndex + 1) % route.waypoints.length;
         progress = 0;
         currentTarget = applyJitter(route.waypoints[nextIndex].position);
@@ -123,25 +159,52 @@ export function createEngineerAgent(
 
       if (progress >= 1) {
         arriveAtWaypoint();
+        return;
       } else {
         // Interpolate position
         const from = route.waypoints[currentIndex].position;
         const pos = Vector3.Lerp(from, currentTarget, progress);
-        root.position.x = pos.x;
-        root.position.z = pos.z;
+        bx = pos.x;
+        bz = pos.z;
 
-        // Procedural walk bob
-        walkTime += dt;
-        root.position.y = groundedY
-          + Math.abs(Math.sin(walkTime * BOB_FREQUENCY * Math.PI)) * BOB_AMPLITUDE;
+        if (animated) {
+          // Skeletal animation handles bob/limb motion — keep grounded and level.
+          root.position.y = groundedY;
+        } else {
+          // Procedural walk bob
+          walkTime += dt;
+          root.position.y = groundedY
+            + Math.abs(Math.sin(walkTime * BOB_FREQUENCY * Math.PI)) * BOB_AMPLITUDE;
 
-        // Rotation swing (subtle lean)
-        root.rotation.z = Math.sin(walkTime * BOB_FREQUENCY * Math.PI * 0.5) * SWING_AMPLITUDE;
+          // Rotation swing (subtle lean)
+          root.rotation.z = Math.sin(walkTime * BOB_FREQUENCY * Math.PI * 0.5) * SWING_AMPLITUDE;
+        }
 
         // Face direction of travel
         faceTarget(from, currentTarget);
       }
     }
+
+    // Collision avoidance: weighted repulsion from neighbors within PERSONAL_SPACE,
+    // applied as a smoothed lateral offset on top of the base path position.
+    let ox = 0, oz = 0;
+    if (neighbors) for (const o of neighbors) {
+      if (o.id === route.id) continue;
+      const dx = bx - o.position.x, dz = bz - o.position.z;
+      const d2 = dx * dx + dz * dz;
+      if (d2 > 1e-6 && d2 < PERSONAL_SPACE * PERSONAL_SPACE) {
+        const d = Math.sqrt(d2);
+        const w = (PERSONAL_SPACE - d) / PERSONAL_SPACE; // 1 at contact -> 0 at edge
+        ox += (dx / d) * w; oz += (dz / d) * w;
+      }
+    }
+    const olen = Math.hypot(ox, oz);
+    let tx = 0, tz = 0;
+    if (olen > 1e-6) { const mag = Math.min(olen, 1) * MAX_AVOID_OFFSET; tx = (ox / olen) * mag; tz = (oz / olen) * mag; }
+    avoidX += (tx - avoidX) * Math.min(1, dt * 8);
+    avoidZ += (tz - avoidZ) * Math.min(1, dt * 8);
+    root.position.x = bx + avoidX;
+    root.position.z = bz + avoidZ;
 
     // Sync AR camera — use setTarget for unambiguous forward direction
     const fwdX = Math.sin(travelHeading);
@@ -157,6 +220,10 @@ export function createEngineerAgent(
   }
 
   function dispose(): void {
+    for (const group of walkGroups) {
+      group.stop();
+      group.dispose();
+    }
     arCamera.dispose();
     root.dispose();
   }

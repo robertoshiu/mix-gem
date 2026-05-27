@@ -23,6 +23,8 @@ export const ASSET_PATHS = {
   character: {
     base: '/models/character/engineer_white.glb',
     suitBlue: '/models/character/engineer_blue.glb',
+    casualWalk: '/models/character/Meshy_AI_Animation_Casual_Walk_withSkin.glb',
+    walking: '/models/character/Meshy_AI_Animation_Walking_withSkin.glb',
   },
   accessory: {
     arGlasses: '/models/accessory/ar_glasses.glb',
@@ -194,6 +196,8 @@ export interface LoadedCharacter {
   root: BABYLON.TransformNode;
   headNode: BABYLON.TransformNode | null;
   allMeshes: BABYLON.AbstractMesh[];
+  animationGroups?: BABYLON.AnimationGroup[];
+  hasSkeletalWalk?: boolean;
 }
 
 // PBR suit colors per variant (Meshy preview models have no texture)
@@ -277,9 +281,11 @@ async function loadArHeadsetGLB(
  */
 export async function loadCharacterGLB(
   scene: BABYLON.Scene,
-  variant: 'base' | 'blue' = 'base',
+  variant: 'base' | 'blue' | 'casual' | 'walking' = 'base',
 ): Promise<LoadedCharacter> {
-  const charPath = variant === 'blue'
+  // Only base/blue are static-suit GLBs; other variants fall back to the base model.
+  const suitVariant: 'base' | 'blue' = variant === 'blue' ? 'blue' : 'base';
+  const charPath = suitVariant === 'blue'
     ? BASE_PATH + ASSET_PATHS.character.suitBlue
     : BASE_PATH + ASSET_PATHS.character.base;
 
@@ -317,9 +323,9 @@ export async function loadCharacterGLB(
     }
 
     // Apply suit color tint (Meshy preview models are untextured gray)
-    const colors = SUIT_COLORS[variant] ?? SUIT_COLORS.base;
+    const colors = SUIT_COLORS[suitVariant] ?? SUIT_COLORS.base;
     for (const mesh of childMeshes) {
-      const mat = new BABYLON.PBRMaterial(`suit_${variant}_${mesh.name}`, scene);
+      const mat = new BABYLON.PBRMaterial(`suit_${suitVariant}_${mesh.name}`, scene);
       mat.albedoColor = new BABYLON.Color3(...colors.albedo);
       mat.metallic = 0.05;
       mat.roughness = 0.7;
@@ -331,7 +337,99 @@ export async function loadCharacterGLB(
     }
   }
 
-  const headNode = await loadArHeadsetGLB(scene, variant, root);
+  const headNode = await loadArHeadsetGLB(scene, suitVariant, root);
 
   return { root, headNode, allMeshes };
+}
+
+// Probe-derived root-motion flags for the skinned walk models (both in-place).
+const ANIMATED_HAS_ROOT_MOTION: Record<'casualWalk' | 'walking', boolean> = {
+  casualWalk: false,
+  walking: false,
+};
+
+/**
+ * Load a textured skinned-walk character GLB and return its walk AnimationGroup(s).
+ * Keeps the model's original materials (the '*_withSkin' models are textured).
+ * The engineer agent plays/pauses the walk group based on walking/idle state.
+ */
+export async function loadAnimatedCharacterGLB(
+  scene: BABYLON.Scene,
+  modelKey: 'casualWalk' | 'walking',
+): Promise<LoadedCharacter> {
+  const charPath = BASE_PATH + ASSET_PATHS.character[modelKey];
+  const charResult = await BABYLON.ImportMeshAsync(charPath, scene);
+  const root = charResult.meshes[0] as unknown as BABYLON.TransformNode;
+  const allMeshes = [...charResult.meshes];
+
+  // Scale character to ~1.7m height and ground the model (same logic as loadCharacterGLB).
+  const childMeshes = root.getChildMeshes();
+  if (childMeshes.length > 0) {
+    root.computeWorldMatrix(true);
+    let minY = Infinity;
+    let maxY = -Infinity;
+    for (const mesh of childMeshes) {
+      mesh.computeWorldMatrix(true);
+      const bi = mesh.getBoundingInfo();
+      minY = Math.min(minY, bi.boundingBox.minimumWorld.y);
+      maxY = Math.max(maxY, bi.boundingBox.maximumWorld.y);
+    }
+    const currentHeight = maxY - minY;
+    if (currentHeight > 0 && Math.abs(currentHeight - 1.7) > 0.3) {
+      const scale = 1.7 / currentHeight;
+      root.scaling.scaleInPlace(scale);
+    }
+    // Recompute after scaling to ground the feet at Y=0
+    root.computeWorldMatrix(true);
+    let groundMinY = Infinity;
+    for (const mesh of childMeshes) {
+      mesh.computeWorldMatrix(true);
+      const bi = mesh.getBoundingInfo();
+      groundMinY = Math.min(groundMinY, bi.boundingBox.minimumWorld.y);
+    }
+    if (Math.abs(groundMinY) > 0.05) {
+      root.position.y = -groundMinY;
+    }
+  }
+
+  // Collect walk animation groups; stop initially (agent drives playback by state).
+  const groups = charResult.animationGroups ?? [];
+  for (const group of groups) {
+    group.stop();
+  }
+  // Pick the walk group: longest-duration group, falling back to index 0.
+  let walkGroups: BABYLON.AnimationGroup[] = [];
+  if (groups.length === 1) {
+    walkGroups = [groups[0]];
+  } else if (groups.length > 1) {
+    let best = groups[0];
+    for (const group of groups) {
+      if (group.to - group.from > best.to - best.from) best = group;
+    }
+    walkGroups = [best];
+  }
+
+  // If the model carries root motion, strip top-level position channels so the walk
+  // plays in place (defensive — both probed models report hasRootMotion=false).
+  if (ANIMATED_HAS_ROOT_MOTION[modelKey]) {
+    for (const group of walkGroups) {
+      const targeted = group.targetedAnimations ?? [];
+      for (let i = targeted.length - 1; i >= 0; i--) {
+        const ta = targeted[i];
+        const isPosition = ta?.animation?.targetProperty === 'position';
+        const isRoot = ta?.target === root || (ta?.target as BABYLON.Node)?.parent == null;
+        if (isPosition && isRoot) {
+          targeted.splice(i, 1);
+        }
+      }
+    }
+  }
+
+  return {
+    root,
+    headNode: null,
+    allMeshes,
+    animationGroups: walkGroups,
+    hasSkeletalWalk: true,
+  };
 }
