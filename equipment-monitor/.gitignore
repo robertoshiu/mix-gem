@@ -48,3 +48,4 @@ next-env.d.ts
 /public/env/*.env
 /vendor/grabcad/*.step
 /CREDITS.md
+.gstack/

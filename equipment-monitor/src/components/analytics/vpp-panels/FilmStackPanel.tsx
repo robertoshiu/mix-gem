@@ -1,72 +1,106 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useMemo } from 'react';
+import {
+  BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList,
+} from 'recharts';
 import type { FilmLayer } from '@/lib/analytics/types';
+import { SYM } from '@/lib/analytics/symbols';
+import { useClientReady } from '@/hooks/use-client-ready';
 
 interface Props {
   filmStack: FilmLayer[];
 }
 
+/** Themed recharts tooltip surface — #0f172a + cyan border (home dashboard style). */
+const TOOLTIP_STYLE = {
+  backgroundColor: '#0f172a',
+  border: '1px solid rgba(34,211,238,0.45)',
+  borderRadius: 12,
+  color: '#f8fafc',
+  fontSize: 12,
+} as const;
+
+const AXIS_STROKE = 'rgba(148,163,184,0.72)';
+const GRID_STROKE = 'rgba(148,163,184,0.12)';
+
 export function FilmStackPanel({ filmStack }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const clientReady = useClientReady();
   const totalThickness = filmStack.reduce((s, l) => s + l.thickness, 0);
 
-  useEffect(() => {
-    drawFilmStack(canvasRef.current, filmStack);
-  });
+  // Bottom-up stack order (substrate at bottom): reverse so the X axis reads
+  // from the deepest layer outward, matching the physical wafer cross-section.
+  const data = useMemo(
+    () =>
+      filmStack
+        .map((l, i) => ({
+          material: l.material,
+          thickness: Number(l.thickness.toFixed(1)),
+          color: l.color,
+          key: `${l.material}-${i}`,
+        }))
+        .reverse(),
+    [filmStack],
+  );
+
+  const thickest =
+    filmStack.length > 0
+      ? filmStack.reduce((a, b) => (a.thickness > b.thickness ? a : b)).material
+      : SYM.dash;
 
   return (
-    <div className="space-y-2">
-      <canvas ref={canvasRef} data-testid="film-stack-canvas" width={500} height={200}
-        className="w-full bg-[var(--smartfactory-bg-base)] rounded" />
-      <div className="flex flex-wrap gap-2 text-xs text-[var(--smartfactory-text-secondary)]">
+    <div className="space-y-3">
+      <div className="h-[200px] rounded-2xl border border-[rgba(34,211,238,0.18)] bg-[rgba(2,6,23,0.55)] p-3">
+        {clientReady ? (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data} margin={{ top: 16, right: 12, left: -8, bottom: 0 }}>
+              <CartesianGrid stroke={GRID_STROKE} vertical={false} />
+              <XAxis dataKey="material" stroke={AXIS_STROKE} fontSize={10} tickLine={false} axisLine={false} interval={0} />
+              <YAxis
+                stroke={AXIS_STROKE}
+                fontSize={11}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(v: number) => `${v.toFixed(0)}`}
+              />
+              <Tooltip
+                cursor={{ fill: 'rgba(34,211,238,0.08)' }}
+                contentStyle={TOOLTIP_STYLE}
+                formatter={(v: number | undefined) => [`${(v ?? 0).toFixed(1)} nm`, 'Thickness']}
+              />
+              <Bar dataKey="thickness" radius={[4, 4, 0, 0]} data-testid="film-stack-chart">
+                <LabelList
+                  dataKey="thickness"
+                  position="top"
+                  fontSize={10}
+                  fill="#94A3B8"
+                  formatter={(v: React.ReactNode) => `${Number(v ?? 0).toFixed(0)}`}
+                />
+                {data.map((d) => (
+                  <Cell key={d.key} fill={d.color} fillOpacity={0.7} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="flex h-full items-center justify-center text-sm text-[var(--sf-text-secondary)]">
+            Rendering film stack...
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-wrap gap-3 text-sm text-[var(--sf-text-secondary)]">
         {filmStack.map((l, i) => (
-          <span key={i} className="flex items-center gap-1">
-            <span className="inline-block w-2 h-2 rounded-sm" style={{ backgroundColor: l.color }} />
-            {l.material} — {l.thickness.toFixed(0)} nm
+          <span key={i} className="flex items-center gap-1.5">
+            <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: l.color }} />
+            {l.material} {SYM.dash} {l.thickness.toFixed(0)} nm
           </span>
         ))}
       </div>
-      <div className="text-xs text-[var(--smartfactory-text-muted)]">
-        Total: {totalThickness.toFixed(0)} nm | {filmStack.length} layers | Thickest: {filmStack.length > 0 ? filmStack.reduce((a, b) => a.thickness > b.thickness ? a : b).material : '—'}
+      <div className="text-sm text-[var(--sf-text-secondary)]">
+        Total: {totalThickness.toFixed(0)} nm {SYM.dash} {filmStack.length} layers {SYM.dash} Thickest:{' '}
+        {thickest}
       </div>
     </div>
   );
-}
-
-function drawFilmStack(canvas: HTMLCanvasElement | null, stack: FilmLayer[]) {
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  const { width: W, height: H } = canvas;
-  ctx.clearRect(0, 0, W, H);
-  if (stack.length === 0) return;
-
-  const pad = 20;
-  const totalThickness = stack.reduce((s, l) => s + l.thickness, 0);
-  const drawH = H - 2 * pad;
-  const barW = W * 0.4;
-  const barX = (W - barW) / 2;
-
-  ctx.fillStyle = '#475569';
-  ctx.fillRect(barX, H - pad - 20, barW, 20);
-  ctx.fillStyle = '#94A3B8';
-  ctx.font = '10px monospace';
-  ctx.textAlign = 'center';
-  ctx.fillText('Si Substrate', barX + barW / 2, H - pad - 6);
-
-  let y = H - pad - 20;
-  for (let i = stack.length - 1; i >= 0; i--) {
-    const layerH = Math.max(15, (stack[i].thickness / totalThickness) * (drawH - 20));
-    y -= layerH;
-    ctx.fillStyle = stack[i].color + '88';
-    ctx.strokeStyle = stack[i].color;
-    ctx.lineWidth = 1;
-    ctx.fillRect(barX, y, barW, layerH);
-    ctx.strokeRect(barX, y, barW, layerH);
-    ctx.fillStyle = '#94A3B8';
-    ctx.font = '10px monospace';
-    ctx.textAlign = 'left';
-    ctx.fillText(`${stack[i].material} ${stack[i].thickness.toFixed(0)}nm`, barX + barW + 8, y + layerH / 2 + 4);
-  }
 }

@@ -1,11 +1,44 @@
 'use client';
 
-import { useRef, useEffect, useState } from 'react';
-import type { DopantSpeciesId, DopantProfileResult } from '@/lib/analytics/types';
+import { useMemo, useState } from 'react';
+import {
+  LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine,
+} from 'recharts';
+import type { DopantSpeciesId } from '@/lib/analytics/types';
 import { computeDopantProfile } from '@/lib/analytics/vpp-engine';
 import { ALL_DOPANT_SPECIES, DOPANT_IMPLANT_DATA } from '@/lib/analytics/vpp-constants';
+import { SYM } from '@/lib/analytics/symbols';
+import { useClientReady } from '@/hooks/use-client-ready';
 
-export function DopantPanel() {
+interface Props {
+  /** Called when the user explores via a control — pauses the parent tab's live updates. */
+  onExplore?: () => void;
+}
+
+/** Themed recharts tooltip surface — #0f172a + cyan border (home dashboard style). */
+const TOOLTIP_STYLE = {
+  backgroundColor: '#0f172a',
+  border: '1px solid rgba(34,211,238,0.45)',
+  borderRadius: 12,
+  color: '#f8fafc',
+  fontSize: 12,
+} as const;
+
+const AXIS_STROKE = 'rgba(148,163,184,0.72)';
+const GRID_STROKE = 'rgba(148,163,184,0.12)';
+
+function toggleClass(active: boolean): string {
+  return [
+    'inline-flex min-h-[44px] items-center rounded-full px-3 py-2 text-sm font-medium outline-none transition-colors',
+    'focus-visible:ring-2 focus-visible:ring-[var(--sf-accent-cyan)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B0F19]',
+    active
+      ? 'border border-[rgba(34,211,238,0.5)] bg-[rgba(34,211,238,0.16)] text-[var(--sf-accent-cyan)]'
+      : 'border border-[rgba(34,211,238,0.18)] bg-[rgba(2,6,23,0.5)] text-[var(--sf-text-secondary)] hover:bg-[rgba(34,211,238,0.08)]',
+  ].join(' ');
+}
+
+export function DopantPanel({ onExplore }: Props) {
+  const clientReady = useClientReady();
   const [selected, setSelected] = useState<DopantSpeciesId[]>(['B', 'P', 'As']);
   const [depthMax, setDepthMax] = useState(500);
   const [scale, setScale] = useState<'log' | 'linear'>('log');
@@ -14,194 +47,198 @@ export function DopantPanel() {
   const [showActive, setShowActive] = useState(false);
   const [showJunction, setShowJunction] = useState(true);
 
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const explore = (fn: () => void) => {
+    onExplore?.();
+    fn();
+  };
 
-  const result = computeDopantProfile(selected, 0, depthMax, annealTemp, annealTime, showActive);
+  const result = useMemo(
+    () => computeDopantProfile(selected, 0, depthMax, annealTemp, annealTime, showActive),
+    [selected, depthMax, annealTemp, annealTime, showActive],
+  );
 
-  useEffect(() => {
-    drawDopantProfile(canvasRef.current, result, scale, showJunction, showActive);
-  });
+  // Merge per-species profiles into one row-per-depth dataset keyed by species id.
+  const chartData = useMemo(() => {
+    if (result.species.length === 0) return [];
+    const nPoints = result.species[0].profile.length;
+    const rows: Record<string, number>[] = [];
+    for (let i = 0; i < nPoints; i++) {
+      const row: Record<string, number> = { depth: Number(result.species[0].profile[i].depth.toFixed(1)) };
+      for (const sp of result.species) {
+        const pt = sp.profile[i];
+        const c = showActive ? pt.activeConcentration : pt.concentration;
+        // Floor for log axis so zeros don't break log10.
+        row[sp.species] = Math.max(c, 1e14);
+      }
+      rows.push(row);
+    }
+    return rows;
+  }, [result, showActive]);
 
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap gap-2 items-center">
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-3">
         {ALL_DOPANT_SPECIES.map((sp) => (
-          <label key={sp} className="flex items-center gap-1 text-xs text-[var(--smartfactory-text-muted)]">
-            <input type="checkbox" aria-label={sp} checked={selected.includes(sp)}
-              onChange={(e) => {
-                if (e.target.checked) setSelected([...selected, sp]);
-                else setSelected(selected.filter((s) => s !== sp));
-              }} />
-            <span className="inline-block w-2 h-2 rounded-sm" style={{ backgroundColor: DOPANT_IMPLANT_DATA[sp].color }} />
+          <label key={sp} className="flex items-center gap-1.5 text-sm text-[var(--sf-text-secondary)]">
+            <input
+              type="checkbox"
+              aria-label={sp}
+              checked={selected.includes(sp)}
+              className="h-4 w-4 accent-[var(--sf-accent-cyan)]"
+              onChange={(e) =>
+                explore(() => {
+                  if (e.target.checked) setSelected([...selected, sp]);
+                  else setSelected(selected.filter((s) => s !== sp));
+                })
+              }
+            />
+            <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: DOPANT_IMPLANT_DATA[sp].color }} />
             {sp}
           </label>
         ))}
       </div>
 
-      <div className="flex flex-wrap gap-2 items-center">
-        <div className="flex items-center gap-1">
-          <label className="text-xs text-[var(--smartfactory-text-muted)]">Depth:</label>
-          <input type="range" min={100} max={2000} step={50} value={depthMax}
-            onChange={(e) => setDepthMax(Number(e.target.value))} className="w-20" />
-          <span className="text-xs text-[var(--smartfactory-text-secondary)]">{depthMax} nm</span>
-        </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-2 text-sm text-[var(--sf-text-secondary)]">
+          <span>Depth</span>
+          <input
+            type="range"
+            min={100}
+            max={2000}
+            step={50}
+            value={depthMax}
+            aria-label="Maximum depth"
+            onChange={(e) => explore(() => setDepthMax(Number(e.target.value)))}
+            className="h-2 w-24 accent-[var(--sf-accent-cyan)]"
+          />
+          <span className="font-mono tabular-nums text-[var(--sf-text-primary)]">{depthMax} nm</span>
+        </label>
         {([['log', 'Log'], ['linear', 'Linear']] as const).map(([val, label]) => (
-          <button key={val} onClick={() => setScale(val)}
-            className={`px-2 py-1 text-xs rounded ${scale === val ? 'bg-blue-600 text-white' : 'bg-[var(--smartfactory-bg-base)] text-[var(--smartfactory-text-secondary)] border border-[var(--smartfactory-border-default)]'}`}>
+          <button key={val} type="button" onClick={() => explore(() => setScale(val))} className={toggleClass(scale === val)}>
             {label}
           </button>
         ))}
         {([['Total', false], ['Active', true]] as const).map(([label, val]) => (
-          <button key={label} onClick={() => setShowActive(val as boolean)}
-            className={`px-2 py-1 text-xs rounded ${showActive === val ? 'bg-blue-600 text-white' : 'bg-[var(--smartfactory-bg-base)] text-[var(--smartfactory-text-secondary)] border border-[var(--smartfactory-border-default)]'}`}>
+          <button key={label} type="button" onClick={() => explore(() => setShowActive(val as boolean))} className={toggleClass(showActive === val)}>
             {label}
           </button>
         ))}
-        <label className="flex items-center gap-1 text-xs text-[var(--smartfactory-text-muted)]">
-          <input type="checkbox" checked={showJunction} onChange={(e) => setShowJunction(e.target.checked)} />
+        <label className="flex items-center gap-1.5 text-sm text-[var(--sf-text-secondary)]">
+          <input
+            type="checkbox"
+            checked={showJunction}
+            className="h-4 w-4 accent-[var(--sf-accent-cyan)]"
+            onChange={(e) => explore(() => setShowJunction(e.target.checked))}
+          />
           Junction Xj
         </label>
       </div>
 
-      <div className="flex flex-wrap gap-2 items-center">
-        <div className="flex items-center gap-1">
-          <label className="text-xs text-[var(--smartfactory-text-muted)]">Anneal T:</label>
-          <input type="range" min={800} max={1200} step={10} value={annealTemp}
-            onChange={(e) => setAnnealTemp(Number(e.target.value))} className="w-20" />
-          <span className="text-xs text-[var(--smartfactory-text-secondary)]">{annealTemp}&deg;C</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <label className="text-xs text-[var(--smartfactory-text-muted)]">Time:</label>
-          <input type="range" min={1} max={120} step={1} value={annealTime}
-            onChange={(e) => setAnnealTime(Number(e.target.value))} className="w-20" />
-          <span className="text-xs text-[var(--smartfactory-text-secondary)]">{annealTime} min</span>
-        </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-2 text-sm text-[var(--sf-text-secondary)]">
+          <span>Anneal T</span>
+          <input
+            type="range"
+            min={800}
+            max={1200}
+            step={10}
+            value={annealTemp}
+            aria-label="Anneal temperature"
+            onChange={(e) => explore(() => setAnnealTemp(Number(e.target.value)))}
+            className="h-2 w-24 accent-[var(--sf-accent-cyan)]"
+          />
+          <span className="font-mono tabular-nums text-[var(--sf-text-primary)]">
+            {annealTemp}
+            {SYM.deg}C
+          </span>
+        </label>
+        <label className="flex items-center gap-2 text-sm text-[var(--sf-text-secondary)]">
+          <span>Time</span>
+          <input
+            type="range"
+            min={1}
+            max={120}
+            step={1}
+            value={annealTime}
+            aria-label="Anneal time"
+            onChange={(e) => explore(() => setAnnealTime(Number(e.target.value)))}
+            className="h-2 w-24 accent-[var(--sf-accent-cyan)]"
+          />
+          <span className="font-mono tabular-nums text-[var(--sf-text-primary)]">{annealTime} min</span>
+        </label>
       </div>
 
-      <canvas ref={canvasRef} data-testid="dopant-profile-canvas" width={500} height={250}
-        className="w-full bg-[var(--smartfactory-bg-base)] rounded" />
+      <div className="h-[260px] rounded-2xl border border-[rgba(34,211,238,0.18)] bg-[rgba(2,6,23,0.55)] p-3" data-testid="dopant-profile-chart">
+        {clientReady ? (
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={chartData} margin={{ top: 8, right: 16, left: 8, bottom: 8 }}>
+              <CartesianGrid stroke={GRID_STROKE} />
+              <XAxis
+                dataKey="depth"
+                type="number"
+                stroke={AXIS_STROKE}
+                fontSize={10}
+                tickLine={false}
+                axisLine={false}
+                label={{ value: 'Depth (nm)', position: 'insideBottom', offset: -4, fill: '#94A3B8', fontSize: 10 }}
+              />
+              <YAxis
+                stroke={AXIS_STROKE}
+                fontSize={10}
+                tickLine={false}
+                axisLine={false}
+                scale={scale === 'log' ? 'log' : 'linear'}
+                domain={scale === 'log' ? [1e14, 1e21] : ['auto', 'auto']}
+                tickFormatter={(v: number) => (v > 0 ? `1e${Math.round(Math.log10(v))}` : '0')}
+                width={48}
+              />
+              <Tooltip
+                contentStyle={TOOLTIP_STYLE}
+                formatter={(v: number | undefined, name) => [`${(v ?? 0).toExponential(1)} cm${SYM.dash}${SYM.sup2}`, name]}
+                labelFormatter={(d) => `Depth ${d} nm`}
+              />
+              <ReferenceLine y={result.backgroundDoping} stroke="rgba(148,163,184,0.5)" strokeDasharray="4 4" label={{ value: 'N_sub', position: 'right', fill: '#94A3B8', fontSize: 9 }} />
+              {result.species.map((sp) => (
+                <Line
+                  key={sp.species}
+                  type="monotone"
+                  dataKey={sp.species}
+                  stroke={sp.color}
+                  strokeWidth={2}
+                  dot={false}
+                  isAnimationActive={false}
+                />
+              ))}
+              {showJunction &&
+                result.species.map((sp) =>
+                  sp.junctionDepth > 0 && sp.junctionDepth < depthMax ? (
+                    <ReferenceLine
+                      key={`xj-${sp.species}`}
+                      x={Number(sp.junctionDepth.toFixed(1))}
+                      stroke={sp.color}
+                      strokeDasharray="2 2"
+                      label={{ value: `Xj ${sp.junctionDepth.toFixed(0)}`, position: 'top', fill: sp.color, fontSize: 9 }}
+                    />
+                  ) : null,
+                )}
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="flex h-full items-center justify-center text-sm text-[var(--sf-text-secondary)]">
+            Rendering dopant profile...
+          </div>
+        )}
+      </div>
 
-      <div className="flex flex-wrap gap-3 text-xs text-[var(--smartfactory-text-muted)]">
+      <div className="flex flex-wrap gap-4 text-sm text-[var(--sf-text-secondary)]">
         {result.species.map((sp) => (
           <span key={sp.species}>
-            <span className="inline-block w-2 h-2 rounded-sm mr-1" style={{ backgroundColor: sp.color }} />
-            {sp.species}: Peak {sp.peakConcentration.toExponential(1)} cm&sup3; | Xj {sp.junctionDepth.toFixed(0)} nm | Dose {sp.dose.toExponential(1)} cm&sup2;
+            <span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: sp.color }} />
+            {sp.species}: Peak {sp.peakConcentration.toExponential(1)} cm{SYM.dash}{SYM.sup2} {SYM.dash} Xj{' '}
+            {sp.junctionDepth.toFixed(0)} nm {SYM.dash} Dose {sp.dose.toExponential(1)} cm{SYM.sup2}
           </span>
         ))}
       </div>
     </div>
   );
-}
-
-function drawDopantProfile(
-  canvas: HTMLCanvasElement | null,
-  result: DopantProfileResult,
-  scale: 'log' | 'linear',
-  showJunction: boolean,
-  showActive: boolean,
-) {
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  const { width: W, height: H } = canvas;
-  ctx.clearRect(0, 0, W, H);
-  if (result.species.length === 0) return;
-
-  const pad = 50;
-  const allProfiles = result.species.flatMap((s) => s.profile);
-  const maxDepth = Math.max(...allProfiles.map((p) => p.depth));
-  const toX = (d: number) => pad + (d / (maxDepth || 1)) * (W - 2 * pad);
-
-  let toY: (c: number) => number;
-  if (scale === 'log') {
-    const logMin = 14;
-    const logMax = 21;
-    toY = (c: number) => {
-      const logC = Math.log10(Math.max(c, 1e14));
-      return H - pad - ((logC - logMin) / (logMax - logMin)) * (H - 2 * pad);
-    };
-    ctx.strokeStyle = '#1E293B';
-    ctx.lineWidth = 0.5;
-    for (let exp = logMin; exp <= logMax; exp++) {
-      const y = toY(Math.pow(10, exp));
-      ctx.beginPath();
-      ctx.moveTo(pad, y);
-      ctx.lineTo(W - pad, y);
-      ctx.stroke();
-      ctx.fillStyle = '#64748B';
-      ctx.font = '9px monospace';
-      ctx.textAlign = 'right';
-      ctx.fillText(`10^${exp}`, pad - 4, y + 3);
-    }
-  } else {
-    const maxC = Math.max(...allProfiles.map((p) => p.concentration));
-    toY = (c: number) => H - pad - (c / (maxC || 1)) * (H - 2 * pad);
-  }
-
-  // Background doping line
-  ctx.strokeStyle = '#475569';
-  ctx.setLineDash([4, 4]);
-  ctx.beginPath();
-  const bgY = toY(result.backgroundDoping);
-  ctx.moveTo(pad, bgY);
-  ctx.lineTo(W - pad, bgY);
-  ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillStyle = '#475569';
-  ctx.font = '9px monospace';
-  ctx.textAlign = 'left';
-  ctx.fillText('N_sub', W - pad + 4, bgY + 3);
-
-  // Draw profiles
-  for (const sp of result.species) {
-    ctx.strokeStyle = sp.color;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    sp.profile.forEach((pt, i) => {
-      const x = toX(pt.depth);
-      const c = showActive ? pt.activeConcentration : pt.concentration;
-      const y = toY(c);
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    });
-    ctx.stroke();
-
-    if (showActive) {
-      ctx.strokeStyle = sp.color + '88';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([3, 3]);
-      ctx.beginPath();
-      sp.profile.forEach((pt, i) => {
-        const x = toX(pt.depth);
-        const y = toY(pt.concentration);
-        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-      });
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-
-    if (showJunction && sp.junctionDepth > 0 && sp.junctionDepth < maxDepth) {
-      const jx = toX(sp.junctionDepth);
-      ctx.strokeStyle = sp.color;
-      ctx.setLineDash([2, 2]);
-      ctx.beginPath();
-      ctx.moveTo(jx, pad);
-      ctx.lineTo(jx, H - pad);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle = sp.color;
-      ctx.font = '9px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText(`Xj=${sp.junctionDepth.toFixed(0)}`, jx, pad - 4);
-    }
-  }
-
-  ctx.fillStyle = '#94A3B8';
-  ctx.font = '10px monospace';
-  ctx.textAlign = 'center';
-  ctx.fillText('Depth (nm)', W / 2, H - 4);
-  ctx.save();
-  ctx.translate(12, H / 2);
-  ctx.rotate(-Math.PI / 2);
-  ctx.fillText('Concentration (cm\u207B\u00B3)', 0, 0);
-  ctx.restore();
 }

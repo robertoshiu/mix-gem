@@ -3,7 +3,6 @@
 import {
   SUBSYSTEM_IDS,
   EQUIPMENT_DEFS,
-  type EquipmentDef,
   type EquipmentStatus,
 } from '../dashboard-facility-types';
 

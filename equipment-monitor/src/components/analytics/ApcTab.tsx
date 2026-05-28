@@ -1,9 +1,25 @@
 'use client';
 
-import { useRef, useEffect, useCallback, useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+} from 'recharts';
 import { simulateRuns, computeResidualStats } from '@/lib/analytics/apc-engine';
 import type { DriftType, DriftConfig } from '@/lib/analytics/types';
 import { useAnalyticsStore } from '@/stores/analytics-store';
+import { useAnalyticsSimStore } from '@/stores/analytics-sim-store';
+import { useClientReady } from '@/hooks/use-client-ready';
+import { SYM } from '@/lib/analytics/symbols';
+import { KpiBox } from '@/components/analytics/KpiBox';
 
 const DRIFT_OPTIONS: { value: DriftType; label: string }[] = [
   { value: 'none', label: 'None' },
@@ -13,193 +29,389 @@ const DRIFT_OPTIONS: { value: DriftType; label: string }[] = [
   { value: 'mixed', label: 'Mixed' },
 ];
 
+/** Themed recharts tooltip — surface #0f172a + cyan border, matches the home dashboard. */
+const TOOLTIP_STYLE = {
+  backgroundColor: '#0f172a',
+  border: '1px solid var(--sf-accent-cyan)',
+  borderRadius: 12,
+  color: '#f8fafc',
+  fontSize: 12,
+} as const;
+
+const AXIS_STROKE = 'rgba(148,163,184,0.72)';
+const GRID_STROKE = 'rgba(148,163,184,0.12)';
+
+/** Accent palette (DESIGN.md): cyan primary, blue controlled, red uncontrolled, slate target. */
+const COLOR_CONTROLLED = 'var(--sf-accent-blue)';
+const COLOR_UNCONTROLLED = 'var(--sf-status-red)';
+const COLOR_EWMA = 'var(--sf-accent-cyan)';
+const COLOR_TARGET = 'rgba(226,232,240,0.45)';
+
+/** Glass container shell matching the home dashboard treatment. */
+function GlassCard({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-3xl border border-[rgba(34,211,238,0.22)] bg-[rgba(2,6,23,0.72)] p-4 shadow-[0_24px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+      <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--sf-accent-cyan)]">
+        {title}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
+/** The four live/explore inputs the apc-engine consumes. */
+interface ApcInputs {
+  lambda: number;
+  lambdaSlope: number;
+  noise: number;
+  driftType: DriftType;
+}
+
 export function ApcTab() {
-  const {
-    apcTarget, apcLambda, apcLambdaSlope, apcNoise, apcDriftType, apcRunCount,
-    setApcLambda, setApcLambdaSlope, setApcDriftType, setApcRunCount,
-  } = useAnalyticsStore();
+  const clientReady = useClientReady();
+
+  // Static config that is not part of the live simulation channel.
+  const apcTarget = useAnalyticsStore((s) => s.apcTarget);
+  const apcRunCount = useAnalyticsStore((s) => s.apcRunCount);
+  const setApcRunCount = useAnalyticsStore((s) => s.setApcRunCount);
+
+  // Live snapshot for THIS module only (granular selector → re-renders on tick).
+  const liveSnapshot = useAnalyticsSimStore((s) => s.modules.apc);
+
+  // Slider takeover: local-only pause state (we never mutate the shared store).
+  // While `override` is non-null this tab is "exploring" — the engine reads the
+  // frozen + user-edited inputs instead of the live tick snapshot. The Hero and
+  // the shared driver keep running regardless.
+  const [override, setOverride] = useState<ApcInputs | null>(null);
+  const paused = override !== null;
+
+  // Inputs actually fed to the (unchanged) computation engine.
+  const inputs: ApcInputs = paused
+    ? override
+    : {
+        lambda: liveSnapshot.lambda,
+        lambdaSlope: liveSnapshot.lambdaSlope,
+        noise: liveSnapshot.noise,
+        driftType: liveSnapshot.driftType,
+      };
+
+  /** Enter explore mode (or update an existing override) with a patched input. */
+  const takeOver = (patch: Partial<ApcInputs>) => {
+    setOverride((prev) => ({
+      lambda: liveSnapshot.lambda,
+      lambdaSlope: liveSnapshot.lambdaSlope,
+      noise: liveSnapshot.noise,
+      driftType: liveSnapshot.driftType,
+      ...prev,
+      ...patch,
+    }));
+  };
+
+  const resumeLive = () => setOverride(null);
 
   const driftConfig: DriftConfig = useMemo(() => {
-    switch (apcDriftType) {
-      case 'linear': return { type: 'linear', slope: 0.5 };
-      case 'sinusoidal': return { type: 'sinusoidal', amplitude: 5, period: 30 };
-      case 'step-shift': return { type: 'step-shift', magnitude: 8, triggerRun: Math.floor(apcRunCount / 2) };
-      case 'mixed': return { type: 'mixed', slope: 0.2, amplitude: 3, period: 30 };
-      default: return { type: 'none' };
+    switch (inputs.driftType) {
+      case 'linear':
+        return { type: 'linear', slope: 0.5 };
+      case 'sinusoidal':
+        return { type: 'sinusoidal', amplitude: 5, period: 30 };
+      case 'step-shift':
+        return { type: 'step-shift', magnitude: 8, triggerRun: Math.floor(apcRunCount / 2) };
+      case 'mixed':
+        return { type: 'mixed', slope: 0.2, amplitude: 3, period: 30 };
+      default:
+        return { type: 'none' };
     }
-  }, [apcDriftType, apcRunCount]);
+  }, [inputs.driftType, apcRunCount]);
 
-  const runs = useMemo(() =>
-    simulateRuns({ target: apcTarget, lambda: apcLambda, lambdaSlope: apcLambdaSlope, noise: apcNoise }, driftConfig, apcRunCount, 42),
-    [apcTarget, apcLambda, apcLambdaSlope, apcNoise, driftConfig, apcRunCount],
+  // Source of truth: the existing apc-engine. We feed it the live (or explored)
+  // inputs — we never duplicate its EWMA / residual math here.
+  const runs = useMemo(
+    () =>
+      simulateRuns(
+        { target: apcTarget, lambda: inputs.lambda, lambdaSlope: inputs.lambdaSlope, noise: inputs.noise },
+        driftConfig,
+        apcRunCount,
+        42,
+      ),
+    [apcTarget, inputs.lambda, inputs.lambdaSlope, inputs.noise, driftConfig, apcRunCount],
   );
 
-  const stats = useMemo(() =>
-    computeResidualStats(runs.map((r) => r.controlled), apcTarget),
+  const stats = useMemo(
+    () => computeResidualStats(runs.map((r) => r.controlled), apcTarget),
     [runs, apcTarget],
   );
 
-  const traceRef = useRef<HTMLCanvasElement>(null);
-  const ewmaRef = useRef<HTMLCanvasElement>(null);
-  const histRef = useRef<HTMLCanvasElement>(null);
+  // Chart-ready data series.
+  const traceData = useMemo(
+    () =>
+      runs.map((r) => ({
+        run: r.run,
+        controlled: r.controlled,
+        uncontrolled: r.uncontrolled,
+        target: apcTarget,
+      })),
+    [runs, apcTarget],
+  );
 
-  const drawCharts = useCallback(() => {
-    drawTraceChart(traceRef.current, runs, apcTarget);
-    drawEwmaChart(ewmaRef.current, runs);
-    drawHistogram(histRef.current, stats);
-  }, [runs, apcTarget, stats]);
+  const ewmaData = useMemo(
+    () => runs.map((r) => ({ run: r.run, ewmaLevel: r.ewmaLevel, ewmaSlope: r.ewmaSlope })),
+    [runs],
+  );
 
-  useEffect(() => { drawCharts(); }, [drawCharts]);
+  const histData = useMemo(
+    () => stats.histogram.map((b) => ({ bin: Number(b.bin.toFixed(2)), count: b.count })),
+    [stats],
+  );
 
   const lastRun = runs[runs.length - 1];
-  const currentOffset = lastRun ? (lastRun.controlled - apcTarget).toFixed(2) : '\u2014';
+  const currentOffset = lastRun ? (lastRun.controlled - apcTarget).toFixed(2) : SYM.dash;
+  const usingDEwma = inputs.lambdaSlope > 0;
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-5 gap-2">
-        <KpiBox label="Current Offset" value={currentOffset} />
-        <KpiBox label="EWMA \u03BB" value={apcLambda.toFixed(2)} />
-        <KpiBox label="Drift Rate" value={driftConfig.type === 'linear' ? `${driftConfig.slope}/run` : driftConfig.type} />
+      <header className="space-y-1">
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-lg font-semibold text-[var(--sf-text-primary)]">APC Run-to-Run</h2>
+          {paused ? (
+            <span
+              data-testid="apc-paused-badge"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--sf-status-amber)] bg-[rgba(245,158,11,0.12)] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--sf-status-amber)]"
+            >
+              <span aria-hidden="true" className="h-2 w-2 rounded-full bg-[var(--sf-status-amber)]" />
+              Paused {SYM.dash} exploring
+            </span>
+          ) : (
+            <span
+              data-testid="apc-live-badge"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(34,211,238,0.4)] bg-[rgba(34,211,238,0.1)] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--sf-accent-cyan)]"
+            >
+              <span aria-hidden="true" className="h-2 w-2 animate-pulse rounded-full bg-[var(--sf-accent-cyan)]" />
+              Live
+            </span>
+          )}
+          {paused && (
+            <button
+              type="button"
+              onClick={resumeLive}
+              className="inline-flex min-h-[44px] items-center rounded-full border border-[rgba(34,211,238,0.4)] bg-[rgba(34,211,238,0.1)] px-4 text-sm font-medium text-[var(--sf-accent-cyan)] transition-colors hover:bg-[rgba(34,211,238,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sf-accent-cyan)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B0F19]"
+            >
+              Resume live
+            </button>
+          )}
+        </div>
+        <p className="text-sm leading-snug text-[var(--sf-text-secondary)]">
+          Run-to-run control nudges every wafer back to target {SYM.dash} watch the EWMA loop
+          cancel out drift and tighten the spread.
+        </p>
+      </header>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5" aria-live="off">
+        <KpiBox
+          label="Current offset"
+          value={currentOffset}
+          plain="Last wafer vs target"
+        />
+        <KpiBox
+          label={`EWMA ${SYM.lambda}`}
+          value={inputs.lambda.toFixed(2)}
+          plain="Correction smoothing"
+        />
+        <KpiBox
+          label="Drift rate"
+          value={driftConfig.type === 'linear' ? `${driftConfig.slope}/run` : driftConfig.type}
+        />
         <KpiBox label="Runs" value={`${apcRunCount}`} />
-        <KpiBox label="Cpk" value={stats.cpk === Infinity ? '\u221E' : stats.cpk.toFixed(2)} />
+        <KpiBox
+          label="Cpk"
+          value={stats.cpk === Infinity ? SYM.dash : stats.cpk.toFixed(2)}
+          accent="var(--sf-status-green)"
+          plain="Process capability"
+        />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="space-y-3 bg-[var(--smartfactory-surface-card)] border border-[var(--smartfactory-border-default)] rounded p-3">
-          <div className="flex gap-2">
-            <button onClick={() => setApcLambdaSlope(0)}
-              className={`px-3 py-1 text-xs rounded ${apcLambdaSlope === 0 ? 'bg-blue-600 text-white' : 'bg-[var(--smartfactory-surface-card)] text-[var(--smartfactory-text-secondary)] border border-[var(--smartfactory-border-default)]'}`}>
-              EWMA
-            </button>
-            <button onClick={() => setApcLambdaSlope(0.1)}
-              className={`px-3 py-1 text-xs rounded ${apcLambdaSlope > 0 ? 'bg-blue-600 text-white' : 'bg-[var(--smartfactory-surface-card)] text-[var(--smartfactory-text-secondary)] border border-[var(--smartfactory-border-default)]'}`}>
-              d-EWMA
-            </button>
-          </div>
-
-          <div>
-            <label className="text-xs text-[var(--smartfactory-text-muted)]">EWMA \u03BB</label>
-            <input type="range" min={0.01} max={1} step={0.01} value={apcLambda}
-              onChange={(e) => setApcLambda(Number(e.target.value))} className="w-full" />
-          </div>
-
-          {apcLambdaSlope > 0 && (
-            <div>
-              <label className="text-xs text-[var(--smartfactory-text-muted)]">Slope \u03BB</label>
-              <input type="range" min={0.01} max={0.5} step={0.01} value={apcLambdaSlope}
-                onChange={(e) => setApcLambdaSlope(Number(e.target.value))} className="w-full" />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <GlassCard title="Controller">
+          <div className="space-y-4">
+            <div className="flex gap-2" role="group" aria-label="Controller mode">
+              <button
+                type="button"
+                onClick={() => takeOver({ lambdaSlope: 0 })}
+                aria-pressed={!usingDEwma}
+                className={`min-h-[44px] rounded-xl px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sf-accent-cyan)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B0F19] ${
+                  !usingDEwma
+                    ? 'bg-[var(--sf-accent-blue)] text-white'
+                    : 'border border-[rgba(34,211,238,0.22)] bg-[rgba(2,6,23,0.72)] text-[var(--sf-text-secondary)] hover:text-[var(--sf-text-primary)]'
+                }`}
+              >
+                EWMA
+              </button>
+              <button
+                type="button"
+                onClick={() => takeOver({ lambdaSlope: 0.1 })}
+                aria-pressed={usingDEwma}
+                className={`min-h-[44px] rounded-xl px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sf-accent-cyan)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B0F19] ${
+                  usingDEwma
+                    ? 'bg-[var(--sf-accent-blue)] text-white'
+                    : 'border border-[rgba(34,211,238,0.22)] bg-[rgba(2,6,23,0.72)] text-[var(--sf-text-secondary)] hover:text-[var(--sf-text-primary)]'
+                }`}
+              >
+                d-EWMA
+              </button>
             </div>
-          )}
 
-          <div>
-            <label htmlFor="drift-type" className="text-xs text-[var(--smartfactory-text-muted)]">Drift Type</label>
-            <select id="drift-type" aria-label="Drift Type" value={apcDriftType}
-              onChange={(e) => setApcDriftType(e.target.value as DriftType)}
-              className="w-full bg-[var(--smartfactory-bg-base)] border border-[var(--smartfactory-border-default)] rounded px-2 py-1 text-sm text-[var(--smartfactory-text-primary)]">
-              {DRIFT_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          </div>
+            <div>
+              <label
+                htmlFor="apc-lambda"
+                className="text-sm text-[var(--sf-text-secondary)]"
+              >
+                EWMA {SYM.lambda} {SYM.dash} {inputs.lambda.toFixed(2)}
+              </label>
+              <input
+                id="apc-lambda"
+                type="range"
+                min={0.01}
+                max={1}
+                step={0.01}
+                value={inputs.lambda}
+                onChange={(e) => takeOver({ lambda: Number(e.target.value) })}
+                className="mt-1 w-full accent-[var(--sf-accent-cyan)]"
+              />
+            </div>
 
-          <div>
-            <label className="text-xs text-[var(--smartfactory-text-muted)]">Run Count</label>
-            <input type="range" min={20} max={200} value={apcRunCount}
-              onChange={(e) => setApcRunCount(Number(e.target.value))} className="w-full" />
-            <span className="text-xs text-[var(--smartfactory-text-secondary)]">{apcRunCount}</span>
+            {usingDEwma && (
+              <div>
+                <label
+                  htmlFor="apc-slope"
+                  className="text-sm text-[var(--sf-text-secondary)]"
+                >
+                  Slope {SYM.lambda} {SYM.dash} {inputs.lambdaSlope.toFixed(2)}
+                </label>
+                <input
+                  id="apc-slope"
+                  type="range"
+                  min={0.01}
+                  max={0.5}
+                  step={0.01}
+                  value={inputs.lambdaSlope}
+                  onChange={(e) => takeOver({ lambdaSlope: Number(e.target.value) })}
+                  className="mt-1 w-full accent-[var(--sf-accent-cyan)]"
+                />
+              </div>
+            )}
+
+            <div>
+              <label htmlFor="apc-drift" className="text-sm text-[var(--sf-text-secondary)]">
+                Drift type
+              </label>
+              <select
+                id="apc-drift"
+                aria-label="Drift type"
+                value={inputs.driftType}
+                onChange={(e) => takeOver({ driftType: e.target.value as DriftType })}
+                className="mt-1 min-h-[44px] w-full rounded-xl border border-[rgba(34,211,238,0.22)] bg-[#0B0F19] px-3 text-sm text-[var(--sf-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sf-accent-cyan)]"
+              >
+                {DRIFT_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="apc-runs" className="text-sm text-[var(--sf-text-secondary)]">
+                Run count {SYM.dash} {apcRunCount}
+              </label>
+              <input
+                id="apc-runs"
+                type="range"
+                min={20}
+                max={200}
+                value={apcRunCount}
+                onChange={(e) => {
+                  setApcRunCount(Number(e.target.value));
+                  takeOver({});
+                }}
+                className="mt-1 w-full accent-[var(--sf-accent-cyan)]"
+              />
+            </div>
           </div>
-        </div>
+        </GlassCard>
 
         <div className="space-y-4">
-          <canvas ref={traceRef} data-testid="apc-chart-trace" width={500} height={200}
-            className="w-full bg-[var(--smartfactory-surface-card)] border border-[var(--smartfactory-border-default)] rounded" />
-          <canvas ref={ewmaRef} data-testid="apc-chart-ewma" width={500} height={200}
-            className="w-full bg-[var(--smartfactory-surface-card)] border border-[var(--smartfactory-border-default)] rounded" />
-          <canvas ref={histRef} data-testid="apc-chart-hist" width={500} height={200}
-            className="w-full bg-[var(--smartfactory-surface-card)] border border-[var(--smartfactory-border-default)] rounded" />
+          <GlassCard title="Process trace">
+            <div className="h-48" data-testid="apc-chart-trace">
+              {clientReady ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={traceData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                    <CartesianGrid stroke={GRID_STROKE} vertical={false} />
+                    <XAxis dataKey="run" stroke={AXIS_STROKE} fontSize={10} tickLine={false} axisLine={false} />
+                    <YAxis stroke={AXIS_STROKE} fontSize={10} tickLine={false} axisLine={false} width={36} />
+                    <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ stroke: 'var(--sf-accent-cyan)', strokeWidth: 1 }} />
+                    <ReferenceLine y={apcTarget} stroke={COLOR_TARGET} strokeDasharray="6 6" />
+                    <Line type="monotone" dataKey="uncontrolled" name="Uncontrolled" stroke={COLOR_UNCONTROLLED} strokeWidth={1} dot={false} isAnimationActive={false} />
+                    <Line type="monotone" dataKey="controlled" name="Controlled" stroke={COLOR_CONTROLLED} strokeWidth={2} dot={false} isAnimationActive={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <ChartPlaceholder />
+              )}
+            </div>
+          </GlassCard>
+
+          <GlassCard title="EWMA level">
+            <div className="h-48" data-testid="apc-chart-ewma">
+              {clientReady ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={ewmaData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                    <CartesianGrid stroke={GRID_STROKE} vertical={false} />
+                    <XAxis dataKey="run" stroke={AXIS_STROKE} fontSize={10} tickLine={false} axisLine={false} />
+                    <YAxis stroke={AXIS_STROKE} fontSize={10} tickLine={false} axisLine={false} width={36} />
+                    <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ stroke: 'var(--sf-accent-cyan)', strokeWidth: 1 }} />
+                    <Line type="monotone" dataKey="ewmaLevel" name="EWMA level" stroke={COLOR_EWMA} strokeWidth={2} dot={false} isAnimationActive={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <ChartPlaceholder />
+              )}
+            </div>
+          </GlassCard>
+
+          <GlassCard title="Residual histogram">
+            <div className="h-48" data-testid="apc-chart-hist">
+              {clientReady ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={histData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+                    <CartesianGrid stroke={GRID_STROKE} vertical={false} />
+                    <XAxis dataKey="bin" stroke={AXIS_STROKE} fontSize={10} tickLine={false} axisLine={false} />
+                    <YAxis stroke={AXIS_STROKE} fontSize={10} tickLine={false} axisLine={false} width={36} allowDecimals={false} />
+                    <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(34,211,238,0.08)' }} />
+                    <Bar dataKey="count" name="Count" fill={COLOR_CONTROLLED} fillOpacity={0.65} radius={[2, 2, 0, 0]} isAnimationActive={false} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <ChartPlaceholder />
+              )}
+            </div>
+          </GlassCard>
         </div>
       </div>
     </div>
   );
 }
 
-function KpiBox({ label, value }: { label: string; value: string }) {
+/** Hydration-gate placeholder shown until the client is ready (mirrors ProcessDashboard). */
+function ChartPlaceholder() {
   return (
-    <div className="bg-[var(--smartfactory-surface-card)] border border-[var(--smartfactory-border-default)] rounded p-2 text-center">
-      <div className="text-xs text-[var(--smartfactory-text-muted)]">{label}</div>
-      <div className="text-sm font-semibold text-[var(--smartfactory-text-primary)]">{value}</div>
+    <div className="flex h-full items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] text-sm text-[var(--sf-text-secondary)]">
+      Initializing telemetry...
     </div>
   );
-}
-
-function drawTraceChart(canvas: HTMLCanvasElement | null, runs: { run: number; controlled: number; uncontrolled: number }[], target: number) {
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  const { width: W, height: H } = canvas;
-  ctx.clearRect(0, 0, W, H);
-  if (runs.length === 0) return;
-  const pad = 30;
-  const allVals = runs.flatMap((r) => [r.controlled, r.uncontrolled]);
-  const yMin = Math.min(...allVals, target - 5);
-  const yMax = Math.max(...allVals, target + 5);
-  const yRange = yMax - yMin || 1;
-  const toX = (i: number) => pad + (i / (runs.length - 1)) * (W - 2 * pad);
-  const toY = (v: number) => H - pad - ((v - yMin) / yRange) * (H - 2 * pad);
-  ctx.strokeStyle = '#64748B';
-  ctx.setLineDash([4, 4]);
-  ctx.beginPath(); ctx.moveTo(pad, toY(target)); ctx.lineTo(W - pad, toY(target)); ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.strokeStyle = '#EF4444';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  runs.forEach((r, i) => { if (i === 0) ctx.moveTo(toX(i), toY(r.uncontrolled)); else ctx.lineTo(toX(i), toY(r.uncontrolled)); });
-  ctx.stroke();
-  ctx.strokeStyle = '#3B82F6';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  runs.forEach((r, i) => { if (i === 0) ctx.moveTo(toX(i), toY(r.controlled)); else ctx.lineTo(toX(i), toY(r.controlled)); });
-  ctx.stroke();
-}
-
-function drawEwmaChart(canvas: HTMLCanvasElement | null, runs: { ewmaLevel: number; ewmaSlope: number }[]) {
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  const { width: W, height: H } = canvas;
-  ctx.clearRect(0, 0, W, H);
-  if (runs.length === 0) return;
-  const pad = 30;
-  const levels = runs.map((r) => r.ewmaLevel);
-  const yMin = Math.min(...levels);
-  const yMax = Math.max(...levels);
-  const yRange = yMax - yMin || 1;
-  ctx.strokeStyle = '#22D3EE';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  runs.forEach((r, i) => {
-    const x = pad + (i / (runs.length - 1)) * (W - 2 * pad);
-    const y = H - pad - ((r.ewmaLevel - yMin) / yRange) * (H - 2 * pad);
-    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-  });
-  ctx.stroke();
-}
-
-function drawHistogram(canvas: HTMLCanvasElement | null, stats: ReturnType<typeof computeResidualStats>) {
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  const { width: W, height: H } = canvas;
-  ctx.clearRect(0, 0, W, H);
-  const { histogram } = stats;
-  if (histogram.length === 0) return;
-  const pad = 30;
-  const maxCount = Math.max(...histogram.map((b) => b.count), 1);
-  const barW = (W - 2 * pad) / histogram.length;
-  histogram.forEach((bin, i) => {
-    const x = pad + i * barW;
-    const barH = (bin.count / maxCount) * (H - 2 * pad);
-    ctx.fillStyle = '#3B82F688';
-    ctx.fillRect(x, H - pad - barH, barW - 1, barH);
-  });
 }

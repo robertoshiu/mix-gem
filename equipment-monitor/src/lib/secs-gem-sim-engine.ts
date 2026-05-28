@@ -1,19 +1,13 @@
 import type { DemoDirection, DemoSecsMessage } from './secs-gem-demo-data';
 import { ALARM_TEMPLATES, TERMINAL_MESSAGES, STATUS_VARIABLES, SPC_NOMINAL, SCENARIO_TEMPLATES } from './secs-gem-demo-data';
 import { MOCK_LOTS, MOCK_RECIPES } from './mes-mock-data';
+import { mulberry32 } from '@/lib/prng';
 
 // ── PRNG ──────────────────────────────────────────────
 
-/** Mulberry32 — fast 32-bit PRNG from a single integer seed. */
-export function mulberry32(seed: number): () => number {
-  let s = seed | 0;
-  return () => {
-    s = (s + 0x6d2b79f5) | 0;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+// Mulberry32 now lives in '@/lib/prng'. Re-exported here for backward
+// compatibility with existing importers and tests.
+export { mulberry32 };
 
 /** Pick element from array using a PRNG value in [0, 1). */
 export function pick<T>(arr: readonly T[], rand: number): T {

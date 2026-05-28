@@ -431,7 +431,7 @@ export function HvacPanel({
               data={particleHistoryArr}
               markers={markers}
               label="Particle Count"
-              unit="/m\u00B3"
+              unit="/m³"
               usl={ISO5_PARTICLE_LIMIT}
               color="#F59E0B"
               expanded={particleExpanded}
