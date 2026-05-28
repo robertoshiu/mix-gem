@@ -1,84 +1,102 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useMemo } from 'react';
+import {
+  BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine,
+} from 'recharts';
 import type { ThermalBudgetStep } from '@/lib/analytics/types';
 import { STEP_SHORT_NAMES } from '@/lib/analytics/constants';
+import { SYM } from '@/lib/analytics/symbols';
+import { useClientReady } from '@/hooks/use-client-ready';
 
 interface Props {
   steps: ThermalBudgetStep[];
   ceiling: number;
 }
 
+/** Themed recharts tooltip surface — #0f172a + cyan border (home dashboard style). */
+const TOOLTIP_STYLE = {
+  backgroundColor: '#0f172a',
+  border: '1px solid rgba(34,211,238,0.45)',
+  borderRadius: 12,
+  color: '#f8fafc',
+  fontSize: 12,
+} as const;
+
+const AXIS_STROKE = 'rgba(148,163,184,0.72)';
+const GRID_STROKE = 'rgba(148,163,184,0.12)';
+const STEP_COLORS = ['#F47920', '#22D3EE', '#8B5CF6', '#3B82F6', '#F43F5E', '#F59E0B', '#10B981', '#E2E8F0'];
+
 export function ThermalBudgetPanel({ steps, ceiling }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const clientReady = useClientReady();
   const totalDt = steps.length > 0 ? steps[steps.length - 1].cumulativeDt : 0;
   const exceeded = totalDt > ceiling;
 
-  useEffect(() => {
-    drawThermalBudget(canvasRef.current, steps, ceiling);
-  });
+  const data = useMemo(
+    () =>
+      steps.map((step, i) => ({
+        step: STEP_SHORT_NAMES[step.stepId] ?? step.stepId,
+        cumulativeDt: step.cumulativeDt,
+        isHot: step.temperature > 1000,
+        color: step.temperature > 1000 ? '#F59E0B' : STEP_COLORS[i % STEP_COLORS.length],
+      })),
+    [steps],
+  );
 
   return (
     <div className="space-y-2">
-      <canvas ref={canvasRef} data-testid="thermal-budget-canvas" width={500} height={200}
-        className="w-full bg-[var(--smartfactory-bg-base)] rounded" />
+      <div className="h-[200px] rounded-2xl border border-[rgba(34,211,238,0.18)] bg-[rgba(2,6,23,0.55)] p-3">
+        {clientReady ? (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data} margin={{ top: 16, right: 16, left: 0, bottom: 0 }}>
+              <CartesianGrid stroke={GRID_STROKE} vertical={false} />
+              <XAxis dataKey="step" stroke={AXIS_STROKE} fontSize={10} tickLine={false} axisLine={false} interval={0} />
+              <YAxis
+                stroke={AXIS_STROKE}
+                fontSize={10}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(v: number) => v.toExponential(0)}
+                width={48}
+              />
+              <Tooltip
+                cursor={{ fill: 'rgba(34,211,238,0.08)' }}
+                contentStyle={TOOLTIP_STYLE}
+                formatter={(v: number | undefined) => [`${(v ?? 0).toExponential(2)} °C·s`, 'Cumulative Dt']}
+              />
+              <ReferenceLine
+                y={ceiling}
+                stroke="#EF4444"
+                strokeDasharray="4 4"
+                label={{ value: `Ceiling ${ceiling.toExponential(1)}`, position: 'insideTopRight', fill: '#EF4444', fontSize: 10 }}
+              />
+              <Bar dataKey="cumulativeDt" radius={[4, 4, 0, 0]} data-testid="thermal-budget-chart">
+                {data.map((d) => (
+                  <Cell
+                    key={d.step}
+                    fill={d.color}
+                    fillOpacity={0.65}
+                    stroke={d.isHot ? '#F59E0B' : 'transparent'}
+                    strokeWidth={d.isHot ? 2 : 0}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="flex h-full items-center justify-center text-sm text-[var(--sf-text-secondary)]">
+            Rendering thermal budget...
+          </div>
+        )}
+      </div>
+      <div className="text-sm text-[var(--sf-text-secondary)]">
+        Cumulative Dt: <span className="font-mono tabular-nums">{totalDt.toExponential(2)}</span> {SYM.deg}C·s
+      </div>
       {exceeded && (
-        <div className="text-xs text-red-400 font-semibold">
-          Budget exceeded: {totalDt.toExponential(2)} &gt; {ceiling.toExponential(2)} °C·s
+        <div className="text-sm font-semibold text-[#FF6B6B]">
+          Budget exceeded: {totalDt.toExponential(2)} {SYM.gte} {ceiling.toExponential(2)} {SYM.deg}C·s
         </div>
       )}
     </div>
   );
-}
-
-const STEP_COLORS = ['#FF6B35', '#22D3EE', '#A855F7', '#3B82F6', '#F43F5E', '#F59E0B', '#10B981', '#E2E8F0'];
-
-function drawThermalBudget(canvas: HTMLCanvasElement | null, steps: ThermalBudgetStep[], ceiling: number) {
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  const { width: W, height: H } = canvas;
-  ctx.clearRect(0, 0, W, H);
-  if (steps.length === 0) return;
-
-  const pad = 40;
-  const maxDt = Math.max(ceiling, steps[steps.length - 1].cumulativeDt) * 1.1;
-  const barW = (W - 2 * pad) / steps.length * 0.7;
-  const gap = (W - 2 * pad) / steps.length * 0.3;
-
-  const ceilingY = H - pad - (ceiling / maxDt) * (H - 2 * pad);
-  ctx.strokeStyle = '#EF4444';
-  ctx.setLineDash([4, 4]);
-  ctx.beginPath();
-  ctx.moveTo(pad, ceilingY);
-  ctx.lineTo(W - pad, ceilingY);
-  ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillStyle = '#EF4444';
-  ctx.font = '10px monospace';
-  ctx.textAlign = 'right';
-  ctx.fillText(`Ceiling ${ceiling.toExponential(1)}`, W - pad, ceilingY - 4);
-
-  steps.forEach((step, i) => {
-    const x = pad + i * (barW + gap);
-    const barH = (step.cumulativeDt / maxDt) * (H - 2 * pad);
-    const isHot = step.temperature > 1000;
-    ctx.fillStyle = (isHot ? '#F59E0B' : STEP_COLORS[i % STEP_COLORS.length]) + '88';
-    ctx.fillRect(x, H - pad - barH, barW, barH);
-    if (isHot) {
-      ctx.strokeStyle = '#F59E0B';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(x, H - pad - barH, barW, barH);
-    }
-    ctx.fillStyle = '#94A3B8';
-    ctx.font = '10px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText(STEP_SHORT_NAMES[step.stepId] ?? step.stepId, x + barW / 2, H - pad + 12);
-    ctx.fillText(step.cumulativeDt.toExponential(1), x + barW / 2, H - pad - barH - 4);
-  });
-
-  ctx.fillStyle = '#94A3B8';
-  ctx.font = '10px monospace';
-  ctx.textAlign = 'left';
-  ctx.fillText('Cumulative Dt (\u00B0C\u00B7s)', pad, pad - 8);
 }
