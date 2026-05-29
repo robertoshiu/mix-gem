@@ -215,6 +215,196 @@
       "license": "Meshy-Commercial",
       "licenseUrl": "https://www.meshy.ai/terms",
       "downloadDate": "2026-05-17"
+    },
+    {
+      "id": "litho_scanner",
+      "title": "AI Generated: Nikon NSR-series lithography scanner",
+      "author": "Meshy AI",
+      "sourceUrl": "https://www.meshy.ai",
+      "license": "Meshy-Commercial",
+      "licenseUrl": "https://www.meshy.ai/terms",
+      "downloadDate": "2026-05-29",
+      "notes": "Optimized hero model (Draco + WebP, gltf-transform). Surveillance LITHO bay + War Room litho tool."
+    },
+    {
+      "id": "litho_optics",
+      "title": "AI Generated: blue beam through a lens — lithography optics",
+      "author": "Meshy AI",
+      "sourceUrl": "https://www.meshy.ai",
+      "license": "Meshy-Commercial",
+      "licenseUrl": "https://www.meshy.ai/terms",
+      "downloadDate": "2026-05-29",
+      "notes": "Optimized hero model. Fab Twin lithography tool."
+    },
+    {
+      "id": "plasma_etcher",
+      "title": "AI Generated: plasma etching system",
+      "author": "Meshy AI",
+      "sourceUrl": "https://www.meshy.ai",
+      "license": "Meshy-Commercial",
+      "licenseUrl": "https://www.meshy.ai/terms",
+      "downloadDate": "2026-05-29",
+      "notes": "Optimized hero model. Surveillance etch/CVD chamber."
+    },
+    {
+      "id": "etch_chamber_hero",
+      "title": "AI Generated: plasma etching system (hero chamber)",
+      "author": "Meshy AI",
+      "sourceUrl": "https://www.meshy.ai",
+      "license": "Meshy-Commercial",
+      "licenseUrl": "https://www.meshy.ai/terms",
+      "downloadDate": "2026-05-29",
+      "notes": "Optimized hero model. Fab Twin etch tool."
+    },
+    {
+      "id": "plasma_reactor",
+      "title": "AI Generated: glowing industrial plasma reactor",
+      "author": "Meshy AI",
+      "sourceUrl": "https://www.meshy.ai",
+      "license": "Meshy-Commercial",
+      "licenseUrl": "https://www.meshy.ai/terms",
+      "downloadDate": "2026-05-29",
+      "notes": "Optimized hero model. War Room etch tool."
+    },
+    {
+      "id": "thinfilm_cvd",
+      "title": "AI Generated: semiconductor thin-film deposition (CVD/ALD) cluster",
+      "author": "Meshy AI",
+      "sourceUrl": "https://www.meshy.ai",
+      "license": "Meshy-Commercial",
+      "licenseUrl": "https://www.meshy.ai/terms",
+      "downloadDate": "2026-05-29",
+      "notes": "Optimized hero model. Fab Twin deposition tool."
+    },
+    {
+      "id": "cu_electroplating",
+      "title": "AI Generated: semiconductor copper electroplating / metallization tool",
+      "author": "Meshy AI",
+      "sourceUrl": "https://www.meshy.ai",
+      "license": "Meshy-Commercial",
+      "licenseUrl": "https://www.meshy.ai/terms",
+      "downloadDate": "2026-05-29",
+      "notes": "Optimized hero model. War Room deposition tool."
+    },
+    {
+      "id": "cmp_polisher",
+      "title": "AI Generated: semiconductor CMP chemical-mechanical polisher",
+      "author": "Meshy AI",
+      "sourceUrl": "https://www.meshy.ai",
+      "license": "Meshy-Commercial",
+      "licenseUrl": "https://www.meshy.ai/terms",
+      "downloadDate": "2026-05-29",
+      "notes": "Optimized hero model. Surveillance CMP bay + War Room metrology tool."
+    },
+    {
+      "id": "wafer_processor",
+      "title": "AI Generated: semiconductor wafer processing tool",
+      "author": "Meshy AI",
+      "sourceUrl": "https://www.meshy.ai",
+      "license": "Meshy-Commercial",
+      "licenseUrl": "https://www.meshy.ai/terms",
+      "downloadDate": "2026-05-29",
+      "notes": "Optimized hero model. Surveillance metrology/inspection bay."
+    },
+    {
+      "id": "vacuum_chamber",
+      "title": "AI Generated: copper vacuum chamber (PVD)",
+      "author": "Meshy AI",
+      "sourceUrl": "https://www.meshy.ai",
+      "license": "Meshy-Commercial",
+      "licenseUrl": "https://www.meshy.ai/terms",
+      "downloadDate": "2026-05-29",
+      "notes": "Optimized hero model. Surveillance PVD bay."
+    },
+    {
+      "id": "diffusion_furnace",
+      "title": "AI Generated: vertical semiconductor diffusion furnace",
+      "author": "Meshy AI",
+      "sourceUrl": "https://www.meshy.ai",
+      "license": "Meshy-Commercial",
+      "licenseUrl": "https://www.meshy.ai/terms",
+      "downloadDate": "2026-05-29",
+      "notes": "Optimized hero model. Surveillance furnace bay."
+    },
+    {
+      "id": "cryo_implanter",
+      "title": "AI Generated: cryostat in operation — cryo / ion implanter",
+      "author": "Meshy AI",
+      "sourceUrl": "https://www.meshy.ai",
+      "license": "Meshy-Commercial",
+      "licenseUrl": "https://www.meshy.ai/terms",
+      "downloadDate": "2026-05-29",
+      "notes": "Optimized hero model. War Room test/implant tool."
+    },
+    {
+      "id": "stirred_reactor",
+      "title": "AI Generated: tall cylindrical vessel / stirred-tank reactor",
+      "author": "Meshy AI",
+      "sourceUrl": "https://www.meshy.ai",
+      "license": "Meshy-Commercial",
+      "licenseUrl": "https://www.meshy.ai/terms",
+      "downloadDate": "2026-05-29",
+      "notes": "Optimized hero model. Fab Twin sub-fab scrubber."
+    },
+    {
+      "id": "wet_bench",
+      "title": "AI Generated: blue liquid processing wet bench",
+      "author": "Meshy AI",
+      "sourceUrl": "https://www.meshy.ai",
+      "license": "Meshy-Commercial",
+      "licenseUrl": "https://www.meshy.ai/terms",
+      "downloadDate": "2026-05-29",
+      "notes": "Optimized hero model. Surveillance coat/clean bay."
+    },
+    {
+      "id": "automation_cell",
+      "title": "AI Generated: smart-factory industrial automation cell",
+      "author": "Meshy AI",
+      "sourceUrl": "https://www.meshy.ai",
+      "license": "Meshy-Commercial",
+      "licenseUrl": "https://www.meshy.ai/terms",
+      "downloadDate": "2026-05-29",
+      "notes": "Optimized hero model. Surveillance EFEM / automation bay."
+    },
+    {
+      "id": "cluster_tool",
+      "title": "AI Generated: large modular semiconductor cluster tool",
+      "author": "Meshy AI",
+      "sourceUrl": "https://www.meshy.ai",
+      "license": "Meshy-Commercial",
+      "licenseUrl": "https://www.meshy.ai/terms",
+      "downloadDate": "2026-05-29",
+      "notes": "Optimized hero model. Surveillance robot/cluster bay."
+    },
+    {
+      "id": "cluster_tool_b",
+      "title": "AI Generated: large modular semiconductor cluster tool (variant)",
+      "author": "Meshy AI",
+      "sourceUrl": "https://www.meshy.ai",
+      "license": "Meshy-Commercial",
+      "licenseUrl": "https://www.meshy.ai/terms",
+      "downloadDate": "2026-05-29",
+      "notes": "Optimized hero model. Fab Twin test/WAT cell."
+    },
+    {
+      "id": "process_bay",
+      "title": "AI Generated: large semiconductor process bay tool",
+      "author": "Meshy AI",
+      "sourceUrl": "https://www.meshy.ai",
+      "license": "Meshy-Commercial",
+      "licenseUrl": "https://www.meshy.ai/terms",
+      "downloadDate": "2026-05-29",
+      "notes": "Optimized hero model. War Room lithography tool."
+    },
+    {
+      "id": "discovery_engine",
+      "title": "AI Generated: 'The Discovery Engine' hero centerpiece",
+      "author": "Meshy AI",
+      "sourceUrl": "https://www.meshy.ai",
+      "license": "Meshy-Commercial",
+      "licenseUrl": "https://www.meshy.ai/terms",
+      "downloadDate": "2026-05-29",
+      "notes": "Optimized hero model. War Room central data-core centerpiece."
     }
   ],
   "generatedAt": "2026-05-17T08:26:00.000Z"

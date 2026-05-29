@@ -47,5 +47,11 @@ next-env.d.ts
 # /public/models/accessory/*.glb
 /public/env/*.env
 /vendor/grabcad/*.step
+# Raw Meshy downloads — huge (24 MB–484 MB), optimized into clean names via
+# scripts/optimize-meshy-batch.sh. Never tracked or shipped to GitHub Pages.
+# Scoped to the equipment folder only — character/ keeps its tracked
+# Meshy_AI_Animation_*_withSkin.glb avatars (needed at runtime on GitHub Pages).
+/vendor/meshy-raw/
+/public/models/equipment/Meshy_AI_*.glb
 /CREDITS.md
 .gstack/

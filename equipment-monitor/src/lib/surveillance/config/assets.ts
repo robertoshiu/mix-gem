@@ -12,12 +12,17 @@ const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? '/mix-gem';
 export const ASSET_PATHS = {
   hdri: '/env/cleanroom.env',
   equipment: {
-    chamber: '/models/equipment/etch_chamber.glb',
-    efem: '/models/equipment/efem.glb',
-    stepper: '/models/equipment/lithography.glb',
-    metrology: '/models/equipment/metrology.glb',
-    spinCoater: '/models/equipment/spin_coater.glb',
-    robotArm: '/models/equipment/robot_arm.glb',
+    // High-fidelity Meshy AI hero models (textured) — keep their own materials.
+    chamber: '/models/equipment/plasma_etcher.glb',
+    efem: '/models/equipment/automation_cell.glb',
+    stepper: '/models/equipment/litho_scanner.glb',
+    metrology: '/models/equipment/wafer_processor.glb',
+    spinCoater: '/models/equipment/wet_bench.glb',
+    robotArm: '/models/equipment/cluster_tool.glb',
+    cmp: '/models/equipment/cmp_polisher.glb',
+    furnace: '/models/equipment/diffusion_furnace.glb',
+    pvd: '/models/equipment/vacuum_chamber.glb',
+    // Legacy lightweight model (untextured) — flat PBR palette applied.
     waferCassette: '/models/equipment/wafer_cassette.glb',
   },
   character: {
@@ -55,8 +60,12 @@ export const equipmentLayout: EquipmentPlacement[] = [
   // South row
   { assetKey: 'efem', position: [-4, 0, -6], rotation: Math.PI, label: 'EFEM-01' },
   { assetKey: 'metrology', position: [0, 0, -6], label: 'SEM-01' },
-  { assetKey: 'metrology', position: [4, 0, -6], label: 'SEM-02' },
-  { assetKey: 'chamber', position: [8, 0, -3], label: 'PVD-01' },
+  { assetKey: 'cmp', position: [4, 0, -6], label: 'CMP-01' },
+  { assetKey: 'pvd', position: [8, 0, -3], label: 'PVD-01' },
+
+  // Eastern process bay — diffusion furnace + extra CMP head
+  { assetKey: 'furnace', position: [8, 0, 1], label: 'FURN-01' },
+  { assetKey: 'cmp', position: [4, 0, 1], rotation: Math.PI, label: 'CMP-02' },
 
   // Chemical storage area (inside restricted zone)
   { assetKey: 'chamber', position: [11, 0, -7], label: 'CHEM-01' },
@@ -74,8 +83,17 @@ const EQUIPMENT_COLORS: Record<EquipmentKey, { albedo: [number, number, number];
   metrology: { albedo: [0.45, 0.48, 0.52], metallic: 0.6, roughness: 0.3, emissive: [0.00, 0.03, 0.03] },
   spinCoater: { albedo: [0.50, 0.52, 0.55], metallic: 0.4, roughness: 0.5 },
   robotArm: { albedo: [0.85, 0.55, 0.10], metallic: 0.7, roughness: 0.25, emissive: [0.03, 0.01, 0.0] },
+  cmp: { albedo: [0.55, 0.57, 0.62], metallic: 0.6, roughness: 0.35 },
+  furnace: { albedo: [0.60, 0.45, 0.40], metallic: 0.5, roughness: 0.4, emissive: [0.04, 0.01, 0.0] },
+  pvd: { albedo: [0.62, 0.50, 0.32], metallic: 0.75, roughness: 0.28 },
   waferCassette: { albedo: [0.25, 0.25, 0.30], metallic: 0.3, roughness: 0.6 },
 };
+
+// Hero models shipped with their own baked Meshy textures — keep those materials
+// instead of overriding with the flat PBR palette (which is only for bland GLBs).
+const TEXTURED_EQUIPMENT = new Set<EquipmentKey>([
+  'chamber', 'efem', 'stepper', 'metrology', 'spinCoater', 'robotArm', 'cmp', 'furnace', 'pvd',
+]);
 
 export interface LoadedEquipment {
   meshes: Map<string, BABYLON.AbstractMesh>;
@@ -159,18 +177,22 @@ export async function loadEquipmentGLBs(
             root.scaling.setAll(scale);
           }
 
-          // Apply colored PBR materials — replace bland/white GLB materials
+          // Textured hero models keep their own baked materials; only the legacy
+          // bland GLBs get the flat colored PBR palette.
+          const keepTextures = TEXTURED_EQUIPMENT.has(placement.assetKey);
           const palette = EQUIPMENT_COLORS[placement.assetKey];
           for (const mesh of childMeshes) {
-            const mat = new BABYLON.PBRMaterial(`${placement.label}_mat_${mesh.name}`, scene);
-            mat.albedoColor = new BABYLON.Color3(...palette.albedo);
-            mat.metallic = palette.metallic;
-            mat.roughness = palette.roughness;
-            if (palette.emissive) {
-              mat.emissiveColor = new BABYLON.Color3(...palette.emissive);
+            if (!keepTextures) {
+              const mat = new BABYLON.PBRMaterial(`${placement.label}_mat_${mesh.name}`, scene);
+              mat.albedoColor = new BABYLON.Color3(...palette.albedo);
+              mat.metallic = palette.metallic;
+              mat.roughness = palette.roughness;
+              if (palette.emissive) {
+                mat.emissiveColor = new BABYLON.Color3(...palette.emissive);
+              }
+              mat.freeze();
+              mesh.material = mat;
             }
-            mat.freeze();
-            mesh.material = mat;
             shadowGen.addShadowCaster(mesh);
             mesh.receiveShadows = true;
           }

@@ -186,15 +186,18 @@ function createTool(scene: BABYLON.Scene, tool: (typeof FAB_TWIN_TOOLS)[number],
 
 /** Map FAB_TWIN_TOOLS tool_type to existing equipment GLB filenames */
 const TOOL_GLB_MAP: Record<string, string> = {
-  lithography: '/models/equipment/lithography.glb',
-  etch: '/models/equipment/etch_chamber.glb',
-  deposition: '/models/equipment/etch_chamber.glb',
+  lithography: '/models/equipment/litho_optics.glb',
+  etch: '/models/equipment/etch_chamber_hero.glb',
+  deposition: '/models/equipment/thinfilm_cvd.glb',
   metrology: '/models/equipment/metrology.glb',
-  test: '/models/equipment/efem.glb',
+  test: '/models/equipment/cluster_tool_b.glb',
 };
 
+// tool_types whose GLB carries baked Meshy textures — keep the original material.
+const TEXTURED_TOOL_TYPES = new Set(['lithography', 'etch', 'deposition', 'test']);
+
 const INFRA_GLB_MAP: Record<string, { path: string; scale?: number; rotationY?: number }> = {
-  'SCRUBBER-SUBFAB-01': { path: '/models/infrastructure/scrubber.glb' },
+  'SCRUBBER-SUBFAB-01': { path: '/models/equipment/stirred_reactor.glb' },
   'PDU-A-01': { path: '/models/infrastructure/pdu.glb' },
   'FOUP-CARRIER-A17': { path: '/models/equipment/wafer_cassette.glb', scale: 0.7 },
   'GAS-CABINET-01': { path: '/models/infrastructure/gas_cabinet.glb' },
@@ -262,11 +265,18 @@ async function upgradeToolsWithGLB(scene: BABYLON.Scene): Promise<void> {
             }
           }
 
-          // Apply semi-transparent PBR style matching the scene
-          const mat = createPbr(scene, `${tool.tool_id}-glb-mat`, tool.heroAsset ? '#dbeafe' : '#cbd5e1', 0.42, 0.36);
-          for (const mesh of root.getChildMeshes()) {
-            mesh.material = mat;
-            mesh.isPickable = false;
+          // Textured hero models keep their baked Meshy materials; the legacy
+          // untextured tool GLBs get the scene's semi-transparent PBR style.
+          if (TEXTURED_TOOL_TYPES.has(tool.tool_type)) {
+            for (const mesh of root.getChildMeshes()) {
+              mesh.isPickable = false;
+            }
+          } else {
+            const mat = createPbr(scene, `${tool.tool_id}-glb-mat`, tool.heroAsset ? '#dbeafe' : '#cbd5e1', 0.42, 0.36);
+            for (const mesh of root.getChildMeshes()) {
+              mesh.material = mat;
+              mesh.isPickable = false;
+            }
           }
         }
       }

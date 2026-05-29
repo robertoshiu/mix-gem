@@ -67,6 +67,20 @@ const PULSE_RATE: Record<HealthLevel, number> = { normal: 0, warning: 1, alarm: 
 
 const CASCADE_TUBE_POOL_SIZE = 6;
 
+const WAR_ROOM_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? '/mix-gem';
+
+// War-room-specific hero model assignment per process tool_type. Distinct from the
+// Fab Twin set so the three 3D scenes each showcase a different slice of the library.
+const WAR_ROOM_TOOL_GLB_MAP: Record<string, string> = {
+  lithography: '/models/equipment/process_bay.glb',
+  etch: '/models/equipment/plasma_reactor.glb',
+  deposition: '/models/equipment/cu_electroplating.glb',
+  metrology: '/models/equipment/cmp_polisher.glb',
+  test: '/models/equipment/cryo_implanter.glb',
+};
+
+const WAR_ROOM_HERO_CORE_GLB = '/models/equipment/discovery_engine.glb';
+
 function createPbr(scene: BABYLON.Scene, name: string, color: string, roughness = 0.45, metalness = 0.28) {
   const material = new BABYLON.PBRMaterial(name, scene);
   material.albedoColor = BABYLON.Color3.FromHexString(color);
@@ -280,6 +294,128 @@ async function upgradeSubsystemWithGLB(scene: BABYLON.Scene, faultId: FabTwinFau
   }
 }
 
+/**
+ * Background GLB upgrade: drop textured Meshy hero models onto the war-room
+ * process tools, replacing the procedural body boxes. The GLB meshes become the
+ * pickable surface (tool metadata mirrored onto them); the procedural box is
+ * hidden via isVisible=false (so it neither renders nor picks, and survives
+ * applyLayerIsolation which only touches mesh.visibility). Load ports, service
+ * panels, labels, and alarm beacons (siblings under the tool group) are preserved.
+ */
+async function upgradeWarRoomToolsWithGLB(scene: BABYLON.Scene): Promise<void> {
+  try {
+    const containers = new Map<string, BABYLON.AssetContainer>();
+    const uniquePaths = [...new Set(Object.values(WAR_ROOM_TOOL_GLB_MAP))];
+
+    await Promise.all(uniquePaths.map(async (glbPath) => {
+      try {
+        const container = await BABYLON.LoadAssetContainerAsync(WAR_ROOM_BASE_PATH + glbPath, scene);
+        containers.set(glbPath, container);
+      } catch {
+        // GLB not available — procedural box remains
+      }
+    }));
+
+    if (scene.isDisposed || containers.size === 0) return;
+
+    for (const tool of FAB_TWIN_TOOLS) {
+      const glbPath = WAR_ROOM_TOOL_GLB_MAP[tool.tool_type];
+      const container = glbPath ? containers.get(glbPath) : undefined;
+      if (!container) continue;
+
+      const group = scene.getTransformNodeByName(`${tool.tool_id}-node`);
+      if (!group) continue;
+
+      // Capture the procedural body box up-front (before GLB meshes are added).
+      const baseBox = scene.getMeshByName(tool.tool_id);
+
+      const instance = container.instantiateModelsToScene((n) => `${tool.tool_id}-glb_${n}`);
+      const tint = BABYLON.Color3.FromHexString(tool.color).scale(0.08);
+      for (const root of instance.rootNodes) {
+        if (!(root instanceof BABYLON.TransformNode)) continue;
+        root.parent = group;
+        root.position.y = tool.sizeM[1] / 2;
+
+        const meshes = root.getChildMeshes();
+        if (meshes.length > 0) {
+          let minVec = new BABYLON.Vector3(Infinity, Infinity, Infinity);
+          let maxVec = new BABYLON.Vector3(-Infinity, -Infinity, -Infinity);
+          for (const mesh of meshes) {
+            mesh.computeWorldMatrix(true);
+            const bi = mesh.getBoundingInfo();
+            minVec = BABYLON.Vector3.Minimize(minVec, bi.boundingBox.minimumWorld);
+            maxVec = BABYLON.Vector3.Maximize(maxVec, bi.boundingBox.maximumWorld);
+          }
+          const extents = maxVec.subtract(minVec);
+          const maxDim = Math.max(extents.x, extents.y, extents.z);
+          if (maxDim > 0) {
+            root.scaling.setAll(Math.max(tool.sizeM[0], tool.sizeM[1], tool.sizeM[2]) / maxDim);
+          }
+        }
+
+        // Keep baked textures; add a faint tool-color emissive so the model reads
+        // against the dark neon canvas. Route picks + layer isolation to the model
+        // by mirroring the tool metadata onto its meshes (without renaming them).
+        for (const mesh of root.getChildMeshes()) {
+          mesh.isPickable = true;
+          // `textured: true` marks this as a baked-material GLB mesh so applyMode()
+          // leaves its emissive alone in nominal mode (keeps the Meshy look).
+          mesh.metadata = { ...tool, id: tool.tool_id, path: tool.path, type: 'process-tool', layers: ['process'], textured: true };
+          if (mesh.material instanceof BABYLON.PBRMaterial) {
+            mesh.material.emissiveColor = mesh.material.emissiveColor.add(tint);
+          }
+        }
+      }
+
+      // Hide the procedural body box. isVisible (not visibility) survives the
+      // applyLayerIsolation re-runs that only touch mesh.visibility.
+      if (baseBox) baseBox.isVisible = false;
+    }
+  } catch {
+    // GLBs not available — procedural fallbacks remain visible
+  }
+}
+
+/**
+ * Background load of the "discovery engine" hero model as the war-room centerpiece,
+ * anchored at the data-flow core. Purely decorative (non-pickable), keeps textures.
+ */
+async function addWarRoomHeroCore(scene: BABYLON.Scene): Promise<void> {
+  try {
+    const container = await BABYLON.LoadAssetContainerAsync(WAR_ROOM_BASE_PATH + WAR_ROOM_HERO_CORE_GLB, scene);
+    if (scene.isDisposed) { container.dispose(); return; }
+
+    const instance = container.instantiateModelsToScene((n) => `DISCOVERY-CORE_${n}`);
+    for (const root of instance.rootNodes) {
+      if (!(root instanceof BABYLON.TransformNode)) continue;
+      root.position = new BABYLON.Vector3(0, 0, -1.4);
+
+      const meshes = root.getChildMeshes();
+      if (meshes.length > 0) {
+        let minVec = new BABYLON.Vector3(Infinity, Infinity, Infinity);
+        let maxVec = new BABYLON.Vector3(-Infinity, -Infinity, -Infinity);
+        for (const mesh of meshes) {
+          mesh.computeWorldMatrix(true);
+          const bi = mesh.getBoundingInfo();
+          minVec = BABYLON.Vector3.Minimize(minVec, bi.boundingBox.minimumWorld);
+          maxVec = BABYLON.Vector3.Maximize(maxVec, bi.boundingBox.maximumWorld);
+        }
+        const extents = maxVec.subtract(minVec);
+        const maxDim = Math.max(extents.x, extents.y, extents.z);
+        if (maxDim > 0) root.scaling.setAll(3.4 / maxDim);
+      }
+      for (const mesh of root.getChildMeshes()) {
+        mesh.isPickable = false;
+        if (mesh.material instanceof BABYLON.PBRMaterial) {
+          mesh.material.emissiveColor = mesh.material.emissiveColor.add(BABYLON.Color3.FromHexString('#22d3ee').scale(0.06));
+        }
+      }
+    }
+  } catch {
+    // Hero core GLB not available — center hub wireframe remains the focal point.
+  }
+}
+
 function createSensors(scene: BABYLON.Scene, faultId: FabTwinFaultId) {
   FAB_TWIN_SENSORS.forEach((sensor) => {
     const layers = getLayers(sensor.sensor_id);
@@ -473,8 +609,10 @@ function createScene(
   createFactoryEnvelope(scene);
   createProcessTools(scene);
   createSubsystemEquipment(scene, props.faultId);
-  // Background: upgrade subsystem equipment with GLB models when available
+  // Background: upgrade subsystem equipment + process tools with GLB models when available
   void upgradeSubsystemWithGLB(scene, props.faultId);
+  void upgradeWarRoomToolsWithGLB(scene);
+  void addWarRoomHeroCore(scene);
   createSensors(scene, props.faultId);
   createTransport(scene, props.faultId);
   createDataParticles(scene, reducedMotion);
@@ -640,7 +778,7 @@ function applyMode(scene: BABYLON.Scene, mode: FabTwinMode) {
   const isLotTransfer = mode === 'lot-transfer';
 
   scene.meshes.forEach((mesh) => {
-    const meta = mesh.metadata as { type?: string; layers?: WarRoomLayer[]; id?: string } | null;
+    const meta = mesh.metadata as { type?: string; layers?: WarRoomLayer[]; id?: string; textured?: boolean } | null;
     if (!meta) return;
 
     // --- Service panels: swing open in maintenance ---
@@ -667,7 +805,10 @@ function applyMode(scene: BABYLON.Scene, mode: FabTwinMode) {
     }
 
     // --- Process tools: tint red in alarm mode ---
-    if (meta.type === 'process-tool') {
+    // Textured Meshy GLB tools keep their baked emissive — skip the override so
+    // the model's appearance survives mode round-trips (alarm/maintenance still
+    // read via the scene-wide clearColor + light shifts).
+    if (meta.type === 'process-tool' && !meta.textured) {
       const mat = mesh.material;
       if (mat instanceof BABYLON.PBRMaterial) {
         if (isAlarm) {
