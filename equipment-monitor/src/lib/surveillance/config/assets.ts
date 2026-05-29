@@ -177,6 +177,19 @@ export async function loadEquipmentGLBs(
             root.scaling.setAll(scale);
           }
 
+          // Ground the model. Meshy GLB origins sit at the geometric center, so
+          // after scaling the base lands below the floor (only the top half shows).
+          // Recompute the scaled world bounds and drop the base to placement Y.
+          root.computeWorldMatrix(true);
+          let groundMinY = Infinity;
+          for (const child of childMeshes) {
+            child.computeWorldMatrix(true);
+            groundMinY = Math.min(groundMinY, child.getBoundingInfo().boundingBox.minimumWorld.y);
+          }
+          if (Number.isFinite(groundMinY)) {
+            root.position.y += placement.position[1] - groundMinY;
+          }
+
           // Textured hero models keep their own baked materials; only the legacy
           // bland GLBs get the flat colored PBR palette.
           const keepTextures = TEXTURED_EQUIPMENT.has(placement.assetKey);
