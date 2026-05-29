@@ -72,8 +72,14 @@ export const equipmentLayout: EquipmentPlacement[] = [
   { assetKey: 'efem', position: [11, 0, -5], rotation: -Math.PI / 2, label: 'EFEM-02' },
 ];
 
-// Target bounding box for equipment scaling
+// Target bounding box for equipment scaling (fallback for degenerate models).
 const EQUIPMENT_TARGET_SIZE = 2.2;
+// Scale process tools by HEIGHT so they stand clearly taller than the ~1.7 m
+// engineers (real fab tools are ~2.5–3.5 m). Most Meshy models are wider than
+// tall, so the old max-dimension cap made them too short.
+const EQUIPMENT_TARGET_HEIGHT = 2.8;
+// Safety net: stop a pathologically wide/flat model from sprawling over neighbors.
+const EQUIPMENT_MAX_FOOTPRINT = 5.0;
 
 // PBR color palette per equipment type — used as fallback when GLB materials are bland
 const EQUIPMENT_COLORS: Record<EquipmentKey, { albedo: [number, number, number]; metallic: number; roughness: number; emissive?: [number, number, number] }> = {
@@ -172,8 +178,17 @@ export async function loadEquipmentGLBs(
           }
           const extents = maxVec.subtract(minVec);
           const maxDim = Math.max(extents.x, extents.y, extents.z);
-          if (maxDim > 0) {
-            const scale = EQUIPMENT_TARGET_SIZE / maxDim;
+          const footprint = Math.max(extents.x, extents.z);
+          let scale = 0;
+          if (extents.y > 0.001) {
+            scale = EQUIPMENT_TARGET_HEIGHT / extents.y;
+            if (footprint > 0 && footprint * scale > EQUIPMENT_MAX_FOOTPRINT) {
+              scale = EQUIPMENT_MAX_FOOTPRINT / footprint;
+            }
+          } else if (maxDim > 0) {
+            scale = EQUIPMENT_TARGET_SIZE / maxDim;
+          }
+          if (scale > 0) {
             root.scaling.setAll(scale);
           }
 
