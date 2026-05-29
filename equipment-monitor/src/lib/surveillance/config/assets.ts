@@ -101,9 +101,17 @@ const TEXTURED_EQUIPMENT = new Set<EquipmentKey>([
   'chamber', 'efem', 'stepper', 'metrology', 'spinCoater', 'robotArm', 'cmp', 'furnace', 'pvd',
 ]);
 
+/** Circular ground footprint engineers must walk around (XZ plane, metres). */
+export interface EquipmentObstacle {
+  x: number;
+  z: number;
+  radius: number;
+}
+
 export interface LoadedEquipment {
   meshes: Map<string, BABYLON.AbstractMesh>;
   labels: Map<string, BABYLON.Vector3>; // label -> world position for HUD
+  obstacles: EquipmentObstacle[]; // collision footprints for engineer avoidance
 }
 
 /**
@@ -131,6 +139,7 @@ export async function loadEquipmentGLBs(
   const result: LoadedEquipment = {
     meshes: new Map(),
     labels: new Map(),
+    obstacles: [],
   };
 
   // Load each unique asset type as a container
@@ -203,6 +212,18 @@ export async function loadEquipmentGLBs(
           }
           if (Number.isFinite(groundMinY)) {
             root.position.y += placement.position[1] - groundMinY;
+          }
+
+          // Register a circular collision footprint (scaled horizontal half-extent)
+          // so patrolling engineers steer around the tool instead of clipping it.
+          // Capped at 2.2 m so a very wide tool can't seal an aisle and trap an
+          // engineer — collision size is decoupled from the tall visual size.
+          if (scale > 0 && footprint > 0) {
+            result.obstacles.push({
+              x: placement.position[0],
+              z: placement.position[2],
+              radius: Math.min(2.2, Math.max(0.6, (footprint * scale) / 2)),
+            });
           }
 
           // Textured hero models keep their own baked materials; only the legacy

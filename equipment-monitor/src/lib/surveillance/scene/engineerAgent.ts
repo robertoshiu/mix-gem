@@ -9,7 +9,7 @@ import { FreeCamera } from '@babylonjs/core/Cameras/freeCamera';
 import { Scene } from '@babylonjs/core/scene';
 import type { AnimationGroup } from '@babylonjs/core/Animations/animationGroup';
 import { type PatrolRoute, applyJitter } from '../config/patrol';
-import type { LoadedCharacter } from '../config/assets';
+import type { LoadedCharacter, EquipmentObstacle } from '../config/assets';
 
 export type AgentState = 'walking' | 'idle';
 
@@ -35,6 +35,9 @@ const CHARACTER_FORWARD_YAW_OFFSET = Math.PI;
 // Collision avoidance between agents (applies to all agents).
 const PERSONAL_SPACE = 0.9;   // metres; repulsion radius
 const MAX_AVOID_OFFSET = 0.6; // metres; max lateral displacement from path
+// Hard collision against equipment footprints (engineers walk around tools).
+const PERSON_RADIUS = 0.4;       // metres; body half-width kept clear of tools
+const OBSTACLE_SOLVE_PASSES = 2; // resolve against multiple overlapping tools
 
 /**
  * Create an engineer agent from a loaded character GLB and patrol route.
@@ -43,6 +46,7 @@ export function createEngineerAgent(
   scene: Scene,
   character: LoadedCharacter,
   route: PatrolRoute,
+  obstacles: EquipmentObstacle[] = [],
 ): EngineerAgent {
   const { root } = character;
   // glTF loader sets rotationQuaternion which overrides Euler .rotation — null it
@@ -205,6 +209,32 @@ export function createEngineerAgent(
     avoidZ += (tz - avoidZ) * Math.min(1, dt * 8);
     root.position.x = bx + avoidX;
     root.position.z = bz + avoidZ;
+
+    // Hard collision against equipment footprints: if the engineer ends up inside a
+    // tool's circle, push them radially out to its edge. Multiple passes resolve
+    // overlapping tools. This guarantees no clipping even if a path crosses a tool.
+    for (let pass = 0; pass < OBSTACLE_SOLVE_PASSES; pass++) {
+      let pushed = false;
+      for (const ob of obstacles) {
+        const dx = root.position.x - ob.x;
+        const dz = root.position.z - ob.z;
+        const minDist = ob.radius + PERSON_RADIUS;
+        const d2 = dx * dx + dz * dz;
+        if (d2 < minDist * minDist) {
+          const d = Math.sqrt(d2);
+          if (d > 1e-4) {
+            const push = (minDist - d) / d;
+            root.position.x += dx * push;
+            root.position.z += dz * push;
+          } else {
+            // Dead-center: eject along +X by the full clearance.
+            root.position.x += minDist;
+          }
+          pushed = true;
+        }
+      }
+      if (!pushed) break;
+    }
 
     // Sync AR camera — use setTarget for unambiguous forward direction
     const fwdX = Math.sin(travelHeading);

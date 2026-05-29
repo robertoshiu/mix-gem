@@ -63,7 +63,7 @@ export async function initSurveillanceScene(canvases: HTMLCanvasElement[]): Prom
       const character = route.animatedModel
         ? await loadAnimatedCharacterGLB(scene, route.animatedModel)
         : await loadCharacterGLB(scene, route.suitVariant);
-      const agent = createEngineerAgent(scene, character, route);
+      const agent = createEngineerAgent(scene, character, route, equipment.obstacles);
 
       // Add character meshes as shadow casters
       for (const mesh of character.allMeshes) {
