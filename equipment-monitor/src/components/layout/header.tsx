@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import Image from "next/image";
 import { Bell, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -71,20 +70,43 @@ export function Header({ className }: { className?: string }) {
       >
         {/* Left: Logo + Title */}
         <div className="flex items-center gap-3">
-          <Image
-            src="/mix-gem/better-logo.png"
+          {/* Silicon-wafer mark — disc + primary flat + die grid, DESIGN.md primary accent cyan #22D3EE */}
+          <svg
             width={48}
             height={48}
+            viewBox="0 0 48 48"
+            fill="none"
             className="shrink-0"
-            alt="Better SmartFactory Logo"
-            priority
-          />
+            role="img"
+            aria-label="Silicon wafer"
+          >
+            <defs>
+              {/* Wafer disc with a primary flat on the bottom edge */}
+              <clipPath id="waferDisc">
+                <path d="M17.76 43 A20 20 0 1 1 30.24 43 Z" />
+              </clipPath>
+            </defs>
+            {/* faint disc glow */}
+            <path d="M17.76 43 A20 20 0 1 1 30.24 43 Z" fill="#22D3EE" fillOpacity="0.07" />
+            {/* die grid, clipped to the disc */}
+            <g clipPath="url(#waferDisc)" stroke="#22D3EE" strokeOpacity="0.38" strokeWidth="1">
+              <path d="M12 4 V44 M18 4 V44 M24 4 V44 M30 4 V44 M36 4 V44" />
+              <path d="M4 12 H44 M4 18 H44 M4 24 H44 M4 30 H44 M4 36 H44" />
+            </g>
+            {/* disc outline + flat */}
+            <path
+              d="M17.76 43 A20 20 0 1 1 30.24 43 Z"
+              stroke="#22D3EE"
+              strokeWidth="1.75"
+              strokeLinejoin="round"
+            />
+          </svg>
           <div className="flex flex-col leading-tight">
             <h1 className="text-sm font-semibold text-[var(--smartfactory-text-primary)]">
               Equipment Monitor
             </h1>
             <span className="text-[11px] text-[var(--smartfactory-text-secondary)]">
-              Better SmartFactory
+              Semiconductor SmartFactory
             </span>
           </div>
         </div>
