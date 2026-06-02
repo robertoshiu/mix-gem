@@ -76,17 +76,24 @@ export async function initSurveillanceScene(canvases: HTMLCanvasElement[]): Prom
   // Load characters and create engineer agents
   const engineers: EngineerAgent[] = [];
 
-  for (const route of patrolRoutes) {
+  // ~16MB animated character GLBs are the single biggest GPU-memory consumer here. iPhone's
+  // usable WebGL budget is only ~60-80MB, so 3 of them (~48MB) plus equipment/HDR/shadows
+  // overruns it -> WKWebView is killed. On iOS/standalone, load just one engineer and skip
+  // their (expensive) shadow casters.
+  const routesToLoad = memoryConstrained ? patrolRoutes.slice(0, 1) : patrolRoutes;
+  for (const route of routesToLoad) {
     try {
       const character = route.animatedModel
         ? await loadAnimatedCharacterGLB(scene, route.animatedModel)
         : await loadCharacterGLB(scene, route.suitVariant);
       const agent = createEngineerAgent(scene, character, route, equipment.obstacles);
 
-      // Add character meshes as shadow casters
-      for (const mesh of character.allMeshes) {
-        if (mesh.getTotalVertices() > 0) {
-          shadowGenerator.addShadowCaster(mesh);
+      // Add character meshes as shadow casters (skipped on memory-constrained iOS)
+      if (!memoryConstrained) {
+        for (const mesh of character.allMeshes) {
+          if (mesh.getTotalVertices() > 0) {
+            shadowGenerator.addShadowCaster(mesh);
+          }
         }
       }
 
