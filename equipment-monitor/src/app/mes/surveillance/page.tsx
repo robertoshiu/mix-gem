@@ -11,19 +11,18 @@ const CAMERA_LABELS = [
 
 export default function SurveillancePage() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!containerRef.current) return;
-
-    const canvases = containerRef.current.querySelectorAll<HTMLCanvasElement>('.cam-canvas');
-    if (canvases.length !== 9) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
     let cancelled = false;
 
-    initSurveillanceScene(Array.from(canvases))
+    initSurveillanceScene(canvas)
       .then((cleanup) => {
         if (cancelled) {
           cleanup();
@@ -57,10 +56,10 @@ export default function SurveillancePage() {
           </div>
         </div>
       )}
+      <canvas className="surveillance-canvas" ref={canvasRef} />
       <div className="grid-3x3" ref={containerRef}>
         {CAMERA_LABELS.map((label, i) => (
           <div key={i} className="cam-cell" data-cam-index={i}>
-            <canvas className="cam-canvas" />
             <div className="cam-label">{label}</div>
             <div className="cam-border" />
             {i === 4 && (
@@ -108,26 +107,31 @@ const gridStyles = `
   50% { opacity: 1; }
 }
 
+.surveillance-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: 0;
+}
+
 .grid-3x3 {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   grid-template-rows: 1fr 1fr 1fr;
-  width: 100%;
-  height: 100%;
   gap: 2px;
-  background: #111;
+  background: transparent;
 }
 
 .cam-cell {
   position: relative;
   overflow: hidden;
-  background: #0a0a0a;
-}
-
-.cam-canvas {
-  width: 100%;
-  height: 100%;
-  display: block;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.5);
 }
 
 .cam-label {

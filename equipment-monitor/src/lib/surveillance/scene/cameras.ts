@@ -1,6 +1,10 @@
 /**
  * 9 camera definitions for the surveillance grid — rearranged for drama.
- * Uses engine.registerView() to render same scene through multiple cameras.
+ *
+ * Rendering model: ONE WebGL canvas. Each camera gets a viewport rectangle (one grid
+ * cell) and all 9 are pushed to scene.activeCameras, so Babylon tiles all 9 feeds onto
+ * a single canvas/context. (Previously this used engine.registerView() = 9 separate
+ * canvases, which blew iOS WKWebView's per-page canvas-memory budget -> OOM crash.)
  *
  * Layout:
  *   [0] 機械手臂特寫 [1] 俯視全景     [2] NE 走廊
@@ -10,20 +14,26 @@
 import { Scene } from '@babylonjs/core/scene';
 import { FreeCamera } from '@babylonjs/core/Cameras/freeCamera';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
-import { Engine } from '@babylonjs/core/Engines/engine';
+import { Viewport } from '@babylonjs/core/Maths/math.viewport';
 import { Camera } from '@babylonjs/core/Cameras/camera';
-import '@babylonjs/core/Engines/AbstractEngine/abstractEngine.views';
 import type { EngineerAgent } from './engineerAgent';
 
 const FOV_TIGHT = 0.87; // ~50 degrees — fills frame with characters
 const FOV_WIDE = 1.2;   // ~69 degrees — corridor overview
+
+// Cell index -> normalized viewport on a single canvas. 3x3 grid, row 0 = top.
+// Babylon viewports use a bottom-left origin, so y is flipped.
+function cellViewport(i: number): Viewport {
+  const col = i % 3;
+  const row = Math.floor(i / 3);
+  return new Viewport(col / 3, (2 - row) / 3, 1 / 3, 1 / 3);
+}
 
 export interface CameraGrid {
   cameras: Camera[];
   arDefaultCamera: FreeCamera;
   centralBayCamera: FreeCamera;
   birdEyeCamera: FreeCamera;
-  views: ReturnType<Engine['registerView']>[];
   setDefaultAR(agent: EngineerAgent): void;
   swapToAR(agent: EngineerAgent): void;
   revertToDefaultAR(): void;
@@ -32,7 +42,7 @@ export interface CameraGrid {
   defaultARAgent: EngineerAgent | null;
 }
 
-export function setupCameras(scene: Scene, engine: Engine, canvases: HTMLCanvasElement[]): CameraGrid {
+export function setupCameras(scene: Scene): CameraGrid {
   const cameras: Camera[] = [];
 
   // [0] 機械手臂特寫 — elevated north-west view of ROBOT-01 and central bay
@@ -96,10 +106,19 @@ export function setupCameras(scene: Scene, engine: Engine, canvases: HTMLCanvasE
   camEntrance.fov = FOV_TIGHT;
   cameras.push(camEntrance);
 
-  // Register views — each canvas gets its own camera
-  const views = canvases.map((canvas, i) => {
-    return engine.registerView(canvas, cameras[i]);
+  // Assign each camera its grid-cell viewport and render all 9 on the one canvas.
+  cameras.forEach((cam, i) => {
+    cam.viewport = cellViewport(i);
   });
+  const AR_CELL = 4;
+  scene.activeCameras = [...cameras];
+
+  // The camera occupying the AR cell (index 4). Swapping AR = replace this entry and
+  // move cell 4's viewport onto the new camera.
+  function setCell4Camera(cam: Camera): void {
+    cam.viewport = cellViewport(AR_CELL);
+    if (scene.activeCameras) scene.activeCameras[AR_CELL] = cam;
+  }
 
   // AR swap state
   let defaultARAgent: EngineerAgent | null = null;
@@ -110,14 +129,14 @@ export function setupCameras(scene: Scene, engine: Engine, canvases: HTMLCanvasE
   function setDefaultAR(agent: EngineerAgent): void {
     defaultARAgent = agent;
     if (!isARSwapped) {
-      views[4].camera = agent.arCamera;
+      setCell4Camera(agent.arCamera);
       currentARAgent = agent;
     }
   }
 
   function swapToAR(agent: EngineerAgent): void {
     if (revertTimer) clearTimeout(revertTimer);
-    views[4].camera = agent.arCamera;
+    setCell4Camera(agent.arCamera);
     isARSwapped = true;
     currentARAgent = agent;
     revertTimer = setTimeout(() => revertToDefaultAR(), 10000);
@@ -127,10 +146,10 @@ export function setupCameras(scene: Scene, engine: Engine, canvases: HTMLCanvasE
     if (revertTimer) { clearTimeout(revertTimer); revertTimer = null; }
     isARSwapped = false;
     if (defaultARAgent) {
-      views[4].camera = defaultARAgent.arCamera;
+      setCell4Camera(defaultARAgent.arCamera);
       currentARAgent = defaultARAgent;
     } else {
-      views[4].camera = camARDefault;
+      setCell4Camera(camARDefault);
       currentARAgent = null;
     }
   }
@@ -140,7 +159,6 @@ export function setupCameras(scene: Scene, engine: Engine, canvases: HTMLCanvasE
     arDefaultCamera: camARDefault,
     centralBayCamera: camCentralBay,
     birdEyeCamera: camBirdEye,
-    views,
     setDefaultAR,
     swapToAR,
     revertToDefaultAR,

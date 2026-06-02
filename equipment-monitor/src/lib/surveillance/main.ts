@@ -17,32 +17,10 @@ import { patrolRoutes } from './config/patrol';
 const TARGET_FPS = 30;
 const FRAME_TIME = 1000 / TARGET_FPS;
 
-export async function initSurveillanceScene(canvases: HTMLCanvasElement[]): Promise<() => void> {
-  if (canvases.length !== 9) {
-    throw new Error('Surveillance grid requires exactly 9 canvases');
-  }
-
-  // Create the WebGL engine on a hidden source canvas. The 9 visible grid canvases
-  // are registered as views below; using cell 0 as both source canvas and view
-  // leaves the first cell black in the static build.
-  const sourceCanvas = document.createElement('canvas');
-  sourceCanvas.width = 1;
-  sourceCanvas.height = 1;
-  sourceCanvas.style.position = 'fixed';
-  sourceCanvas.style.left = '-1px';
-  sourceCanvas.style.top = '-1px';
-  sourceCanvas.style.width = '1px';
-  sourceCanvas.style.height = '1px';
-  sourceCanvas.style.opacity = '0';
-  sourceCanvas.style.pointerEvents = 'none';
-  document.body.appendChild(sourceCanvas);
-
+export async function initSurveillanceScene(canvas: HTMLCanvasElement): Promise<() => void> {
   // iOS WKWebView (especially the installed-PWA standalone WebView) enforces a much smaller
-  // per-page canvas-memory budget than a Safari tab. This is the only Babylon scene that did
-  // NOT cap hardware scaling, so on retina it rendered all 9 multi-view canvases at full
-  // devicePixelRatio (buffer cost grows with DPR^2) and blew WebKit's canvas-memory ceiling
-  // -> the WebView is killed ("A problem repeatedly occurred"). Cap render resolution hard on
-  // iOS / standalone (and drop MSAA there); use the same light cap as the other scenes elsewhere.
+  // per-page canvas-memory budget than a Safari tab, so cap render resolution hard on iOS /
+  // standalone (and drop MSAA there); use the same light cap as the other scenes elsewhere.
   const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
   const standalone =
     (typeof window !== 'undefined' && window.matchMedia?.('(display-mode: standalone)').matches === true) ||
@@ -54,7 +32,10 @@ export async function initSurveillanceScene(canvases: HTMLCanvasElement[]): Prom
       (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent)));
   const memoryConstrained = standalone || iOS;
 
-  const engine = new Engine(sourceCanvas, !memoryConstrained, {
+  // ONE WebGL canvas; the 9 camera feeds are tiled via per-camera viewports
+  // (scene.activeCameras). A single canvas/context keeps the page under iOS's per-page
+  // canvas-memory ceiling — 9 separate registerView() canvases blew it (OOM crash).
+  const engine = new Engine(canvas, !memoryConstrained, {
     preserveDrawingBuffer: false,
     stencil: false,
     antialias: !memoryConstrained,
@@ -69,8 +50,8 @@ export async function initSurveillanceScene(canvases: HTMLCanvasElement[]): Prom
   // Build static environment + load equipment GLBs
   const { equipment, shadowGenerator } = await buildCleanroom(scene);
 
-  // Setup 9 cameras + multi-view
-  const cameraGrid = setupCameras(scene, engine, canvases);
+  // 9 cameras tiled via per-camera viewports on the single canvas (scene.activeCameras)
+  const cameraGrid = setupCameras(scene);
   scene.activeCamera = cameraGrid.cameras[0];
 
   // Load characters and create engineer agents
@@ -236,6 +217,5 @@ export async function initSurveillanceScene(canvases: HTMLCanvasElement[]): Prom
     }
     scene.dispose();
     engine.dispose();
-    sourceCanvas.remove();
   };
 }
