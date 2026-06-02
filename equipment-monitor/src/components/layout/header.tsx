@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useMesSpcStore } from "@/stores/mes-spc-store";
 import { NotificationPanel } from "@/components/spc/NotificationPanel";
+import { InstallButton } from "@/components/pwa/InstallButton";
 
 export function Header({ className }: { className?: string }) {
   const [clock, setClock] = useState("--:--:--");
@@ -121,6 +122,7 @@ export function Header({ className }: { className?: string }) {
 
         {/* Right: Icon buttons */}
         <div ref={iconAreaRef} className="relative flex items-center gap-1">
+          <InstallButton />
           {/* Bell / Notifications */}
           <Button
             variant="ghost"
