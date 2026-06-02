@@ -79,6 +79,8 @@ jobs:
         run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
       - name: Build with Next.js
         run: ${{ steps.detect-package-manager.outputs.runner }} next build
+      - name: Generate service worker (Workbox)
+        run: node scripts/build-sw.mjs
       - name: Run lint
         run: ${{ steps.detect-package-manager.outputs.manager }} run lint
       - name: Run tests
