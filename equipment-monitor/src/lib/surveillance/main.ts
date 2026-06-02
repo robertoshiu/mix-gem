@@ -37,11 +37,29 @@ export async function initSurveillanceScene(canvases: HTMLCanvasElement[]): Prom
   sourceCanvas.style.pointerEvents = 'none';
   document.body.appendChild(sourceCanvas);
 
-  const engine = new Engine(sourceCanvas, true, {
+  // iOS WKWebView (especially the installed-PWA standalone WebView) enforces a much smaller
+  // per-page canvas-memory budget than a Safari tab. This is the only Babylon scene that did
+  // NOT cap hardware scaling, so on retina it rendered all 9 multi-view canvases at full
+  // devicePixelRatio (buffer cost grows with DPR^2) and blew WebKit's canvas-memory ceiling
+  // -> the WebView is killed ("A problem repeatedly occurred"). Cap render resolution hard on
+  // iOS / standalone (and drop MSAA there); use the same light cap as the other scenes elsewhere.
+  const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+  const standalone =
+    (typeof window !== 'undefined' && window.matchMedia?.('(display-mode: standalone)').matches === true) ||
+    (typeof navigator !== 'undefined' &&
+      (navigator as unknown as { standalone?: boolean }).standalone === true);
+  const iOS =
+    typeof navigator !== 'undefined' &&
+    (/iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent)));
+  const memoryConstrained = standalone || iOS;
+
+  const engine = new Engine(sourceCanvas, !memoryConstrained, {
     preserveDrawingBuffer: false,
     stencil: false,
-    antialias: true,
+    antialias: !memoryConstrained,
   });
+  engine.setHardwareScalingLevel(memoryConstrained ? Math.max(2, dpr) : dpr > 1 ? 1.2 : 1);
 
   const scene = new Scene(engine);
   scene.skipPointerMovePicking = true;
